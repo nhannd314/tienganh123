@@ -2,7 +2,6 @@
 
 use App\Models\Course;
 use App\Models\Lesson;
-use App\Models\MembershipPlan;
 use App\Models\Subscription;
 use App\Models\Unit;
 use App\Models\User;
@@ -79,14 +78,6 @@ it('opens every lesson of the course to a user subscribed to it', function () {
     $this->get(lessonReview($lesson))->assertOk();
 });
 
-it('opens every course to a member', function () {
-    $lesson = lessonOfCourse();
-    $user = User::factory()->create();
-    Subscription::factory()->for($user)->membership()->create();
-
-    $this->actingAs($user)->get(lessonPage($lesson))->assertOk();
-});
-
 it('opens everything to an admin', function () {
     $this->actingAs(User::factory()->admin()->create())->get(lessonPage(lessonOfCourse()))->assertOk();
 });
@@ -99,11 +90,10 @@ it('does not open a course through the subscription to another course, an expire
         'other course' => Subscription::factory()->for($user)->create(),
         'expired' => Subscription::factory()->for($user)->expired()->create(['subscribable_type' => $lesson->unit->course->getMorphClass(), 'subscribable_id' => $lesson->unit->course_id]),
         'cancelled' => Subscription::factory()->for($user)->cancelled()->create(['subscribable_type' => $lesson->unit->course->getMorphClass(), 'subscribable_id' => $lesson->unit->course_id]),
-        'expired membership' => Subscription::factory()->for($user)->membership()->expired()->create(),
     };
 
     $this->actingAs($user)->get(lessonPage($lesson))->assertForbidden();
-})->with(['other course', 'expired', 'cancelled', 'expired membership']);
+})->with(['other course', 'expired', 'cancelled']);
 
 it('keeps a hidden lesson not found, even behind a paywall', function () {
     $lesson = lessonOfCourse();
@@ -139,10 +129,11 @@ it('shows the same sidebar with the real progress to a signed-in user on the les
     $lesson = lessonOfCourse(0);
     $user = User::factory()->create(['name' => 'Nguyễn Văn An']);
     $lesson->reviews()->create(['user_id' => $user->id, 'step' => 1, 'total' => 1, 'correct' => 1, 'duration_seconds' => 65, 'answers' => []]);
+    $lesson->scores()->create(['user_id' => $user->id, 'score' => 100, 'percent' => 17]);
 
     $this->actingAs($user)->get($page === 'lesson' ? lessonPage($lesson) : lessonReview($lesson))
         ->assertSee('Tiến độ học tập')
-        ->assertSee('Top 10 học tốt nhất')
+        ->assertSee('Top 10 bài học này')
         ->assertDontSee('để lưu kết quả học tập.')
         ->assertSee('<span data-stat-text="done">1</span>/<span data-stat-total>6</span>', false)
         ->assertSee('data-total-time class="tabular-nums">01:05<', false)
@@ -169,7 +160,7 @@ it('opens the lesson of a free course from the course page for everyone, and sho
 it('shows a subscriber the lessons of the paid course as open on the course page', function () {
     $lesson = lessonOfCourse();
     $user = User::factory()->create();
-    Subscription::factory()->for($user)->membership(MembershipPlan::factory()->create())->create();
+    Subscription::factory()->for($user)->create(['subscribable_type' => $lesson->unit->course->getMorphClass(), 'subscribable_id' => $lesson->unit->course_id]);
 
     $this->actingAs($user)->get(route('courses.show', $lesson->unit->course))
         ->assertDontSee('aria-label="Đã khóa"', false)
@@ -180,13 +171,10 @@ it('works out the access of a user to a course from the subscriptions', function
     $course = Course::factory()->priced()->create();
     $user = User::factory()->create();
 
-    expect($user->hasActiveMembership())->toBeFalse()->and($user->isSubscribedTo($course))->toBeFalse();
+    expect($user->isSubscribedTo($course))->toBeFalse();
 
     Subscription::factory()->for($user)->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id]);
-    expect($user->isSubscribedTo($course))->toBeTrue()->and($user->hasActiveMembership())->toBeFalse();
-
-    Subscription::factory()->for($user)->membership()->create();
-    expect($user->hasActiveMembership())->toBeTrue();
+    expect($user->isSubscribedTo($course))->toBeTrue();
 });
 
 it('offers to enroll in the paid course beside a trial lesson and its review', function (string $page) {

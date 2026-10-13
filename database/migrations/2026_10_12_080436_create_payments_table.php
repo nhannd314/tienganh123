@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Money paid by a user through a payment provider. `payable` is what it bought: a subscription or a token top-up.
+     * Money paid by a user through a payment provider. `payable` is what it bought: a subscription.
      */
     public function up(): void
     {

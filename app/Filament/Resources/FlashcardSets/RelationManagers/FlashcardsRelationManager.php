@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\FlashcardSets\RelationManagers;
 
+use App\Filament\Resources\Flashcards\Schemas\FlashcardForm;
+use App\Models\Flashcard;
+use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ImageColumn;
@@ -20,41 +20,17 @@ class FlashcardsRelationManager extends RelationManager
 {
     protected static string $relationship = 'flashcards';
 
+    protected static ?string $recordTitleAttribute = 'title';
+
     public function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                TextInput::make('title')
-                    ->maxLength(255),
-                Select::make('word_id')
-                    ->label('Word')
-                    ->relationship('word', 'word')
-                    ->searchable()
-                    ->preload(),
-                FileUpload::make('image')
-                    ->image()
-                    ->disk('public')
-                    ->directory('flashcards/images')
-                    ->visibility('public'),
-                FileUpload::make('audio')
-                    ->acceptedFileTypes(['audio/mpeg'])
-                    ->disk('public')
-                    ->directory('flashcards/audio')
-                    ->visibility('public')
-                    ->maxSize(10240)
-                    ->downloadable(),
-                TextInput::make('sort_order')
-                    ->required()
-                    ->numeric()
-                    ->default(0),
-            ]);
+        return FlashcardForm::configure($schema);
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('title')
-            ->defaultSort('sort_order')
+            ->recordTitle(fn ($record): string => $record->display_title ?? '#'.$record->getKey())
             ->columns([
                 ImageColumn::make('image')
                     ->disk('public'),
@@ -65,20 +41,24 @@ class FlashcardsRelationManager extends RelationManager
                     ->label('Word')
                     ->placeholder('—')
                     ->searchable(),
-                TextColumn::make('sort_order')
-                    ->numeric()
-                    ->sortable(),
             ])
+            ->reorderable('flashcard_flashcard_set.sort_order')
             ->headerActions([
-                CreateAction::make(),
+                CreateAction::make()
+                    ->mutateDataUsing(fn (array $data): array => FlashcardForm::fillMissing($data))
+                    ->after(fn (Flashcard $record) => FlashcardForm::queueMissingMedia($record)),
+                AttachAction::make()
+                    ->preloadRecordSelect(),
             ])
             ->recordActions([
-                EditAction::make(),
-                DeleteAction::make(),
+                EditAction::make()
+                    ->mutateDataUsing(fn (array $data): array => FlashcardForm::fillMissing($data))
+                    ->after(fn (Flashcard $record) => FlashcardForm::queueMissingMedia($record)),
+                DetachAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }

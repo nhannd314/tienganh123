@@ -1,9 +1,10 @@
 @php
-    $vocabTiles = [
-        ['word' => 'apple', 'box' => 'border-danger-border bg-danger-bg'],
-        ['word' => 'car', 'box' => 'border-primary-border bg-primary-bg'],
-        ['word' => 'ant', 'box' => 'border-success-border bg-success-bg'],
-        ['word' => 'axe', 'box' => 'border-accent-border bg-accent-bg'],
+    $tileTones = [
+        'border-danger-border bg-danger-bg',
+        'border-primary-border bg-primary-bg',
+        'border-success-border bg-success-bg',
+        'border-accent-border bg-accent-bg',
+        'border-secondary-border bg-secondary-bg',
     ];
 
     $features = [
@@ -56,14 +57,25 @@
                 </div>
             </div>
 
-            <div class="grid w-full max-w-190 grid-cols-[repeat(auto-fit,minmax(min(100%,130px),1fr))] gap-5">
-                @foreach ($vocabTiles as $tile)
-                    <div @class(['flex flex-col items-center gap-2 rounded-lg border px-2 py-4', $tile['box']])>
-                        <img src="{{ asset('images/vocab/'.$tile['word'].'.png') }}" alt="{{ $tile['word'] }}" class="aspect-square w-full max-w-28 object-contain">
-                        <span lang="en" class="type-label-lg text-fg-strong">{{ $tile['word'] }}</span>
-                    </div>
-                @endforeach
-            </div>
+            @if ($flashcards->isNotEmpty())
+                <div class="grid w-full max-w-220 grid-cols-[repeat(auto-fit,minmax(min(100%,130px),1fr))] gap-5">
+                    @foreach ($flashcards as $flashcard)
+                        @php $text = $flashcard->display_title; @endphp
+                        <button
+                            type="button"
+                            data-audio-button
+                            data-text="{{ $text }}"
+                            data-lang="en-US"
+                            @if ($flashcard->audio_url) data-src="{{ $flashcard->audio_url }}" @endif
+                            aria-label="Nghe phát âm {{ $text }}"
+                            class="flex cursor-pointer flex-col items-center gap-2 rounded-lg border px-2 py-2 transition-interactive hover:brightness-95 {{ $tileTones[$loop->index % count($tileTones)] }}"
+                        >
+                            <img data-flashcard-image src="{{ $flashcard->image_url ?? $flashcard->word?->image_url }}" alt="" class="aspect-square w-full max-w-28 object-contain">
+                            <span lang="en" class="type-label-lg text-fg-strong">{{ $text }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            @endif
         </section>
 
         {{-- Why choose us --}}
@@ -158,6 +170,10 @@
                 </div>
                 <x-icon-button icon="x" label="Đóng" variant="ghost" size="sm" data-toggle-close="leaderboard" />
             </div>
+
+            @if ($leaderboard === [])
+                <p class="type-body text-fg-muted">Chưa có học sinh nào ghi điểm.</p>
+            @endif
 
             <ol class="flex flex-col gap-1">
                 @foreach ($leaderboard as $index => $learner)

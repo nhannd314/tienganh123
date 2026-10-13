@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Payments\Tables;
 use App\Enums\PaymentStatus;
 use App\Filament\Resources\Payments\Actions\MarkPaymentAsPaidAction;
 use App\Models\Course;
-use App\Models\MembershipPlan;
 use App\Models\Payment;
 use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
@@ -81,7 +80,6 @@ class PaymentsTable
     {
         return match (true) {
             $payment->payable instanceof Course => 'Khóa học: '.$payment->payable->title,
-            $payment->payable instanceof MembershipPlan => 'Thành viên: '.$payment->payable->name,
             default => '—',
         };
     }

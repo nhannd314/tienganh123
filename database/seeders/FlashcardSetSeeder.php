@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Flashcard;
 use App\Models\FlashcardSet;
 use App\Models\Unit;
 use App\Models\Word;
@@ -29,15 +30,15 @@ class FlashcardSetSeeder extends Seeder
                 ],
             );
 
-            $flashcardSet->flashcards()->delete();
-
-            collect($data['words'])
-                ->filter(fn (string $slug): bool => $wordIds->has($slug))
-                ->values()
-                ->each(fn (string $slug, int $position) => $flashcardSet->flashcards()->create([
-                    'word_id' => $wordIds[$slug],
-                    'sort_order' => $position + 1,
-                ]));
+            $flashcardSet->flashcards()->sync(
+                collect($data['words'])
+                    ->filter(fn (string $slug): bool => $wordIds->has($slug))
+                    ->values()
+                    ->mapWithKeys(fn (string $slug, int $position): array => [
+                        Flashcard::firstOrCreate(['word_id' => $wordIds[$slug]])->id => ['sort_order' => $position + 1],
+                    ])
+                    ->all(),
+            );
 
             Unit::where('slug', $data['unit'])->first()
                 ?->lessons()

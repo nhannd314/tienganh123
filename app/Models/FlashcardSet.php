@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['title', 'slug', 'description', 'sort_order'])]
 class FlashcardSet extends Model
@@ -29,11 +28,15 @@ class FlashcardSet extends Model
     }
 
     /**
-     * @return HasMany<Flashcard, $this>
+     * @return BelongsToMany<Flashcard, $this>
      */
-    public function flashcards(): HasMany
+    public function flashcards(): BelongsToMany
     {
-        return $this->hasMany(Flashcard::class)->orderBy('sort_order');
+        return $this->belongsToMany(Flashcard::class)
+            ->withPivot('sort_order')
+            ->withTimestamps()
+            ->orderByPivot('sort_order')
+            ->orderBy('flashcards.id');
     }
 
     /**

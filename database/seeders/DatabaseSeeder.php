@@ -25,7 +25,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminUserSeeder::class,
             CourseSeeder::class,
-            PricingSeeder::class,
             TagSeeder::class,
             WordSeeder::class,
             LessonVocabularySeeder::class,

@@ -3,7 +3,6 @@
 namespace Database\Factories;
 
 use App\Models\Course;
-use App\Models\MembershipPlan;
 use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,20 +28,6 @@ class SubscriptionFactory extends Factory
             'cancelled_at' => null,
             'price_paid' => 50000,
         ];
-    }
-
-    /**
-     * Indicate that it is a membership.
-     */
-    public function membership(?MembershipPlan $plan = null): static
-    {
-        $plan ??= MembershipPlan::factory()->create();
-
-        return $this->state(fn (array $attributes) => [
-            'subscribable_type' => $plan->getMorphClass(),
-            'subscribable_id' => $plan->getKey(),
-            'price_paid' => $plan->monthly_price,
-        ]);
     }
 
     /**

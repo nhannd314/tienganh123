@@ -26,6 +26,11 @@ class CoursesTable
                     ->label('Monthly price')
                     ->formatStateUsing(fn (int $state): string => $state === 0 ? 'Free' : number_format($state, 0, ',', '.').' ₫')
                     ->sortable(),
+                TextColumn::make('regular_price')
+                    ->label('Regular price')
+                    ->formatStateUsing(fn (int $state): string => number_format($state, 0, ',', '.').' ₫')
+                    ->placeholder('—')
+                    ->sortable(),
                 TextColumn::make('sort_order')
                     ->numeric()
                     ->sortable(),

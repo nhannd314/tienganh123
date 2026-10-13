@@ -58,7 +58,7 @@ it('puts the status URL and channel on the payment page', function () {
     $course = Course::factory()->published()->priced(50000)->create();
     config(['payment.bank.account_number' => '0123456789']);
 
-    $response = $this->actingAs($user)->get(route('courses.enroll', $course))->assertOk();
+    $response = $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 1]))->assertOk();
 
     $payment = Payment::sole();
 

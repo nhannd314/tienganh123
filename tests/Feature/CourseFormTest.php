@@ -142,3 +142,20 @@ it('shows the price of each course in the list, Free for a free one', function (
         ->assertSee('50.000 ₫')
         ->assertSee('Free');
 });
+
+it('saves a regular price above the monthly price and rejects one that is not', function () {
+    $course = Course::factory()->priced(50000)->create();
+
+    Livewire::test(EditCourse::class, ['record' => $course->getRouteKey()])
+        ->fillForm(['regular_price' => 100000])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($course->refresh()->regular_price)->toBe(100000)
+        ->and($course->displayDiscountPercent())->toBe(50);
+
+    Livewire::test(EditCourse::class, ['record' => $course->getRouteKey()])
+        ->fillForm(['regular_price' => 40000])
+        ->call('save')
+        ->assertHasFormErrors(['regular_price']);
+});

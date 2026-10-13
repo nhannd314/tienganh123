@@ -13,9 +13,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'slug', 'description', 'thumbnail', 'monthly_price', 'unit_count', 'lesson_count', 'level', 'sort_order', 'is_published'])]
+#[Fillable(['title', 'slug', 'description', 'thumbnail', 'monthly_price', 'regular_price', 'unit_count', 'lesson_count', 'level', 'sort_order', 'is_published'])]
 class Course extends Model
 {
     /** @use HasFactory<CourseFactory> */
@@ -30,6 +31,7 @@ class Course extends Model
     {
         return [
             'monthly_price' => 'integer',
+            'regular_price' => 'integer',
             'unit_count' => 'integer',
             'lesson_count' => 'integer',
             'sort_order' => 'integer',
@@ -51,6 +53,37 @@ class Course extends Model
     public function lessons(): HasManyThrough
     {
         return $this->hasManyThrough(Lesson::class, Unit::class);
+    }
+
+    /**
+     * The learners with the highest total score over the lessons of the course, best first (ties go to whoever has the
+     * lowest user id). A learner's `progress` is the average review percent of all the lessons of the course, so a lesson
+     * they have not started counts as 0.
+     *
+     * @return Collection<int, array{name: string, points: int, progress: int}>
+     */
+    public function topLearners(int $limit = 10): Collection
+    {
+        $lessonIds = $this->lessons()->where('units.is_published', true)->where('lessons.is_published', true)->pluck('lessons.id');
+
+        if ($lessonIds->isEmpty()) {
+            return collect();
+        }
+
+        return LessonScore::query()
+            ->whereIn('lesson_id', $lessonIds)
+            ->groupBy('user_id')
+            ->selectRaw('user_id, sum(score) as points, sum(percent) as percent_sum')
+            ->orderByDesc('points')
+            ->orderBy('user_id')
+            ->limit($limit)
+            ->with('user')
+            ->get()
+            ->map(fn (LessonScore $row): array => [
+                'name' => $row->user->name,
+                'points' => (int) $row->points,
+                'progress' => (int) round($row->percent_sum / $lessonIds->count()),
+            ]);
     }
 
     /**
@@ -86,27 +119,59 @@ class Course extends Model
     }
 
     /**
-     * The discount shown on the price, in percent, or null when none is shown (a free course, or the sale is off).
+     * The months a course can be bought for, from the shortest, with the percentage off each (see config payment.cycles).
+     *
+     * @return array<int, int>
      */
-    public function displayDiscountPercent(): ?int
+    public static function cycles(): array
     {
-        $percent = (int) config('payment.display_discount_percent');
-
-        return $this->isFree() || $percent <= 0 || $percent >= 100 ? null : $percent;
+        return config('payment.cycles');
     }
 
     /**
-     * The struck-through price the discount is taken from, rounded to the thousand, e.g. "100.000₫" for 50.000₫ at 50%.
+     * The price of the given number of months, with the discount of that cycle taken off, in VND.
      */
-    public function originalPriceLabel(): ?string
+    public function priceForMonths(int $months): int
     {
-        $percent = $this->displayDiscountPercent();
+        $discount = self::cycles()[$months] ?? 0;
 
-        if ($percent === null) {
+        return (int) round($this->monthly_price * $months * (100 - $discount) / 100);
+    }
+
+    /**
+     * The price of the given number of months formatted as on a course card, e.g. "142.500₫".
+     */
+    public function priceLabelForMonths(int $months): string
+    {
+        return number_format($this->priceForMonths($months), 0, ',', '.').'₫';
+    }
+
+    /**
+     * Whether the course is on sale: it is paid and its regular price is above its monthly price.
+     */
+    public function isOnSale(): bool
+    {
+        return ! $this->isFree() && $this->regular_price !== null && $this->regular_price > $this->monthly_price;
+    }
+
+    /**
+     * The discount shown on the price, in percent off the regular price (at least 1), or null when the course is not on sale.
+     */
+    public function displayDiscountPercent(): ?int
+    {
+        if (! $this->isOnSale()) {
             return null;
         }
 
-        return number_format(round($this->monthly_price * 100 / (100 - $percent), -3), 0, ',', '.').'₫';
+        return max(1, (int) round(($this->regular_price - $this->monthly_price) * 100 / $this->regular_price));
+    }
+
+    /**
+     * The struck-through regular price, e.g. "100.000₫", or null when the course is not on sale.
+     */
+    public function originalPriceLabel(): ?string
+    {
+        return $this->isOnSale() ? number_format($this->regular_price, 0, ',', '.').'₫' : null;
     }
 
     /**

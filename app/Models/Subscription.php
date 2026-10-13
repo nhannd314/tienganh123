@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * A period during which a user can learn a course, or every course (a membership plan).
+ * A period during which a user can learn a course.
  *
  * A null `ends_at` never expires, which is what a free course gets.
  */
@@ -46,7 +46,7 @@ class Subscription extends Model
     }
 
     /**
-     * The Course or MembershipPlan it gives access to.
+     * The Course it gives access to.
      *
      * @return MorphTo<Model, $this>
      */

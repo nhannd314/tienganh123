@@ -32,7 +32,7 @@
                 <span class="flex items-center gap-3">
                     <x-audio-button size="sm" :text="$word->word" :lang="$lang" />
                     <span class="type-caption text-fg-muted">{{ $region }}</span>
-                    <span class="type-body whitespace-nowrap text-fg-body">{{ $ipa }}</span>
+                    <span class="type-body font-ipa whitespace-nowrap text-fg-body">{{ $ipa }}</span>
                 </span>
             @endif
         @endforeach

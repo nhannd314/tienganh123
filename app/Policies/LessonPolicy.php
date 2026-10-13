@@ -10,8 +10,8 @@ class LessonPolicy
     /**
      * Whether the visitor may learn the lesson, signed in or not.
      *
-     * Anyone may learn a free lesson and the lessons of a free course. The rest needs an active membership or an
-     * active subscription to the course; admins may learn everything.
+     * Anyone may learn a free lesson and the lessons of a free course. The rest needs an active subscription to the
+     * course; admins may learn everything.
      */
     public function learn(?User $user, Lesson $lesson): bool
     {

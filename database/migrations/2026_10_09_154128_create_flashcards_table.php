@@ -13,15 +13,11 @@ return new class extends Migration
     {
         Schema::create('flashcards', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('flashcard_set_id')->constrained()->cascadeOnDelete();
             $table->foreignId('word_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title')->nullable();
             $table->string('image')->nullable();
             $table->string('audio')->nullable();
-            $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
-
-            $table->index(['flashcard_set_id', 'sort_order']);
         });
     }
 

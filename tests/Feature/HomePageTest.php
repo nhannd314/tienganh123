@@ -1,7 +1,13 @@
 <?php
 
 use App\Models\Course;
+use App\Models\Flashcard;
+use App\Models\Lesson;
+use App\Models\Unit;
+use App\Models\User;
+use App\Models\Word;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -52,9 +58,54 @@ it('renders the hero, features and footer', function () {
         ->assertSee('Learn • Play • Grow');
 });
 
-it('renders the leaderboard drawer closed with ranked learners', function () {
+it('ranks the learners in the leaderboard by their total score over all the published lessons', function () {
+    $course = Course::factory()->published()->create();
+    $unit = Unit::factory()->published()->for($course)->create();
+    $lessons = Lesson::factory()->published()->for($unit)->count(2)->create();
+    $otherCourse = Course::factory()->published()->create();
+    $otherLesson = Lesson::factory()->published()->for(Unit::factory()->published()->for($otherCourse))->create();
+    $draftLesson = Lesson::factory()->for($unit)->create();
+
+    $top = User::factory()->create(['name' => 'Học Sinh Giỏi']);
+    $runnerUp = User::factory()->create(['name' => 'Học Sinh Khá']);
+
+    $lessons[0]->scores()->create(['user_id' => $top->id, 'score' => 40, 'percent' => 100]);
+    $otherLesson->scores()->create(['user_id' => $top->id, 'score' => 1200, 'percent' => 100]);
+    $lessons[1]->scores()->create(['user_id' => $runnerUp->id, 'score' => 60, 'percent' => 100]);
+    $draftLesson->scores()->create(['user_id' => $runnerUp->id, 'score' => 9000, 'percent' => 100]);
+
     $this->get(route('home'))
         ->assertSee('id="leaderboard" hidden', false)
         ->assertSee('Top 10 học sinh điểm cao nhất')
-        ->assertSeeInOrder(['Nhà vua', 'Nguyễn Minh Anh', '1.280', 'Thái sư', 'Trần Gia Bảo']);
+        ->assertSeeInOrder(['Nhà vua', 'Học Sinh Giỏi', '1.240', 'Thái sư', 'Học Sinh Khá', '60'])
+        ->assertDontSee('9.000');
+});
+
+it('shows an empty leaderboard when nobody has scored', function () {
+    $this->get(route('home'))->assertSee('Chưa có học sinh nào ghi điểm.');
+});
+
+it('shows 5 random flashcards with a picture as buttons that play their audio', function () {
+    Flashcard::factory()->count(7)->create(['image' => 'flashcards/images/card.png', 'audio' => 'flashcards/audio/card.mp3']);
+    Flashcard::factory()->create(['title' => 'No Picture Card', 'image' => null]);
+
+    $html = $this->get(route('home'))->getContent();
+
+    expect(substr_count($html, 'data-flashcard-image'))->toBe(5)
+        ->and($html)->toContain('data-src="'.Storage::disk('public')->url('flashcards/audio/card.mp3').'"')
+        ->and($html)->not->toContain('No Picture Card');
+});
+
+it('speaks a flashcard without audio and uses the picture of its word', function () {
+    $word = Word::factory()->create(['word' => 'giraffe', 'image' => 'words/giraffe.png']);
+    Flashcard::factory()->create(['title' => null, 'word_id' => $word->id, 'image' => null, 'audio' => null]);
+
+    $this->get(route('home'))
+        ->assertSee('data-text="giraffe"', false)
+        ->assertSee(Storage::disk('public')->url('words/giraffe.png'), false)
+        ->assertDontSee('data-src', false);
+});
+
+it('hides the flashcards when there are none', function () {
+    $this->get(route('home'))->assertDontSee('data-flashcard-image', false);
 });

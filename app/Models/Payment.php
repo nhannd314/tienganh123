@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Money a user paid through a payment provider, for a subscription or a token top-up (`payable`).
+ * Money a user paid through a payment provider, for a subscription (`payable`).
  */
 #[Fillable(['user_id', 'payable_type', 'payable_id', 'amount', 'currency', 'provider', 'provider_reference', 'status', 'paid_at', 'meta'])]
 class Payment extends Model
@@ -57,10 +57,10 @@ class Payment extends Model
     }
 
     /**
-     * Record that the payment went through and give the user the month it bought.
+     * Record that the payment went through and give the user the course months it bought.
      *
-     * The month starts now, or when the current subscription to the same course or plan ends, so renewing early loses
-     * nothing. Returns the new subscription, or null when the payment was already paid or bought nothing subscribable.
+     * The months it paid for (meta `months`, one by default) start now, or when the current subscription to the same
+     * course ends, so renewing early loses nothing. Returns the new subscription, or null when the payment was already paid or bought nothing subscribable.
      *
      * Once committed, PaymentPaid tells the payment page; a broadcast that fails (Reverb down) is only reported, as the
      * payment itself went through.
@@ -84,11 +84,13 @@ class Payment extends Model
 
             $subscribable = $payment->payable;
 
-            if (! $subscribable instanceof Course && ! $subscribable instanceof MembershipPlan) {
+            if (! $subscribable instanceof Course) {
                 $this->refresh();
 
                 return null;
             }
+
+            $months = max(1, (int) ($payment->meta['months'] ?? 1));
 
             $currentEnd = $payment->user->subscriptions()
                 ->active()
@@ -102,7 +104,7 @@ class Payment extends Model
                 'subscribable_type' => $subscribable->getMorphClass(),
                 'subscribable_id' => $subscribable->getKey(),
                 'starts_at' => $startsAt,
-                'ends_at' => $startsAt->copy()->addMonth(),
+                'ends_at' => $startsAt->copy()->addMonths($months),
                 'price_paid' => $payment->amount,
             ]);
 
@@ -115,8 +117,9 @@ class Payment extends Model
 
     /**
      * The user's pending bank transfer for the payable at its current price, opened the first time and reused after.
+     * `months` is how many months of a course it buys.
      */
-    public static function pendingBankTransfer(User $user, Model $payable, int $amount): static
+    public static function pendingBankTransfer(User $user, Model $payable, int $amount, int $months = 1): static
     {
         return static::firstOrCreate(
             [
@@ -127,7 +130,7 @@ class Payment extends Model
                 'status' => PaymentStatus::Pending,
                 'amount' => $amount,
             ],
-            ['provider_reference' => static::newTransferReference()],
+            ['provider_reference' => static::newTransferReference(), 'meta' => ['months' => $months]],
         );
     }
 

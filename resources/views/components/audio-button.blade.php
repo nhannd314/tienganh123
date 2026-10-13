@@ -1,7 +1,7 @@
 {{--
     Round "listen" button that speaks `text` with the browser's speech synthesis (see resources/js/app.js).
     Sizes: lg (64px) · sm (40px). Optional `tone` fills it with a role colour. `label` replaces the default
-    "Nghe phát âm {text}", e.g. when the word must stay hidden.
+    "Nghe phát âm {text}", e.g. when the word must stay hidden. `src` plays a recorded audio file instead of speaking the text.
 --}}
 @props([
     'text' => '',
@@ -9,6 +9,7 @@
     'size' => 'lg',
     'lang' => 'en-US',
     'tone' => null,
+    'src' => null,
 ])
 
 @php
@@ -30,6 +31,7 @@
     data-audio-button
     data-text="{{ $text }}"
     data-lang="{{ $lang }}"
+    @if ($src) data-src="{{ $src }}" @endif
     aria-label="{{ $label ?? 'Nghe phát âm '.$text }}"
     {{ $attributes->class([
         'inline-flex flex-none cursor-pointer items-center justify-center rounded-full transition-interactive',

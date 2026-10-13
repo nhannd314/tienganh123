@@ -42,6 +42,16 @@ class CourseFactory extends Factory
     }
 
     /**
+     * Indicate that the course is on sale: its regular (struck-through) monthly price, in VND.
+     */
+    public function onSale(int $regularPrice = 100000): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'regular_price' => $regularPrice,
+        ]);
+    }
+
+    /**
      * Indicate that the course is published.
      */
     public function published(): static

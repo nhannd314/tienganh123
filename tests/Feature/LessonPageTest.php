@@ -152,8 +152,8 @@ it('shows an empty state when the lesson has no new words', function () {
 
 it('shows the flashcards of the lesson flashcard set as cards', function () {
     $flashcardSet = FlashcardSet::factory()->create(['title' => 'Đồ dùng học tập']);
-    Flashcard::factory()->for($flashcardSet)->create(['title' => 'Custom card']);
-    Flashcard::factory()->for($flashcardSet)->create(['title' => null, 'word_id' => Word::factory()->create(['word' => 'zebra'])->id]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Custom card']);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => null, 'word_id' => Word::factory()->create(['word' => 'zebra'])->id]);
     $lesson = publishedLesson();
     $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
 
@@ -253,4 +253,55 @@ it('links the open lessons from the course page and the locked ones to the regis
         ->assertSee(route('lessons.show', [$course, $unit, $free]), false)
         ->assertDontSee(route('lessons.show', [$course, $unit, $locked]), false)
         ->assertSee(route('courses.enroll', $course), false);
+});
+
+it('shows every flashcard set of the lesson as its own section, in order, skipping cards with nothing to show', function () {
+    $lesson = publishedLesson();
+    $second = FlashcardSet::factory()->create(['title' => 'Bộ thứ hai']);
+    $first = FlashcardSet::factory()->create(['title' => 'Bộ thứ nhất']);
+    $lesson->flashcardSets()->attach([$second->id => ['sort_order' => 2], $first->id => ['sort_order' => 1]]);
+    Flashcard::factory()->hasAttached($first, ['sort_order' => 1])->create(['title' => 'Card A']);
+    Flashcard::factory()->hasAttached($second, ['sort_order' => 1])->create(['title' => 'Card B']);
+    Flashcard::factory()->hasAttached($second, ['sort_order' => 1])->create(['title' => null, 'word_id' => null]);
+
+    $response = $this->get(lessonUrl($lesson))->assertSeeInOrder(['Bộ thứ nhất', 'Card A', 'Bộ thứ hai', 'Card B']);
+
+    expect(substr_count($response->getContent(), '<div data-flashcards '))->toBe(2)
+        ->and(substr_count($response->getContent(), '<article'))->toBe(2);
+});
+
+it('shows a flashcard with the title or the linked word, its first meaning, and plays its own audio file', function () {
+    $lesson = publishedLesson();
+    $flashcardSet = FlashcardSet::factory()->create();
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    $word = Word::factory()->create(['word' => 'zebra', 'meanings' => [['pos' => '', 'meaning' => 'ngựa vằn']]]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => '', 'word_id' => $word->id, 'audio' => 'flashcards/audio/zebra.mp3']);
+
+    $this->get(lessonUrl($lesson))
+        ->assertSee('zebra')
+        ->assertSee('ngựa vằn')
+        ->assertDontSee('() ngựa vằn')
+        ->assertSee('data-src="'.Storage::disk('public')->url('flashcards/audio/zebra.mp3').'"', false);
+});
+
+it('plays the example audio file from the listen button, which speaks the sentence when there is no file', function () {
+    $lesson = publishedLesson();
+    attachWords($lesson, [
+        Word::factory()->create(['examples' => [['sentence' => 'I eat an apple.', 'audio' => 'audio/examples/apple.mp3']]]),
+        Word::factory()->create(['examples' => [['sentence' => 'Water is cold.']]]),
+    ]);
+
+    $content = $this->get(lessonUrl($lesson))->assertDontSee('<audio', false)->getContent();
+
+    expect(substr_count($content, 'data-src="'.Storage::disk('public')->url('audio/examples/apple.mp3').'"'))->toBe(1)
+        ->and($content)->toContain('data-text="I eat an apple."', 'data-text="Water is cold."');
+});
+
+it('shows the image placeholder on a flashcard without an image', function () {
+    $lesson = publishedLesson();
+    $flashcardSet = FlashcardSet::factory()->create();
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Plain', 'image' => null]);
+
+    $this->get(lessonUrl($lesson))->assertSee('Plain')->assertSee('icon-image', false)->assertDontSee('border-dashed', false);
 });

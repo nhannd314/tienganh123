@@ -54,7 +54,8 @@ class LessonController extends Controller
             'attachments' => $this->attachments($lesson),
             'progress' => $request->user() ? $lesson->reviewProgress($request->user()) : null,
             'enrollCourse' => $course->needsEnrollmentBy($request->user()) ? $course : null,
-            'topLearners' => $this->sampleTopLearners(),
+            'topLearners' => $this->lessonTopLearners($lesson),
+            'standing' => $request->user() ? $this->lessonStanding($lesson, $request->user()) : null,
         ]);
     }
 

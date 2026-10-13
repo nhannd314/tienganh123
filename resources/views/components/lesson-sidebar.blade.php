@@ -3,8 +3,8 @@
 
     `progress` is the review progress of the signed-in user (see Lesson::reviewProgress), or null for a guest, who gets a
     note that results are only saved after signing in. The slot goes under the progress (the review button on the lesson
-    page). The data-* hooks are updated by resources/js/review.js. `score` and `rank` are placeholders until the way
-    they are worked out is decided.
+    page). The data-* hooks are updated by resources/js/review.js. `score` is the best score of the user in the lesson
+    and `rank` their place among the learners who scored, e.g. "3/12" (see Lesson::standingOf).
 
     `enrollCourse` is the course to offer on top when the visitor has not enrolled in it yet (see Course::needsEnrollmentBy).
 --}}
@@ -12,8 +12,8 @@
     'enrollCourse' => null,
     'progress' => null,
     'topLearners' => [],
-    'rank' => '15/100',
-    'score' => 100,
+    'rank' => '—',
+    'score' => 0,
 ])
 
 @php
@@ -48,7 +48,7 @@
                     </span>
                     <span class="flex flex-col items-center">
                         <span class="type-caption text-fg-muted">Thứ hạng</span>
-                        <span class="type-h2 text-primary-text">{{ $rank }}</span>
+                        <span data-rank class="type-h2 text-primary-text">{{ $rank }}</span>
                     </span>
                 </div>
             </div>
@@ -70,6 +70,19 @@
                 @endforeach
 
                 <div class="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-3">
+                    <span class="flex justify-center">
+                        <x-icon name="mic" size="lg" class="text-accent-text" />
+                    </span>
+                    <div class="grid gap-2">
+                        <div class="flex justify-between gap-3 type-body text-fg-strong">
+                            <span>Điểm phát âm</span>
+                            <span class="tabular-nums"><span data-pronunciation-text>{{ str_replace('.', ',', (string) $progress['pronunciation']) }}</span>/10</span>
+                        </div>
+                        <x-progress-bar :value="$progress['pronunciation']" :max="10" tone="accent" size="md" label="Điểm phát âm" data-pronunciation-bar />
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-[40px_minmax(0,1fr)] items-center gap-3">
                     <span class="flex justify-center"><x-icon name="timer" size="lg" class="text-secondary" /></span>
                     <div class="flex justify-between gap-3 type-body text-fg-strong">
                         <span>Thời gian làm bài</span>
@@ -82,5 +95,5 @@
         {{ $slot }}
     </div>
 
-    <x-top-learners :learners="$topLearners" />
+    <x-top-learners title="Top 10 bài học này" :learners="$topLearners" />
 </aside>

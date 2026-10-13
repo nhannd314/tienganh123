@@ -32,14 +32,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Displayed discount
+    | Subscription cycles
     |--------------------------------------------------------------------------
     |
-    | The sale shown next to the price of a paid course: the price is shown as this percentage off a struck-through
-    | original price worked out from it. 0 shows the price alone. What the learner pays never changes.
+    | The number of months a course can be bought for, each with the percentage taken off the monthly price times the
+    | months. The first cycle is the one chosen by default.
     |
     */
 
-    'display_discount_percent' => (int) env('PAYMENT_DISPLAY_DISCOUNT_PERCENT', 50),
+    'cycles' => [
+        1 => 0,
+        3 => 5,
+        6 => 10,
+    ],
 
 ];

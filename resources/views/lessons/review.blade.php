@@ -11,9 +11,10 @@
         'autoListen' => $step === 3,
         'mode' => match ($step) {
             4 => 'spell',
-            5 => 'speak',
+            5, 6 => 'speak',
             default => 'choice',
         },
+        'recordHint' => $step === 6 ? 'Bấm micro rồi đọc to từ tiếng Anh của nghĩa này nhé!' : null,
         'pronounceUrl' => $pronounceUrl,
         'pronunciationPassScore' => \App\Http\Controllers\LessonReviewController::PRONUNCIATION_PASS_SCORE,
         'passPercent' => \App\Models\LessonReview::PASS_PERCENT,
@@ -75,7 +76,7 @@
 
                             <x-pill tone="neutral">
                                 <x-icon name="circle-check" class="text-success" />
-                                Đúng: <b data-correct-count class="font-semibold text-fg-score">0</b>
+                                Điểm: <b data-correct-count class="font-semibold text-fg-score">0</b>
                             </x-pill>
                         </div>
                     </div>
@@ -89,7 +90,7 @@
                         <div data-prompt class="flex justify-center">
                             @if (in_array($step, [1, 5], true))
                                 <x-word-prompt :word="$firstQuestion['prompt']" :phonetic="$firstQuestion['phonetic']" :replay="false" />
-                            @elseif (in_array($step, [2, 4], true))
+                            @elseif (in_array($step, [2, 4, 6], true))
                                 {{-- The meaning to find the word for; no listen button, it would give the answer away --}}
                                 <div data-prompt-word class="type-h1 text-center text-balance whitespace-pre-line text-fg-strong">{{ $firstQuestion['prompt'] }}</div>
                             @else
@@ -101,7 +102,7 @@
                             @endif
                         </div>
 
-                        @if ($step === 5)
+                        @if (in_array($step, [5, 6], true))
                             {{-- Record the word; the server has Azure score it out of 10 --}}
                             <div class="flex flex-col items-center gap-4 text-center">
                                 <button
@@ -112,7 +113,7 @@
                                 >
                                     <x-icon name="mic" size="xl" />
                                 </button>
-                                <p data-record-status class="type-body-lg text-fg-muted">Bấm micro rồi đọc to từ này nhé!</p>
+                                <p data-record-status class="type-body-lg text-fg-muted">{{ $step === 6 ? 'Bấm micro rồi đọc to từ tiếng Anh của nghĩa này nhé!' : 'Bấm micro rồi đọc to từ này nhé!' }}</p>
                                 <p data-record-score hidden class="type-h1"><span data-record-score-value>0</span>/10</p>
                             </div>
                         @elseif ($step === 4)
@@ -158,7 +159,7 @@
         </section>
 
         @if ($firstQuestion)
-            <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" class="flex-[1_1_340px] gap-5" />
+            <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5" />
         @endif
     </div>
 

@@ -8,32 +8,23 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['flashcard_set_id', 'word_id', 'title', 'image', 'audio', 'sort_order'])]
+#[Fillable(['word_id', 'title', 'image', 'audio'])]
 class Flashcard extends Model
 {
     /** @use HasFactory<FlashcardFactory> */
     use HasFactory;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * @return BelongsToMany<FlashcardSet, $this>
      */
-    protected function casts(): array
+    public function flashcardSets(): BelongsToMany
     {
-        return [
-            'sort_order' => 'integer',
-        ];
-    }
-
-    /**
-     * @return BelongsTo<FlashcardSet, $this>
-     */
-    public function flashcardSet(): BelongsTo
-    {
-        return $this->belongsTo(FlashcardSet::class);
+        return $this->belongsToMany(FlashcardSet::class)
+            ->withPivot('sort_order')
+            ->withTimestamps();
     }
 
     /**
@@ -62,5 +53,15 @@ class Flashcard extends Model
     protected function audioUrl(): Attribute
     {
         return Attribute::get(fn (): ?string => $this->audio ? Storage::disk('public')->url($this->audio) : null);
+    }
+
+    /**
+     * The text of the card: its own title, or the word it is linked to when the title is empty.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function displayTitle(): Attribute
+    {
+        return Attribute::get(fn (): ?string => filled($this->title) ? $this->title : $this->word?->word);
     }
 }

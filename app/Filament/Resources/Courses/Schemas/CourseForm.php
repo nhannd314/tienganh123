@@ -51,6 +51,13 @@ class CourseForm
                     ->default(0)
                     ->suffix('₫')
                     ->helperText('Price of one month of this course in VND. 0 makes the course free.'),
+                TextInput::make('regular_price')
+                    ->numeric()
+                    ->integer()
+                    ->minValue(0)
+                    ->suffix('₫')
+                    ->gt('monthly_price')
+                    ->helperText('Regular price of one month, shown struck through. The sale percentage is worked out from it and the monthly price. Leave empty for no sale.'),
                 TextInput::make('unit_count')
                     ->numeric()
                     ->integer()

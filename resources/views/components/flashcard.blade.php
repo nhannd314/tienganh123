@@ -4,40 +4,42 @@
     'phonetic' => null,
     'meaning' => null,
     'image' => null,
+    'audio' => null,
     'tone' => 'primary',
 ])
 
 @php
     $tones = [
-        'primary' => ['box' => 'border-primary-border bg-primary-bg', 'placeholder' => 'border-primary-border', 'word' => 'text-primary-text'],
-        'secondary' => ['box' => 'border-secondary-border bg-secondary-bg', 'placeholder' => 'border-secondary-border', 'word' => 'text-secondary-text'],
-        'accent' => ['box' => 'border-accent-border bg-accent-bg', 'placeholder' => 'border-accent-border', 'word' => 'text-accent-text'],
-        'success' => ['box' => 'border-success-border bg-success-bg', 'placeholder' => 'border-success-border', 'word' => 'text-success-text'],
-        'danger' => ['box' => 'border-danger-border bg-danger-bg', 'placeholder' => 'border-danger-border', 'word' => 'text-danger-text'],
+        'primary' => ['box' => 'border-primary-border bg-primary-bg', 'word' => 'text-primary-text'],
+        'secondary' => ['box' => 'border-secondary-border bg-secondary-bg', 'word' => 'text-secondary-text'],
+        'accent' => ['box' => 'border-accent-border bg-accent-bg', 'word' => 'text-accent-text'],
+        'success' => ['box' => 'border-success-border bg-success-bg', 'word' => 'text-success-text'],
+        'danger' => ['box' => 'border-danger-border bg-danger-bg', 'word' => 'text-danger-text'],
     ];
     $toneConfig = $tones[$tone] ?? $tones['primary'];
 @endphp
 
 <article {{ $attributes->class([
-    'grid min-h-36 grid-cols-[104px_minmax(0,1fr)_auto] items-center gap-4 rounded-lg border p-5',
+    'group/card relative grid min-h-36 grid-cols-[104px_minmax(0,1fr)] items-center gap-4 rounded-lg border p-5',
+    'data-[word-hidden]:grid-cols-1',
     $toneConfig['box'],
 ]) }}>
-    @if ($image)
-        <img src="{{ $image }}" alt="" class="size-26 object-contain">
-    @else
-        <span aria-hidden="true" @class([
-            'flex size-26 items-center justify-center rounded-md border border-dashed bg-surface-card text-fg-disabled',
-            $toneConfig['placeholder'],
-        ])>
-            <x-icon name="image" size="xl" />
-        </span>
-    @endif
+    <div class="flex justify-center">
+        @if ($image)
+            <img data-flashcard-image src="{{ $image }}" alt="" class="size-26 object-contain group-data-[word-hidden]/card:mx-auto group-data-[word-hidden]/card:h-40 group-data-[word-hidden]/card:w-full">
+        @else
+            {{-- Same placeholder as a course card without a thumbnail: a plain tile with the image icon --}}
+            <span data-flashcard-image aria-hidden="true" class="flex size-26 items-center justify-center rounded-md bg-surface-card text-fg-disabled group-data-[word-hidden]/card:h-40 group-data-[word-hidden]/card:w-full">
+                <x-icon name="image" size="xl" />
+            </span>
+        @endif
+    </div>
 
-    <div class="grid gap-1">
+    <div class="grid gap-1 pr-10 group-data-[word-hidden]/card:hidden">
         <h3 lang="en" @class(['type-h2', $toneConfig['word']])>{{ $word }}</h3>
 
         @if ($phonetic)
-            <div class="type-body-lg whitespace-nowrap text-primary">{{ $phonetic }}</div>
+            <div class="type-body-lg font-ipa whitespace-nowrap text-primary" style="font-family: var(--font-ipa)">{{ $phonetic }}</div>
         @endif
 
         @if ($meaning)
@@ -45,7 +47,7 @@
         @endif
     </div>
 
-    <span class="self-start">
-        <x-audio-button size="sm" :text="$word" :tone="$tone" />
+    <span class="absolute right-3 top-3">
+        <x-audio-button size="sm" :text="$word" :src="$audio" lang="en-US" :tone="$tone" />
     </span>
 </article>

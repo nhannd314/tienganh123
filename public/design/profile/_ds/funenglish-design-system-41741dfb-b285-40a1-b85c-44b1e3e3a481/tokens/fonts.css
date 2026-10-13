@@ -1,0 +1,4 @@
+/* Lexend — Google Fonts substitute (closest match to the rounded geometric sans in the reference). Vietnamese subset included. */
+@import url("https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&display=swap&subset=vietnamese");
+/* Icon font: Lucide (CDN substitute for the UI glyphs: search, bell, arrows, bookmark, check) */
+@import url("https://unpkg.com/lucide-static@0.454.0/font/lucide.css");

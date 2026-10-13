@@ -1,5 +1,6 @@
-{{-- "Top 10 học tốt nhất" card. `learners` is a ranked list of ['name' => ..., 'points' => ..., 'progress' => ...]. --}}
+{{-- Top 10 card, titled by `title`. `learners` is a ranked list of ['name' => ..., 'points' => ..., 'progress' => ...]. --}}
 @props([
+    'title' => 'Top 10 học tốt nhất',
     'learners' => [],
 ])
 
@@ -12,7 +13,7 @@
 @endphp
 
 <div {{ $attributes->class(['flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card']) }}>
-    <h2 class="type-h2 text-fg-strong">Top 10 học tốt nhất</h2>
+    <h2 class="type-h2 text-fg-strong">{{ $title }}</h2>
 
     <ol class="flex flex-col gap-4">
         @foreach ($learners as $index => $learner)

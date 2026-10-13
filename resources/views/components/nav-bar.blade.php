@@ -62,12 +62,26 @@
                     <img src="{{ $avatarSrc }}" alt="" class="size-12 rounded-full border-2 border-primary-border object-cover">
                 </button>
             @elseif (auth()->check())
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <x-icon-button icon="log-out" label="Đăng xuất" variant="soft" shape="circle" type="submit" />
-                </form>
+                <a
+                    href="{{ route('profile.show') }}"
+                    aria-label="Hồ sơ của {{ auth()->user()->name }}"
+                    @if (request()->routeIs('profile.*')) aria-current="page" @endif
+                    class="flex size-12 items-center justify-center rounded-full border-2 border-primary-border bg-primary-bg text-xl font-semibold text-primary-text no-underline transition-interactive hover:bg-primary-bg-hover hover:no-underline"
+                >
+                    @if (auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="" class="size-full rounded-full object-cover">
+                    @else
+                        {{ auth()->user()->initial() }}
+                    @endif
+                </a>
             @else
-                <x-icon-button icon="user" label="Đăng nhập" variant="soft" shape="circle" :href="route('login')" />
+                <a
+                    href="{{ route('login') }}"
+                    aria-label="Đăng nhập"
+                    class="flex size-12 items-center justify-center rounded-full border-2 border-primary-border bg-primary-bg text-primary-text no-underline transition-interactive hover:bg-primary-bg-hover hover:text-primary-text hover:no-underline"
+                >
+                    <x-icon name="user" size="lg" />
+                </a>
             @endif
         </div>
     </div>
@@ -130,6 +144,10 @@
             @endforeach
 
             @auth
+                <a href="{{ route('profile.show') }}" class="flex h-12 items-center gap-3 rounded-md px-4 type-label text-fg-body no-underline transition-interactive hover:bg-surface-hover hover:text-fg-body hover:no-underline">
+                    <x-icon name="user" size="md" />
+                    Hồ sơ của bạn
+                </a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button type="submit" class="flex h-12 w-full cursor-pointer items-center gap-3 rounded-md px-4 type-label text-fg-body transition-interactive hover:bg-surface-hover">

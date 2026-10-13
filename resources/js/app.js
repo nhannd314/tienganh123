@@ -1,4 +1,22 @@
-// x-audio-button: speak the word with the browser's speech synthesis.
+// x-audio-button: play the recorded file (data-src) when there is one, otherwise - or when the file cannot be played -
+// speak the text with the browser's speech synthesis (Web Speech API).
+const speak = (text, lang, onEnd) => {
+    if (!('speechSynthesis' in window) || !text) {
+        onEnd();
+
+        return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang || 'en-US';
+    utterance.rate = 0.85;
+    utterance.onend = onEnd;
+    utterance.onerror = onEnd;
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+};
+
 document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-audio-button]');
 
@@ -6,22 +24,33 @@ document.addEventListener('click', (event) => {
         return;
     }
 
+    // Flashcard picture shakes on every click, restarting the animation when clicked repeatedly.
+    const image = (button.closest('article') ?? button).querySelector('[data-flashcard-image]');
+
+    if (image) {
+        image.classList.remove('shake');
+        void image.offsetWidth;
+        image.classList.add('shake');
+    }
+
     const stopPlaying = () => delete button.dataset.playing;
+    const speakText = () => speak(button.dataset.text, button.dataset.lang, stopPlaying);
 
     button.dataset.playing = '';
     setTimeout(stopPlaying, 1200);
 
-    if (!('speechSynthesis' in window)) {
+    if (!button.dataset.src) {
+        speakText();
+
         return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(button.dataset.text ?? '');
-    utterance.lang = button.dataset.lang || 'en-US';
-    utterance.rate = 0.85;
-    utterance.onend = stopPlaying;
-
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+    window.playingAudio = new Audio(button.dataset.src);
+    window.playingAudio.onended = stopPlaying;
+    window.playingAudio.onerror = speakText;
+    window.playingAudio.play().catch(speakText);
 });
 
 /*
@@ -195,8 +224,30 @@ const printElement = (element) => {
 };
 
 document.addEventListener('click', (event) => {
-    if (event.target.closest('[data-print-flashcards]')) {
-        printElement(document.querySelector('[data-flashcards]'));
+    const button = event.target.closest('[data-flashcard-toggle]');
+
+    if (!button) {
+        return;
+    }
+
+    const hidden = button.getAttribute('aria-pressed') !== 'true';
+
+    button.closest('section').querySelectorAll('[data-flashcards] > article').forEach((card) => {
+        card.toggleAttribute('data-word-hidden', hidden);
+    });
+
+    const label = hidden ? 'Hiện từ' : 'Ẩn từ';
+
+    button.setAttribute('aria-pressed', String(hidden));
+    button.title = button.ariaLabel = label;
+    swapIcon(button, hidden ? 'eye' : 'eye-off');
+});
+
+document.addEventListener('click', (event) => {
+    const printButton = event.target.closest('[data-print-flashcards]');
+
+    if (printButton) {
+        printElement(printButton.closest('section').querySelector('[data-flashcards]'));
     }
 });
 
@@ -330,3 +381,50 @@ document.addEventListener(
     },
     true,
 );
+
+// Profile avatar: crop the chosen photo to a centred square and shrink it before upload (phone photos are huge).
+const AVATAR_SIZE = 512;
+
+document.addEventListener('change', async (event) => {
+    const input = event.target.closest('[data-avatar-input]');
+    const file = input?.files?.[0];
+
+    if (!file || !file.type.startsWith('image/')) {
+        return;
+    }
+
+    try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const side = Math.min(bitmap.width, bitmap.height);
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = Math.min(AVATAR_SIZE, side);
+
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, canvas.width, canvas.height);
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+
+        if (!blob) {
+            return;
+        }
+
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+        input.files = transfer.files;
+
+        const preview = document.querySelector('[data-avatar-preview]');
+
+        if (preview) {
+            preview.innerHTML = '';
+            const image = new Image();
+            image.src = URL.createObjectURL(blob);
+            image.alt = '';
+            image.className = 'size-16 flex-none rounded-full border-2 border-primary-border object-cover';
+            preview.append(image);
+        }
+    } catch {
+        // The browser cannot process the photo; the original is uploaded and the server resizes it.
+    }
+});

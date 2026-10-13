@@ -12,7 +12,7 @@
         <div lang="en" data-prompt-word class="type-word tracking-tight text-fg-strong">{{ $word }}</div>
 
         <div data-prompt-ipa-row @if (blank($phonetic)) hidden @endif class="flex items-center gap-2 type-body-lg text-fg-muted">
-            <span data-prompt-ipa>{{ $phonetic }}</span>
+            <span data-prompt-ipa class="font-ipa">{{ $phonetic }}</span>
             @if ($replay)
                 <x-audio-button size="sm" :text="$word" lang="en-US" />
             @endif

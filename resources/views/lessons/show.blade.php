@@ -99,13 +99,13 @@
                                         <td class="{{ $bodyCell }}">
                                             <div class="flex items-center gap-2 md:gap-3">
                                                 <x-audio-button size="sm" :text="$word->word" lang="en-GB" />
-                                                <span class="max-md:group-not-data-[expanded]/vocab:hidden text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_uk }}</span>
+                                                <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_uk }}</span>
                                             </div>
                                         </td>
                                         <td class="{{ $bodyCell }}">
                                             <div class="flex items-center gap-2 md:gap-3">
                                                 <x-audio-button size="sm" tone="secondary" :text="$word->word" lang="en-US" />
-                                                <span class="max-md:group-not-data-[expanded]/vocab:hidden text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_us }}</span>
+                                                <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_us }}</span>
                                             </div>
                                         </td>
                                         <td class="{{ $bodyCell }} text-[length:calc(var(--text-lg)*var(--vs,1))] text-fg-strong">
@@ -144,11 +144,7 @@
                             @php($word = $example['word'])
                             @php($parts = $example['parts'])
                             <li data-example class="flex flex-wrap items-start gap-4 py-4 first:pt-0 last:pb-0">
-                                @if ($example['audioUrl'])
-                                    <audio controls preload="none" src="{{ $example['audioUrl'] }}" class="h-10 w-48 flex-none"></audio>
-                                @else
-                                    <x-audio-button size="sm" tone="secondary" :text="$example['sentence']" lang="en-US" />
-                                @endif
+                                <x-audio-button size="sm" tone="secondary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" />
 
                                 <div class="min-w-0 flex-1">
                                     <p lang="en" class="type-body-lg text-fg-strong">
@@ -169,23 +165,27 @@
 
             {{-- Flashcards --}}
             @foreach ($flashcardSets as $flashcardSet)
-            @if ($flashcardSet->flashcards->isNotEmpty())
+            @php($cards = $flashcardSet->flashcards->filter(fn ($card): bool => filled($card->display_title)))
+            @if ($cards->isNotEmpty())
                 <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
                     <div class="flex items-center justify-between gap-4">
                         <h2 class="type-h2 text-fg-strong">{{ $flashcardSet->title }}</h2>
 
-                        <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
+                        <div class="flex items-center gap-2">
+                            <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-flashcard-toggle />
+                            <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
+                        </div>
                     </div>
 
                     <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
-                        @foreach ($flashcardSet->flashcards as $flashcard)
+                        @foreach ($cards as $flashcard)
                             @php($word = $flashcard->word)
-                            @php($firstMeaning = $word?->meanings[0] ?? null)
                             <x-flashcard
-                                :word="$flashcard->title ?? $word?->word ?? ''"
+                                :word="$flashcard->display_title"
                                 :phonetic="$word?->ipa_us"
-                                :meaning="$firstMeaning ? '('.($firstMeaning['pos'] ?? '').') '.($firstMeaning['meaning'] ?? '') : null"
+                                :meaning="$word?->meaningLabels()[0] ?? null"
                                 :image="$flashcard->image_url ?? $word?->image_url"
+                                :audio="$flashcard->audio_url"
                                 :tone="$flashcardTones[$loop->index % count($flashcardTones)]"
                             />
                         @endforeach
@@ -240,7 +240,7 @@
         </div>
 
         {{-- Sidebar --}}
-        <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners">
+        <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'">
             <x-button size="lg" icon-left="book-open" full-width :href="route('lessons.review.show', [$course, $unit, $lesson, 1])">Ôn tập ngay</x-button>
         </x-lesson-sidebar>
     </div>

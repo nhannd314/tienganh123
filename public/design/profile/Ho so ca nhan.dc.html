@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/layout.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/base.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/styles.css">
+  <script src="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/_ds_bundle.js"></script>
+  <style>
+    body{margin:0;background:var(--surface-page);font-family:var(--font-sans);color:var(--text-body)}
+    a{color:var(--text-link)} a:hover{color:var(--text-link-hover)}
+    nav[aria-label="Chính"] button{font-weight:var(--fw-medium)!important}
+    header a[aria-label^="FunEnglish"] b{font-size:var(--fs-3xl)!important}
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--surface-page);display:flex;flex-direction:column">
+  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.NavBar" items="{{ navItems }}" notifications="{{ 2 }}" hint-size="100%,80px"></x-import>
+  </sc-if>
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <header style="position:sticky;top:0;z-index:20;background:var(--surface-header);border-bottom:var(--border-width-thin) solid var(--border-subtle);box-shadow:var(--shadow-xs)">
+      <div style="height:64px;padding:0 var(--space-4);display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)">
+        <a href="Trang chu.dc.html" style="text-decoration:none;font:var(--fw-bold) var(--fs-2xl)/var(--lh-none) var(--font-sans);letter-spacing:var(--ls-tight);color:var(--primary)">FunEnglish</a>
+        <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.IconButton" icon="user" label="Tài khoản" variant="soft" shape="circle" size="sm" active="{{ true }}" hint-size="40px,40px"></x-import>
+      </div>
+    </header>
+  </sc-if>
+
+  <main style="width:100%;max-width:var(--layout-max-w);margin:0 auto;padding:var(--space-8) var(--space-5);box-sizing:border-box;display:flex;flex-direction:column;gap:var(--space-6)">
+    <h1 style="margin:0;font:var(--type-h1);color:var(--text-strong)">Hồ sơ của bạn</h1>
+
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-6);align-items:flex-start">
+      <aside data-screen-label="Sidebar" style="flex:1 1 360px;max-width:{{ asideMax }};min-width:0;background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-5);box-sizing:border-box;display:flex;flex-direction:column;gap:var(--space-5)">
+        <div style="display:flex;align-items:center;gap:var(--space-4)">
+          <span aria-hidden="true" style="flex:none;width:64px;height:64px;border-radius:var(--radius-pill);display:flex;align-items:center;justify-content:center;background:var(--primary-bg);border:var(--border-width) solid var(--primary-border);font:var(--fw-semibold) var(--fs-2xl)/1 var(--font-sans);color:var(--primary-text)">{{ initials }}</span>
+          <div style="min-width:0;display:flex;flex-direction:column;gap:var(--space-1)">
+            <span style="font:var(--type-h3);color:var(--text-strong)">{{ profile.name }}</span>
+            <span style="display:inline-flex;align-self:flex-start;align-items:center;gap:var(--space-1);height:var(--space-6);padding:0 var(--space-2);border-radius:var(--radius-xs);background:var(--accent-bg);border:var(--border-width-thin) solid var(--accent-border);color:var(--accent-text);font:var(--type-caption);font-weight:var(--fw-semibold);white-space:nowrap"><i class="icon-crown" aria-hidden="true" style="font-size: var(--icon-sm);"></i>Thành viên</span>
+          </div>
+        </div>
+        <nav aria-label="Hồ sơ" style="display:flex;flex-direction:{{ menuDir }};flex-wrap:wrap;gap:var(--space-1);border-top:var(--border-width-thin) solid var(--border-subtle);padding-top:var(--space-4)">
+          <sc-for list="{{ menu }}" as="m" hint-placeholder-count="3">
+            <button type="button" onClick="{{ m.select }}" aria-current="{{ m.current }}" style="display:flex;align-items:center;gap:var(--space-3);height:var(--control-h-lg);padding:0 var(--space-4);border:0;border-radius:var(--radius-md);background:{{ m.bg }};color:{{ m.color }};font:{{ m.font }};text-align:left;cursor:pointer;transition:var(--transition-interactive)" style-hover="background:{{ m.hoverBg }}">
+              <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="{{ m.icon }}" size="lg" color="{{ m.iconColor }}" hint-size="24px,24px"></x-import>
+              <span style="flex:1">{{ m.label }}</span>
+            </button>
+          </sc-for>
+        </nav>
+        <div style="border-top:var(--border-width-thin) solid var(--border-subtle);padding-top:var(--space-4)">
+          <a href="Dang nhap.dc.html" style="display:flex;align-items:center;gap:var(--space-3);height:var(--control-h-lg);padding:0 var(--space-4);border-radius:var(--radius-md);text-decoration:none;font:var(--type-body);color:var(--danger-text)" style-hover="background:var(--danger-bg);color:var(--danger-text)">
+            <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="log-out" size="lg" hint-size="24px,24px"></x-import>
+            Đăng xuất
+          </a>
+        </div>
+      </aside>
+
+      <div style="flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:var(--space-6)">
+
+        <sc-if value="{{ tabAchieve }}" hint-placeholder-val="{{ true }}">
+          <section data-screen-label="Thành tích" style="display:flex;flex-direction:column;gap:var(--space-6)">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:var(--space-4)">
+              <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+                <div style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3)">
+                  <span style="width:48px;height:48px;border-radius:var(--radius-pill);display:flex;align-items:center;justify-content:center;background:{{ s.bg }}">
+                    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="{{ s.icon }}" size="lg" color="{{ s.color }}" hint-size="24px,24px"></x-import>
+                  </span>
+                  <span style="font:var(--fw-semibold) var(--fs-4xl)/var(--lh-tight) var(--font-sans);color:var(--text-strong);font-variant-numeric:tabular-nums">{{ s.value }}</span>
+                  <span style="font:var(--type-body-sm);color:var(--text-muted)">{{ s.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-5)">
+              <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Tiến độ khóa học</h2>
+              <sc-for list="{{ courses }}" as="c" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+                  <div style="display:flex;justify-content:space-between;gap:var(--space-3);align-items:baseline">
+                    <span style="font:var(--type-label-lg);color:var(--text-strong)">{{ c.title }}</span>
+                    <span style="font:var(--type-label);color:{{ c.textColor }};font-variant-numeric:tabular-nums">{{ c.pct }}%</span>
+                  </div>
+                  <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.ProgressBar" value="{{ c.pct }}" tone="{{ c.tone }}" height="var(--space-3)" label="{{ c.title }}" hint-size="100%,12px"></x-import>
+                  <span style="font:var(--type-body-sm);color:var(--text-muted)">{{ c.meta }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-4)">
+              <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Kết quả ôn tập gần đây</h2>
+              <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column">
+                <sc-for list="{{ results }}" as="r" hint-placeholder-count="5">
+                  <li style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:var(--space-4);padding:var(--space-4) 0;border-bottom:var(--border-width-thin) solid var(--border-subtle)">
+                    <div style="min-width:0;display:flex;flex-direction:column;gap:var(--space-1)">
+                      <span style="font:var(--type-label-lg);color:var(--text-strong)">{{ r.lesson }}</span>
+                      <span style="font:var(--type-body-sm);color:var(--text-muted)">{{ r.date }}</span>
+                      <div style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-1)">
+                        <div style="flex:1;min-width:0;max-width:420px">
+                          <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.ProgressBar" value="{{ r.pct }}" tone="{{ r.barTone }}" height="{{ 8 }}" label="{{ r.lesson }}" hint-size="100%,8px"></x-import>
+                        </div>
+                        <span style="flex:none;min-width:40px;font:var(--type-label-sm);color:var(--text-muted)">{{ r.pctText }}</span>
+                      </div>
+                    </div>
+                    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Pill" tone="{{ r.tone }}" icon="{{ r.icon }}" hint-size="80px,40px">{{ r.score }}/10</x-import>
+                  </li>
+                </sc-for>
+              </ul>
+            </div>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{ tabInfo }}" hint-placeholder-val="{{ false }}">
+          <section data-screen-label="Thông tin cá nhân" style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+            <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--space-4)">
+              <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Thông tin cá nhân</h2>
+              <sc-if value="{{ viewMode }}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="outline" size="md" icon-left="pencil" on-click="{{ startEdit }}" hint-size="140px,48px">Chỉnh sửa</x-import>
+              </sc-if>
+            </div>
+            <sc-if value="{{ saved }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Alert" tone="success" title="Đã lưu thông tin" hint-size="100%,64px">Thông tin của bạn đã được cập nhật.</x-import>
+            </sc-if>
+
+            <sc-if value="{{ viewMode }}" hint-placeholder-val="{{ true }}">
+              <dl style="margin:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--space-5) var(--space-6)">
+                <sc-for list="{{ infoRows }}" as="f" hint-placeholder-count="6">
+                  <div style="display:flex;flex-direction:column;gap:var(--space-1);padding-bottom:var(--space-4);border-bottom:var(--border-width-thin) solid var(--border-subtle)">
+                    <dt style="font:var(--type-body-sm);color:var(--text-muted)">{{ f.label }}</dt>
+                    <dd style="margin:0;font:var(--type-body-lg);color:var(--text-strong)">{{ f.value }}</dd>
+                  </div>
+                </sc-for>
+              </dl>
+            </sc-if>
+
+            <sc-if value="{{ editMode }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:var(--space-6)">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--space-5) var(--space-6)">
+                  <sc-for list="{{ editRows }}" as="f" hint-placeholder-count="6">
+                    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.TextInput" label="{{ f.label }}" value="{{ f.value }}" on-change="{{ f.set }}" placeholder="{{ f.placeholder }}" hint-size="100%,84px"></x-import>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:var(--space-3);justify-content:flex-end">
+                  <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="outline" size="md" on-click="{{ cancelEdit }}" hint-size="100px,48px">Hủy</x-import>
+                  <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="primary" size="md" icon-left="check" on-click="{{ saveEdit }}" hint-size="160px,48px">Lưu thay đổi</x-import>
+                </div>
+              </div>
+            </sc-if>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{ tabPurchased }}" hint-placeholder-val="{{ false }}">
+          <section data-screen-label="Khóa học đã mua" style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Khóa học đã mua</h2>
+            <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-3)">
+              <sc-for list="{{ purchased }}" as="p" hint-placeholder-count="3">
+                <li style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-4) var(--space-5);display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-4)">
+                  <div style="flex:1 1 240px;min-width:0;display:flex;flex-direction:column;gap:var(--space-1)">
+                    <span style="font:var(--type-label-lg);color:var(--text-strong)">{{ p.title }}</span>
+                    <span style="font:var(--type-body-sm);color:var(--text-muted)">{{ p.meta }}</span>
+                  </div>
+                  <span style="display:inline-flex;align-items:center;height:var(--space-6);padding:0 var(--space-2);border-radius:var(--radius-xs);background:{{ p.tagBg }};border:var(--border-width-thin) solid {{ p.tagBorder }};color:{{ p.tagColor }};font:var(--type-caption);font-weight:var(--fw-semibold);white-space:nowrap">{{ p.price }}</span>
+                  <a href="Chi tiet khoa hoc.dc.html" style="text-decoration:none">
+                    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="outline" size="sm" icon-right="arrow-right" hint-size="120px,40px">Vào học</x-import>
+                  </a>
+                </li>
+              </sc-for>
+            </ul>
+          </section>
+        </sc-if>
+
+        <sc-if value="{{ tabWallet }}" hint-placeholder-val="{{ false }}">
+          <section data-screen-label="Số dư và nạp tiền" style="display:flex;flex-direction:column;gap:var(--space-6)">
+            <div style="background:var(--primary-bg);border:var(--border-width-thin) solid var(--primary-border);border-radius:var(--radius-lg);padding:var(--space-6);display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--space-4)">
+              <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+                <span style="font:var(--type-label);color:var(--primary-text)">Số dư hiện tại</span>
+                <span style="font:var(--fw-bold) var(--fs-5xl)/var(--lh-tight) var(--font-sans);color:var(--text-strong);font-variant-numeric:tabular-nums">{{ balanceText }}</span>
+              </div>
+              <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="wallet" size="xl" color="var(--primary)" hint-size="32px,32px"></x-import>
+            </div>
+
+            <sc-if value="{{ topupDone }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Alert" tone="success" title="Nạp tiền thành công" hint-size="100%,64px">{{ topupMsg }}</x-import>
+            </sc-if>
+
+            <div style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-6)">
+              <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Nạp tiền</h2>
+              <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+                <span style="font:var(--type-label);color:var(--text-body)">Chọn số tiền</span>
+                <div role="radiogroup" aria-label="Số tiền nạp" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,130px),1fr));gap:var(--space-3)">
+                  <sc-for list="{{ amounts }}" as="a" hint-placeholder-count="4">
+                    <button type="button" role="radio" aria-checked="{{ a.on }}" onClick="{{ a.select }}" style="height:var(--control-h-lg);border-radius:var(--radius-md);border:var(--border-width) solid {{ a.border }};background:{{ a.bg }};color:{{ a.color }};font:var(--type-label-lg);font-variant-numeric:tabular-nums;cursor:pointer;transition:var(--transition-interactive)" style-hover="border-color:{{ a.hoverBorder }}">{{ a.label }}</button>
+                  </sc-for>
+                </div>
+                <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.TextInput" label="Hoặc nhập số tiền khác (đ)" placeholder="Ví dụ: 150000" value="{{ customAmount }}" on-change="{{ setCustom }}" state="{{ customState }}" hint="{{ customHint }}" hint-size="100%,84px"></x-import>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+                <span style="font:var(--type-label);color:var(--text-body)">Phương thức thanh toán</span>
+                <div role="radiogroup" aria-label="Phương thức thanh toán" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:var(--space-3)">
+                  <sc-for list="{{ methods }}" as="p" hint-placeholder-count="3">
+                    <button type="button" role="radio" aria-checked="{{ p.on }}" onClick="{{ p.select }}" style="display:flex;align-items:center;gap:var(--space-3);min-height:var(--control-h-xl);padding:var(--space-3) var(--space-4);border-radius:var(--radius-md);border:var(--border-width) solid {{ p.border }};background:{{ p.bg }};text-align:left;cursor:pointer;transition:var(--transition-interactive)" style-hover="border-color:{{ p.hoverBorder }}">
+                      <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="{{ p.icon }}" size="lg" color="{{ p.iconColor }}" hint-size="24px,24px"></x-import>
+                      <span style="flex:1;font:var(--type-label);color:var(--text-strong)">{{ p.label }}</span>
+                      <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="{{ p.check }}" size="md" color="var(--primary)" hint-size="20px,20px"></x-import>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:var(--space-4);padding-top:var(--space-5);border-top:var(--border-width-thin) solid var(--border-subtle)">
+                <div style="display:flex;flex-direction:column;gap:var(--space-1)">
+                  <span style="font:var(--type-body-sm);color:var(--text-muted)">Số tiền nạp</span>
+                  <span style="font:var(--type-h2);color:var(--text-strong);font-variant-numeric:tabular-nums">{{ chosenText }}</span>
+                </div>
+                <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="primary" size="lg" icon-left="plus" loading="{{ paying }}" disabled="{{ cantPay }}" on-click="{{ pay }}" hint-size="180px,56px">Nạp tiền</x-import>
+              </div>
+            </div>
+
+            <div style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-6);display:flex;flex-direction:column;gap:var(--space-4)">
+              <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Lịch sử giao dịch</h2>
+              <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column">
+                <sc-for list="{{ history }}" as="t" hint-placeholder-count="4">
+                  <li style="display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:var(--space-4);padding:var(--space-4) 0;border-bottom:var(--border-width-thin) solid var(--border-subtle)">
+                    <span style="width:40px;height:40px;border-radius:var(--radius-pill);display:flex;align-items:center;justify-content:center;background:{{ t.bg }}">
+                      <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="{{ t.icon }}" size="md" color="{{ t.iconColor }}" hint-size="20px,20px"></x-import>
+                    </span>
+                    <div style="min-width:0;display:flex;flex-direction:column;gap:var(--space-1)">
+                      <span style="font:var(--type-label);color:var(--text-strong)">{{ t.title }}</span>
+                      <span style="font:var(--type-body-sm);color:var(--text-muted)">{{ t.date }}</span>
+                    </div>
+                    <span style="font:var(--type-label-lg);color:{{ t.amountColor }};font-variant-numeric:tabular-nums;white-space:nowrap">{{ t.amount }}</span>
+                  </li>
+                </sc-for>
+              </ul>
+            </div>
+          </section>
+        </sc-if>
+
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;initialTab&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;achieve&quot;,&quot;info&quot;,&quot;purchased&quot;,&quot;wallet&quot;],&quot;default&quot;:&quot;achieve&quot;,&quot;tsType&quot;:&quot;'achieve' | 'info' | 'wallet'&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: null, isMobile: typeof window !== 'undefined' && window.innerWidth < 1280, narrow: typeof window !== 'undefined' && window.innerWidth < 900,
+    profile: { name: 'Nguyễn Minh An', birthday: '12/05/2017', grade: 'Lớp 3', school: 'Tiểu học Kim Đồng', email: 'phuhuynh.an@gmail.com', phone: '0912 345 678' },
+    editing: false, draft: null, saved: false,
+    balance: 150000, amount: 100000, custom: '', method: 'bank', paying: false, topupDone: null,
+    history: [
+      { title: 'Mua khóa học Hello English', date: '05/10/2026', amount: -199000 },
+      { title: 'Nạp tiền qua Ví MoMo', date: '01/10/2026', amount: 200000 },
+      { title: 'Mua bộ từ vựng Animals', date: '20/09/2026', amount: -51000 },
+      { title: 'Nạp tiền qua chuyển khoản', date: '15/09/2026', amount: 200000 }
+    ]
+  };
+  componentDidMount() {
+    this.onResize = () => { const m = window.innerWidth < 1280, n = window.innerWidth < 900; if (m !== this.state.isMobile || n !== this.state.narrow) this.setState({ isMobile: m, narrow: n }); };
+    window.addEventListener('resize', this.onResize); this.onResize();
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); clearTimeout(this.t); }
+  money(n) { return (n < 0 ? '-' : '') + Math.abs(n).toLocaleString('vi-VN') + ' đ'; }
+  renderVals() {
+    const s = this.state;
+    const tab = s.tab || this.props.initialTab || 'achieve';
+    const p = s.profile;
+    const fields = [['name', 'Họ và tên', ''], ['birthday', 'Ngày sinh', 'dd/mm/yyyy'], ['grade', 'Lớp', 'Ví dụ: Lớp 3'], ['school', 'Trường', ''], ['email', 'Email phụ huynh', 'ten@email.com'], ['phone', 'Số điện thoại phụ huynh', '']];
+    const tones = { primary: 'var(--primary)', secondary: 'var(--secondary)', success: 'var(--success)', accent: 'var(--accent-text)' };
+    const customNum = parseInt(String(s.custom).replace(/\D/g, ''), 10) || 0;
+    const chosen = s.custom ? customNum : s.amount;
+    const customBad = !!s.custom && customNum < 10000;
+    const methodLabel = { bank: 'chuyển khoản', momo: 'Ví MoMo', card: 'thẻ ATM' };
+    return {
+      isDesktop: !s.isMobile, isMobile: s.isMobile,
+      asideMax: s.narrow ? '100%' : '360px', menuDir: s.narrow ? 'row' : 'column',
+      navItems: [
+        { id: 'home', label: 'Trang chủ', icon: 'house' }, { id: 'courses', label: 'Khóa học', icon: 'book-open' },
+        { id: 'vocab', label: 'Từ vựng', icon: 'book-a' }, { id: 'tests', label: 'Bài kiểm tra', icon: 'clipboard-check' }, { id: 'games', label: 'Trò chơi', icon: 'gamepad-2' }
+      ],
+      profile: p, initials: p.name.trim().split(/\s+/).slice(-1)[0].charAt(0).toUpperCase(),
+      menu: [['achieve', 'Thành tích học tập', 'trophy'], ['info', 'Thông tin cá nhân', 'user-round-pen'], ['purchased', 'Khóa học đã mua', 'shopping-bag'], ['wallet', 'Số dư token', 'wallet']].map(([id, label, icon]) => {
+        const on = id === tab;
+        return { label, icon, current: on ? 'page' : undefined, bg: on ? 'var(--primary-bg)' : 'transparent', hoverBg: on ? 'var(--primary-bg)' : 'var(--surface-hover)',
+          color: on ? 'var(--primary-text)' : 'var(--text-body)', iconColor: on ? 'var(--primary)' : 'var(--text-muted)', font: on ? 'var(--type-label-lg)' : 'var(--type-body-lg)',
+          select: () => this.setState({ tab: id, saved: false, topupDone: null }) };
+      }),
+      tabAchieve: tab === 'achieve', tabInfo: tab === 'info', tabWallet: tab === 'wallet', tabPurchased: tab === 'purchased',
+      purchased: [['Tiếng Anh lớp 1', 'Mua ngày 01/09/2026', 0], ['Tiếng Anh lớp 3', 'Mua ngày 15/09/2026', 60000], ['Tiếng Anh lớp 4', 'Mua ngày 02/10/2026', 70000]]
+        .map(([title, meta, price]) => ({ title, meta, price: price ? price.toLocaleString('en-US') + 'đ' : 'Miễn phí', tagBg: price ? 'var(--primary-bg)' : 'var(--success-bg)', tagBorder: price ? 'var(--primary-border)' : 'var(--success-border)', tagColor: price ? 'var(--primary-text)' : 'var(--success-text)' })),
+      stats: [['book-check', 'Bài học đã hoàn thành', '18', 'primary'], ['book-a', 'Từ vựng đã học', '146', 'secondary'], ['star', 'Tổng điểm', '2.350', 'accent']]
+        .map(([icon, label, value, t]) => ({ icon, label, value, bg: 'var(--' + t + '-bg)', color: tones[t] })),
+      courses: [['Hello English – Lớp 3', 72, '13/18 bài học', 'primary'], ['My Family', 40, '4/10 bài học', 'secondary'], ['At school', 0, 'Chưa bắt đầu', 'success']]
+        .map(([title, pct, meta, tone]) => ({ title, pct, meta, tone, textColor: 'var(--' + tone + '-text)' })),
+      results: [['Chào hỏi bạn mới', 9, '10/10/2026'], ['Giới thiệu bản thân', 8, '08/10/2026'], ['Các con số 1–10', 6, '05/10/2026'], ['Màu sắc quanh em', 10, '02/10/2026'], ['Ôn tập Hello', 7, '29/09/2026']]
+        .map(([lesson, score], i) => ({ lesson, score, date: '20 từ', pct: [100, 100, 80, 100, 60][i] ?? 100, pctText: ([100, 100, 80, 100, 60][i] ?? 100) + '%', barTone: ([100, 100, 80, 100, 60][i] ?? 100) === 100 ? 'success' : 'primary', tone: score >= 8 ? 'success' : score >= 6 ? 'warning' : 'danger', icon: score >= 8 ? 'circle-check' : 'star' })),
+      viewMode: !s.editing, editMode: s.editing, saved: s.saved,
+      infoRows: fields.map(([k, label]) => ({ label, value: p[k] || '—' })),
+      editRows: fields.map(([k, label, placeholder]) => ({ label, placeholder, value: (s.draft || p)[k], set: v => this.setState(x => ({ draft: { ...x.draft, [k]: v } })) })),
+      startEdit: () => this.setState({ editing: true, draft: { ...p }, saved: false }),
+      cancelEdit: () => this.setState({ editing: false, draft: null }),
+      saveEdit: () => this.setState(x => ({ profile: { ...x.draft }, editing: false, draft: null, saved: true })),
+      balanceText: this.money(s.balance),
+      amounts: [50000, 100000, 200000, 500000].map(v => {
+        const on = !s.custom && s.amount === v;
+        return { label: v.toLocaleString('vi-VN') + ' đ', on, border: on ? 'var(--primary)' : 'var(--border-default)', hoverBorder: on ? 'var(--primary)' : 'var(--border-hover)',
+          bg: on ? 'var(--primary-bg)' : 'var(--surface-card)', color: on ? 'var(--primary-text)' : 'var(--text-strong)', select: () => this.setState({ amount: v, custom: '', topupDone: null }) };
+      }),
+      customAmount: s.custom, setCustom: v => this.setState({ custom: v.replace(/[^\d.]/g, ''), topupDone: null }),
+      customState: customBad ? 'wrong' : undefined, customHint: customBad ? 'Số tiền nạp tối thiểu là 10.000 đ.' : 'Tối thiểu 10.000 đ.',
+      methods: [['bank', 'Chuyển khoản ngân hàng', 'landmark'], ['momo', 'Ví MoMo', 'smartphone'], ['card', 'Thẻ ATM nội địa', 'credit-card']].map(([id, label, icon]) => {
+        const on = s.method === id;
+        return { label, icon, on, check: on ? 'circle-check' : 'circle', border: on ? 'var(--primary)' : 'var(--border-default)', hoverBorder: on ? 'var(--primary)' : 'var(--border-hover)',
+          bg: on ? 'var(--primary-bg)' : 'var(--surface-card)', iconColor: on ? 'var(--primary)' : 'var(--text-muted)', select: () => this.setState({ method: id }) };
+      }),
+      chosenText: chosen ? this.money(chosen) : '—',
+      cantPay: !chosen || customBad, paying: s.paying,
+      pay: () => {
+        this.setState({ paying: true });
+        this.t = setTimeout(() => this.setState(x => ({
+          paying: false, balance: x.balance + chosen, custom: '',
+          topupDone: 'Đã nạp ' + this.money(chosen) + ' qua ' + methodLabel[x.method] + '.',
+          history: [{ title: 'Nạp tiền qua ' + methodLabel[x.method], date: '12/10/2026', amount: chosen }, ...x.history]
+        })), 1000);
+      },
+      topupDone: !!s.topupDone, topupMsg: s.topupDone,
+      history: s.history.map(t => {
+        const inc = t.amount > 0;
+        return { ...t, amount: (inc ? '+' : '') + this.money(t.amount), icon: inc ? 'arrow-down-left' : 'shopping-bag', bg: inc ? 'var(--success-bg)' : 'var(--secondary-bg)',
+          iconColor: inc ? 'var(--success)' : 'var(--secondary)', amountColor: inc ? 'var(--success-text)' : 'var(--text-strong)' };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

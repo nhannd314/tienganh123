@@ -68,8 +68,7 @@ it('labels the course cards of the home page with their price', function () {
 });
 
 it('shows a paid course card on sale off a struck-through original price, and a free one without', function () {
-    config(['payment.display_discount_percent' => 50]);
-    Course::factory()->published()->priced(100000)->create(['sort_order' => 1]);
+    Course::factory()->published()->priced(100000)->onSale(200000)->create(['sort_order' => 1]);
     Course::factory()->published()->create(['monthly_price' => 0, 'sort_order' => 2]);
 
     $response = $this->get(route('courses.index'))

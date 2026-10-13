@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlug;
+use App\Services\LessonScoreCalculator;
 use Database\Factories\LessonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -38,6 +39,13 @@ class Lesson extends Model
      * Parts of the lesson review, and the most questions one part asks.
      */
     public const REVIEW_PARTS = 6;
+
+    /**
+     * The review parts in which words are read aloud and scored out of 10.
+     *
+     * @var list<int>
+     */
+    public const PRONUNCIATION_STEPS = [5, 6];
 
     public const REVIEW_QUESTIONS_PER_PART = 10;
 
@@ -137,7 +145,11 @@ class Lesson extends Model
      * questions of every part, and the time spent. The answers count once per part, with its latest attempt; a part
      * is completed once an attempt at it passed (see LessonReview::isPassed), even if a later one did not.
      *
-     * @return array{percent: int, completedParts: int, parts: int, done: int, correct: int, wrong: int, total: int, seconds: int}
+     * `pronunciation` is the average of the average scores out of 10 of parts 5 and 6 (their latest attempts), 0 when neither was played.
+     *
+     * `pronunciationWords` is the number of words read in those parts.
+     *
+     * @return array{percent: int, completedParts: int, parts: int, done: int, correct: int, wrong: int, total: int, seconds: int, pronunciation: float, pronunciationWords: int}
      */
     public function reviewProgress(User $user): array
     {
@@ -146,6 +158,10 @@ class Lesson extends Model
         $completedParts = $attempts->filter(fn (LessonReview $review): bool => $review->isPassed())->unique('step')->count();
         $done = (int) $latest->sum('total');
         $correct = (int) $latest->sum('correct');
+
+        $pronunciationScores = $latest
+            ->whereIn('step', self::PRONUNCIATION_STEPS)
+            ->map(fn (LessonReview $review): float => collect(array_column($review->answers ?? [], 'selected'))->map(fn ($score): float => (float) $score)->avg() ?? 0.0);
 
         return [
             'percent' => self::reviewPercent($completedParts),
@@ -156,7 +172,63 @@ class Lesson extends Model
             'wrong' => $done - $correct,
             'total' => $this->reviewWords()->count() * self::REVIEW_PARTS,
             'seconds' => (int) $latest->sum('duration_seconds'),
+            'pronunciation' => $pronunciationScores->isEmpty() ? 0.0 : round($pronunciationScores->avg(), 1),
+            'pronunciationWords' => (int) $latest->whereIn('step', self::PRONUNCIATION_STEPS)->sum('total'),
         ];
+    }
+
+    /**
+     * @return HasMany<LessonScore, $this>
+     */
+    public function scores(): HasMany
+    {
+        return $this->hasMany(LessonScore::class);
+    }
+
+    /**
+     * Work out the score of the user in the lesson (see LessonScoreCalculator) and keep it when it beats their best.
+     */
+    public function recordScore(User $user): LessonScore
+    {
+        $progress = $this->reviewProgress($user);
+        $score = (new LessonScoreCalculator)->calculate($progress)['score'];
+        $best = $this->scores()->firstWhere('user_id', $user->id);
+
+        if ($best === null) {
+            return $this->scores()->create(['user_id' => $user->id, 'score' => $score, 'percent' => $progress['percent']]);
+        }
+
+        if ($score > $best->score) {
+            $best->update(['score' => $score, 'percent' => $progress['percent']]);
+        }
+
+        return $best;
+    }
+
+    /**
+     * The best score of the user in the lesson, their rank among the learners who scored, and how many scored.
+     *
+     * @return array{score: int, rank: int|null, learners: int}
+     */
+    public function standingOf(User $user): array
+    {
+        $mine = $this->scores()->firstWhere('user_id', $user->id);
+
+        return [
+            'score' => $mine?->score ?? 0,
+            'rank' => $mine ? $this->scores()->where('score', '>', $mine->score)->count() + 1 : null,
+            'learners' => $this->scores()->count(),
+        ];
+    }
+
+    /**
+     * The learners with the best scores in the lesson, best first (ties go to whoever scored first).
+     *
+     * @return Collection<int, LessonScore>
+     */
+    public function topScores(int $limit = 10): Collection
+    {
+        return $this->scores()->with('user')->orderByDesc('score')->orderBy('id')->limit($limit)->get();
     }
 
     /**

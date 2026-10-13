@@ -22,21 +22,26 @@ class LessonReviewController extends Controller
 
     /**
      * The parts that have questions so far: 1 (word → meaning), 2 (meaning → word), 3 (heard word → meaning),
-     * 4 (meaning → typed word) and 5 (word → spoken, scored by Azure).
+     * 4 (meaning → typed word), 5 (word → spoken, scored by Azure) and 6 (meaning → spoken word, scored by Azure).
      *
      * @var list<int>
      */
-    private const BUILT_STEPS = [1, 2, 3, 4, 5];
-
-    private const PRONUNCIATION_STEP = 5;
+    private const BUILT_STEPS = [1, 2, 3, 4, 5, 6];
 
     /**
-     * A word counts as read right in part 5 from this score out of 10.
+     * The parts where the word is read into the microphone and scored by Azure.
+     *
+     * @var list<int>
+     */
+    private const PRONUNCIATION_STEPS = [5, 6];
+
+    /**
+     * A word counts as read right in parts 5 and 6 from this score out of 10.
      */
     public const PRONUNCIATION_PASS_SCORE = 7;
 
     /**
-     * How many times a word may be read in part 5; its best score counts.
+     * How many times a word may be read in parts 5 and 6; its best score counts.
      */
     public const PRONUNCIATION_ATTEMPTS = 3;
 
@@ -61,7 +66,7 @@ class LessonReviewController extends Controller
     {
         $this->ensurePublished($course, $unit, $lesson);
 
-        if ($step === self::PRONUNCIATION_STEP) {
+        if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
             session()->forget($this->pronunciationKey($lesson));
         }
 
@@ -79,13 +84,15 @@ class LessonReviewController extends Controller
             'progress' => auth()->user() ? $lesson->reviewProgress(auth()->user()) : null,
             'enrollCourse' => $course->needsEnrollmentBy(auth()->user()) ? $course : null,
             'canSave' => auth()->check(),
-            'topLearners' => $this->sampleTopLearners(),
+            'topLearners' => $this->lessonTopLearners($lesson),
+            'standing' => auth()->user() ? $this->lessonStanding($lesson, auth()->user()) : null,
             'questions' => match ($step) {
                 1 => $this->meaningQuestions($lesson),
                 2 => $this->wordQuestions($lesson),
                 3 => $this->listeningQuestions($lesson),
                 4 => $this->spellingQuestions($lesson),
                 5 => $this->pronunciationQuestions($lesson),
+                6 => $this->recallQuestions($lesson),
                 default => [],
             },
             'isBuilt' => in_array($step, self::BUILT_STEPS, true),
@@ -97,7 +104,7 @@ class LessonReviewController extends Controller
 
     /**
      * Save the finished part. Correctness is recomputed from the stored meanings, never trusted from the browser; in
-     * part 5 it comes from the scores Azure gave this session (see pronounce).
+     * parts 5 and 6 it comes from the scores Azure gave this session (see pronounce).
      */
     public function store(StoreLessonReviewRequest $request, Course $course, Unit $unit, Lesson $lesson, int $step): JsonResponse
     {
@@ -114,7 +121,7 @@ class LessonReviewController extends Controller
         $scores = session($this->pronunciationKey($lesson), []);
 
         $graded = $answers->map(function (array $answer) use ($words, $step, $scores): array {
-            if ($step === self::PRONUNCIATION_STEP) {
+            if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
                 $best = $scores[$answer['word_id']]['best'] ?? 0;
 
                 return ['word_id' => (int) $answer['word_id'], 'selected' => (string) $best, 'correct' => $best >= self::PRONUNCIATION_PASS_SCORE];
@@ -137,19 +144,26 @@ class LessonReviewController extends Controller
             'answers' => $graded->all(),
         ]);
 
-        if ($step === self::PRONUNCIATION_STEP) {
+        if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
             session()->forget($this->pronunciationKey($lesson));
+        }
+
+        $user = $request->user();
+
+        if ($user) {
+            $lesson->recordScore($user);
         }
 
         return response()->json([
             'total' => $review->total,
             'correct' => $review->correct,
-            'progress' => $lesson->reviewProgress($request->user()),
+            'progress' => $lesson->reviewProgress($user),
+            'standing' => $user ? $this->lessonStanding($lesson, $user) : null,
         ], 201);
     }
 
     /**
-     * Score one reading of a word of part 5 with Azure, out of 10. A word may be read PRONUNCIATION_ATTEMPTS times;
+     * Score one reading of a word of part 5 or 6 with Azure, out of 10. A word may be read PRONUNCIATION_ATTEMPTS times;
      * its best score is kept in the session until the part is saved, so the browser never says how well it was read.
      */
     public function pronounce(StorePronunciationRequest $request, Course $course, Unit $unit, Lesson $lesson, AzurePronunciationAssessor $assessor): JsonResponse
@@ -212,7 +226,7 @@ class LessonReviewController extends Controller
     }
 
     /**
-     * Session key of the part 5 scores of the lesson: word id => best score and attempts.
+     * Session key of the part 5 and 6 scores of the lesson: word id => best score and attempts.
      */
     private function pronunciationKey(Lesson $lesson): string
     {
@@ -349,6 +363,22 @@ class LessonReviewController extends Controller
      * @return list<array{id: int, prompt: string, phonetic: null, word: string}>
      */
     private function spellingQuestions(Lesson $lesson): array
+    {
+        return $lesson->reviewWords()->map(fn (Word $word): array => [
+            'id' => $word->id,
+            'prompt' => $word->allMeaningsLabel(),
+            'phonetic' => null,
+            'word' => $word->word,
+        ])->all();
+    }
+
+    /**
+     * Part 6 questions: all the meanings of a word; the English word is read from memory, so it is neither shown nor
+     * played. `word` is revealed once the part is over for that word.
+     *
+     * @return list<array{id: int, prompt: string, phonetic: null, word: string}>
+     */
+    private function recallQuestions(Lesson $lesson): array
     {
         return $lesson->reviewWords()->map(fn (Word $word): array => [
             'id' => $word->id,

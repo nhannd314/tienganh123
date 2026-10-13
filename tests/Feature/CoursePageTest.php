@@ -21,7 +21,7 @@ it('shows a published course with its description and breadcrumbs', function () 
         ->assertSee('Tiếng Anh lớp 3')
         ->assertSee('Học các mẫu câu giao tiếp đơn giản.')
         ->assertSeeInOrder(['Trang chủ', 'Khóa học', 'Tiếng Anh lớp 3'])
-        ->assertSee('Top 10 học tốt nhất');
+        ->assertSee('Top 10 khóa học này');
 });
 
 it('does not show the course thumbnail on the detail page', function () {
@@ -107,23 +107,25 @@ it('shows the price of a paid course above the enroll button', function () {
         ->assertSeeInOrder(['50.000₫', 'Đăng ký khóa học', 'Chỉ với', '50.000₫/tháng', 'Hoàn tiền 100%']);
 });
 
-it('shows the price as a sale off a struck-through original price', function (int $percent, string $original) {
-    config(['payment.display_discount_percent' => $percent]);
-    $course = Course::factory()->published()->priced(100000)->create();
+it('shows the price as a sale off a struck-through regular price', function (int $regular, string $original, int $percent) {
+    $course = Course::factory()->published()->priced(100000)->onSale($regular)->create();
 
     $this->get(route('courses.show', $course))
         ->assertSeeInOrder(["<del class=\"type-body-lg text-fg-muted\">{$original}</del>", "-{$percent}%", '100.000₫', 'Đăng ký khóa học'], false);
 })->with([
-    'half off' => [50, '200.000₫'],
-    'rounded to the thousand' => [30, '143.000₫'],
+    'half off' => [200000, '200.000₫', 50],
+    'rounded percent' => [143000, '143.000₫', 30],
 ]);
 
-it('shows the price alone when the sale is off', function () {
-    config(['payment.display_discount_percent' => 0]);
-    $course = Course::factory()->published()->priced(100000)->create();
+it('shows the price alone when there is no regular price above it', function (?int $regular) {
+    $course = Course::factory()->published()->priced(100000)->create(['regular_price' => $regular]);
 
     $this->get(route('courses.show', $course))->assertSee('100.000₫')->assertDontSee('<del', false);
-});
+})->with([
+    'none' => [null],
+    'equal to the price' => [100000],
+    'below the price' => [80000],
+]);
 
 it('promises no refund on a free course', function () {
     $course = Course::factory()->published()->create(['monthly_price' => 0]);
@@ -187,4 +189,26 @@ it('shows on each lesson the share of parts passed from 80%, as the lesson sideb
     $this->get(route('courses.show', $course))
         ->assertSeeInOrder(['Reviewed lesson', '0%', 'New lesson', '0%'])
         ->assertDontSee('50%');
+});
+
+it('ranks the learners of a course by the total score of its lessons', function () {
+    $course = Course::factory()->published()->create();
+    $unit = Unit::factory()->published()->for($course)->create();
+    [$first, $second] = Lesson::factory()->published()->for($unit)->count(2)->create()->all();
+    $other = Lesson::factory()->published()->create();
+
+    $top = User::factory()->create(['name' => 'Học Sinh Giỏi']);
+    $runnerUp = User::factory()->create(['name' => 'Học Sinh Khá']);
+
+    $first->scores()->create(['user_id' => $top->id, 'score' => 40, 'percent' => 100]);
+    $second->scores()->create(['user_id' => $top->id, 'score' => 30, 'percent' => 50]);
+    $first->scores()->create(['user_id' => $runnerUp->id, 'score' => 60, 'percent' => 100]);
+    $other->scores()->create(['user_id' => $runnerUp->id, 'score' => 500, 'percent' => 100]);
+
+    expect($course->topLearners()->all())->toBe([
+        ['name' => 'Học Sinh Giỏi', 'points' => 70, 'progress' => 75],
+        ['name' => 'Học Sinh Khá', 'points' => 60, 'progress' => 50],
+    ]);
+
+    $this->get(route('courses.show', $course))->assertSeeInOrder(['Top 10 khóa học này', 'Học Sinh Giỏi', '70', 'Học Sinh Khá', '60']);
 });

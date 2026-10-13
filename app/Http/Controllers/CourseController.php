@@ -67,7 +67,7 @@ class CourseController extends Controller
             ])),
             'hasPaidAccess' => $hasPaidAccess,
             'startUrl' => $unitRows[0]['lessons'][0]['url'] ?? null,
-            'topLearners' => $this->sampleTopLearners(),
+            'topLearners' => $course->topLearners()->all(),
         ]);
     }
 

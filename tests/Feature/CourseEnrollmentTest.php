@@ -3,7 +3,6 @@
 use App\Enums\PaymentStatus;
 use App\Models\Course;
 use App\Models\Lesson;
-use App\Models\MembershipPlan;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\Unit;
@@ -41,7 +40,7 @@ it('shows the amount, bank, account, QR code and transfer content to a signed-in
     $course = paidCourse(50000);
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get(route('courses.enroll', $course))
+    $response = $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 1]))
         ->assertOk()
         ->assertSee('Đăng ký khóa học')
         ->assertSee('Tiếng Anh lớp 3')
@@ -64,9 +63,9 @@ it('opens one pending payment for the user and the course and reuses it on every
     $course = paidCourse();
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('courses.enroll', $course));
+    $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 1]));
     $first = Payment::sole();
-    $this->get(route('courses.enroll', $course))->assertSee($first->provider_reference);
+    $this->get(route('courses.enroll', [$course, 'months' => 1]))->assertSee($first->provider_reference);
 
     expect(Payment::count())->toBe(1)
         ->and($first)
@@ -82,11 +81,11 @@ it('opens a new payment when the price has changed, and one per user', function 
     $course = paidCourse(50000);
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('courses.enroll', $course));
+    $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 1]));
     $course->update(['monthly_price' => 70000]);
-    $this->get(route('courses.enroll', $course))->assertSee('70.000₫');
+    $this->get(route('courses.enroll', [$course, 'months' => 1]))->assertSee('70.000₫');
 
-    $this->actingAs(User::factory()->create())->get(route('courses.enroll', $course));
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', [$course, 'months' => 1]));
 
     expect(Payment::count())->toBe(3)
         ->and(Payment::pluck('provider_reference')->unique())->toHaveCount(3);
@@ -97,7 +96,7 @@ it('does not reuse a payment that is already paid', function () {
     $user = User::factory()->create();
     Payment::factory()->paid()->create(['user_id' => $user->id, 'payable_type' => $course->getMorphClass(), 'payable_id' => $course->id, 'amount' => 50000, 'provider' => 'bank_transfer']);
 
-    $this->actingAs($user)->get(route('courses.enroll', $course))->assertOk();
+    $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 1]))->assertOk();
 
     expect(Payment::count())->toBe(2)->and(Payment::where('status', PaymentStatus::Pending)->count())->toBe(1);
 });
@@ -116,25 +115,12 @@ it('keeps an unpublished course not found', function () {
     $this->actingAs(User::factory()->create())->get(route('courses.enroll', $course))->assertNotFound();
 });
 
-it('tells a member the course is already open and opens no payment', function () {
-    $course = paidCourse();
-    $user = User::factory()->create();
-    Subscription::factory()->for($user)->membership()->create();
-
-    $this->actingAs($user)->get(route('courses.enroll', $course))
-        ->assertOk()
-        ->assertSee('Bạn đang là thành viên')
-        ->assertDontSee('0123456789');
-
-    expect(Payment::count())->toBe(0);
-});
-
 it('shows until when a current subscriber is subscribed and still offers to renew', function () {
     $course = paidCourse();
     $user = User::factory()->create();
     Subscription::factory()->for($user)->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id, 'ends_at' => now()->addDays(10)]);
 
-    $this->actingAs($user)->get(route('courses.enroll', $course))
+    $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 1]))
         ->assertSee('Bạn đang học khóa này')
         ->assertSee(now()->addDays(10)->format('d/m/Y'))
         ->assertSee('0123456789');
@@ -144,7 +130,7 @@ it('says so when the bank account is not configured and shows no QR code', funct
     config(['payment.bank' => ['name' => null, 'bin' => null, 'account_number' => null, 'account_name' => null]]);
     $course = paidCourse();
 
-    $this->actingAs(User::factory()->create())->get(route('courses.enroll', $course))
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', [$course, 'months' => 1]))
         ->assertOk()
         ->assertSee('Chưa có thông tin chuyển khoản')
         ->assertDontSee('img.vietqr.io', false);
@@ -153,14 +139,14 @@ it('says so when the bank account is not configured and shows no QR code', funct
 it('shows the transfer details without a QR code while only the account number is set', function () {
     config(['payment.bank' => ['name' => 'ACB', 'bin' => null, 'account_number' => '999', 'account_name' => null]]);
 
-    $this->actingAs(User::factory()->create())->get(route('courses.enroll', paidCourse()))
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', [paidCourse(), 'months' => 1]))
         ->assertSee('ACB')
         ->assertSee('999')
         ->assertDontSee('img.vietqr.io', false);
 });
 
 it('gives the copy buttons what to copy', function () {
-    $this->actingAs(User::factory()->create())->get(route('courses.enroll', paidCourse()))
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', [paidCourse(), 'months' => 1]))
         ->assertSee('data-copy="0123456789"', false)
         ->assertSee('data-copy="50000"', false)
         ->assertSee('data-copy="'.Payment::sole()->provider_reference.'"', false);
@@ -184,7 +170,7 @@ it('offers the registration button on a paid course and none on a free course', 
         ->assertDontSee('Bạn cần');
 });
 
-it('shows Bắt đầu học, linking to the first lesson, instead of the registration button to an admin, a member and a subscriber', function (string $who) {
+it('shows Bắt đầu học, linking to the first lesson, instead of the registration button to an admin and a subscriber', function (string $who) {
     $course = paidCourse();
     $unit = Unit::factory()->published()->for($course)->create(['sort_order' => 1]);
     $first = Lesson::factory()->published()->for($unit)->create(['sort_order' => 1]);
@@ -192,7 +178,6 @@ it('shows Bắt đầu học, linking to the first lesson, instead of the regist
 
     $user = match ($who) {
         'admin' => User::factory()->admin()->create(),
-        'member' => tap(User::factory()->create(), fn (User $user) => Subscription::factory()->for($user)->membership()->create()),
         'subscriber' => tap(User::factory()->create(), fn (User $user) => Subscription::factory()->for($user)->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id])),
     };
 
@@ -201,7 +186,7 @@ it('shows Bắt đầu học, linking to the first lesson, instead of the regist
         ->assertSee(route('lessons.show', [$course, $unit, $first]), false)
         ->assertDontSee('Đăng ký khóa học')
         ->assertDontSee(route('courses.enroll', $course), false);
-})->with(['admin', 'member', 'subscriber']);
+})->with(['admin', 'subscriber']);
 
 it('keeps the registration button for a user without access, even when the subscription expired', function () {
     $course = paidCourse();
@@ -219,47 +204,49 @@ it('shows no button at all to someone with access when the course has no lessons
         ->assertDontSee('Đăng ký khóa học');
 });
 
-it('offers the VIP membership with its price below the course payment', function () {
-    MembershipPlan::factory()->create(['monthly_price' => 100000]);
+it('prices the cycles with 5% off for 3 months and 10% off for 6 months', function () {
+    $course = paidCourse(60000);
 
-    $this->actingAs(User::factory()->create())->get(route('courses.enroll', paidCourse()))
-        ->assertSee('Học tất cả các khóa học không giới hạn')
-        ->assertSee('100.000₫')
-        ->assertSee(route('membership.enroll'), false);
+    expect($course->priceForMonths(1))->toBe(60000)
+        ->and($course->priceForMonths(3))->toBe(171000)
+        ->and($course->priceForMonths(6))->toBe(324000);
 });
 
-it('offers no VIP membership while no plan is active', function () {
-    MembershipPlan::factory()->create(['is_active' => false]);
-
-    $this->actingAs(User::factory()->create())->get(route('courses.enroll', paidCourse()))
-        ->assertDontSee(route('membership.enroll'), false);
-});
-
-it('opens a pending payment for the membership plan and shows the transfer details', function () {
-    $plan = MembershipPlan::factory()->create(['monthly_price' => 100000]);
+it('offers the three cycles with their prices and opens the payment of the chosen one', function () {
+    $course = paidCourse(60000);
     $user = User::factory()->create();
 
-    $this->actingAs($user)->get(route('membership.enroll'))
+    $this->actingAs($user)->get(route('courses.enroll', $course))
         ->assertOk()
-        ->assertSee('Đăng ký thành viên VIP')
-        ->assertSee('0123456789')
-        ->assertSee('100.000₫');
+        ->assertSeeInOrder(['Bước 1: Chọn chu kỳ thanh toán', '1 tháng', '3 tháng', '6 tháng', 'Bước 2: Quét mã QR chuyển khoản', '0123456789'])
+        ->assertSee('171.000₫')->assertSee('-5%')
+        ->assertSee('324.000₫')->assertSee('-10%');
 
-    expect(Payment::sole())
-        ->user_id->toBe($user->id)
-        ->payable_type->toBe($plan->getMorphClass())
-        ->payable_id->toBe($plan->id)
-        ->amount->toBe(100000);
+    expect(Payment::sole()->amount)->toBe(60000);
+
+    $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 6]))->assertOk();
+
+    expect(Payment::count())->toBe(2)
+        ->and(Payment::firstWhere('amount', 324000)->meta['months'])->toBe(6);
 });
 
-it('sends a guest to log in and a current member to the courses from the membership page', function () {
-    MembershipPlan::factory()->create();
+it('falls back to one month for an unknown cycle', function () {
+    $course = paidCourse(60000);
 
-    $this->get(route('membership.enroll'))->assertRedirect(route('login'));
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', [$course, 'months' => 12]))->assertOk();
 
-    $member = User::factory()->create();
-    Subscription::factory()->for($member)->membership()->create();
+    expect(Payment::sole()->amount)->toBe(60000);
+});
 
-    $this->actingAs($member)->get(route('membership.enroll'))->assertRedirect(route('courses.index'));
-    expect(Payment::count())->toBe(0);
+it('gives the months the payment bought once it is paid, after the current subscription', function () {
+    $course = paidCourse(60000);
+    $user = User::factory()->create();
+    $current = Subscription::factory()->for($user)->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id, 'ends_at' => now()->addDays(10)]);
+
+    $this->actingAs($user)->get(route('courses.enroll', [$course, 'months' => 3]));
+    $subscription = Payment::sole()->markAsPaid();
+
+    expect($subscription->price_paid)->toBe(171000)
+        ->and($subscription->starts_at->toDateString())->toBe($current->ends_at->toDateString())
+        ->and($subscription->ends_at->toDateString())->toBe($current->ends_at->copy()->addMonths(3)->toDateString());
 });

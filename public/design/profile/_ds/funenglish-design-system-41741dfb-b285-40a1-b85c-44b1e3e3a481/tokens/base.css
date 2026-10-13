@@ -1,0 +1,9 @@
+html,body{margin:0}
+*{box-sizing:border-box}
+body{font:var(--type-body);color:var(--text-body);background:var(--surface-page);-webkit-font-smoothing:antialiased}
+a{color:var(--text-link);text-decoration:none}a:hover{color:var(--text-link-hover);text-decoration:underline}
+:focus-visible{outline:3px solid var(--focus-color);outline-offset:0}
+input:focus-visible{outline:none}
+::placeholder{color:var(--text-placeholder);opacity:1}
+@keyframes fe-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*:not([data-fe-spin]),*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}[data-fe-spin]{animation-duration:2s!important}}

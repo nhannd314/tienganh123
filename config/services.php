@@ -36,11 +36,22 @@ return [
     ],
 
     'azure_speech' => [
-        // Speech resource used to score pronunciation (lesson review part 5).
+        // Speech resource: scores pronunciation (lesson review part 5) and reads the flashcards aloud (text to speech).
         'key' => env('AZURE_SPEECH_KEY'),
         'region' => env('AZURE_SPEECH_REGION'),
         // Optional: the full speech-to-text URL, for a resource with a custom domain. Defaults to the regional endpoint.
         'endpoint' => env('AZURE_SPEECH_ENDPOINT'),
+        // Voice that reads the flashcards (text to speech): en-US-AnaNeural is a child's voice; en-US-JennyNeural with the
+        // 'cheerful' style is a cheerful adult woman.
+        'voice' => env('AZURE_SPEECH_VOICE', 'en-US-AnaNeural'),
+        'voice_style' => env('AZURE_SPEECH_VOICE_STYLE'),
+    ],
+
+    'openai' => [
+        // Generates flashcard illustrations (AppServicesOpenAiImageGenerator).
+        // Must support a transparent background: gpt-image-2 does not (HTTP 400), gpt-image-1.5 does.
+        'key' => env('OPENAI_API_KEY'),
+        'image_model' => env('OPENAI_IMAGE_MODEL', 'gpt-image-1.5'),
     ],
 
     'oxford_learners' => [

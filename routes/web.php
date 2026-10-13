@@ -9,8 +9,8 @@ use App\Http\Controllers\CourseIndexController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LessonReviewController;
-use App\Http\Controllers\MembershipEnrollmentController;
 use App\Http\Controllers\PaymentStatusController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SepayWebhookController;
 use App\Http\Middleware\EnsureLessonAccess;
 use App\Http\Middleware\VerifySepayWebhook;
@@ -21,7 +21,9 @@ Route::get('/', HomeController::class)->name('home');
 Route::get('/khoa-hoc', CourseIndexController::class)->name('courses.index');
 Route::get('/khoa-hoc/{course:slug}', CourseController::class)->name('courses.show');
 Route::get('/khoa-hoc/{course:slug}/dang-ky', CourseEnrollmentController::class)->middleware('auth')->name('courses.enroll');
-Route::get('/thanh-vien/dang-ky', MembershipEnrollmentController::class)->middleware('auth')->name('membership.enroll');
+Route::get('/ho-so', [ProfileController::class, 'show'])->middleware('auth')->name('profile.show');
+Route::put('/ho-so', [ProfileController::class, 'update'])->middleware('auth')->name('profile.update');
+Route::put('/ho-so/mat-khau', [ProfileController::class, 'updatePassword'])->middleware('auth')->name('profile.password.update');
 Route::get('/thanh-toan/{payment}/trang-thai', PaymentStatusController::class)->middleware('auth')->name('payments.status');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}', LessonController::class)
     ->scopeBindings()

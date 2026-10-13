@@ -102,7 +102,7 @@
                 </ul>
             </div>
 
-            <x-top-learners :learners="$topLearners" />
+            <x-top-learners title="Top 10 khóa học này" :learners="$topLearners" />
         </aside>
     </div>
 

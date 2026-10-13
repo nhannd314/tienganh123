@@ -1,0 +1,27 @@
+:root{
+--font-sans:"Lexend",system-ui,sans-serif;
+--fw-regular:400; /* @kind font */
+--fw-medium:500; /* @kind font */
+--fw-semibold:600; /* @kind font */
+--fw-bold:700; /* @kind font */
+--fs-xs:12px;--fs-sm:14px;--fs-md:16px;--fs-lg:18px;--fs-xl:20px;--fs-2xl:24px;--fs-3xl:30px;--fs-4xl:36px;--fs-5xl:44px;
+--lh-none:1; /* @kind font */
+--lh-tight:1.15; /* @kind font */
+--lh-snug:1.3; /* @kind font */
+--lh-body:1.5; /* @kind font */
+--ls-tight:-0.01em; /* @kind font */
+/* Semantic styles — always built from the primitives above */
+--type-word:var(--fw-bold) var(--fs-5xl)/var(--lh-tight) var(--font-sans);
+--type-h1:var(--fw-semibold) var(--fs-4xl)/var(--lh-tight) var(--font-sans);
+--type-h2:var(--fw-semibold) var(--fs-2xl)/var(--lh-snug) var(--font-sans);
+--type-h3:var(--fw-semibold) var(--fs-xl)/var(--lh-snug) var(--font-sans);
+--type-answer:var(--fw-regular) var(--fs-2xl)/var(--lh-snug) var(--font-sans);
+--type-body-lg:var(--fw-regular) var(--fs-lg)/var(--lh-body) var(--font-sans);
+--type-body:var(--fw-regular) var(--fs-md)/var(--lh-body) var(--font-sans);
+--type-body-sm:var(--fw-regular) var(--fs-sm)/var(--lh-body) var(--font-sans);
+--type-label-xl:var(--fw-medium) var(--fs-xl)/var(--lh-snug) var(--font-sans);
+--type-label-lg:var(--fw-medium) var(--fs-lg)/var(--lh-snug) var(--font-sans);
+--type-label:var(--fw-medium) var(--fs-md)/var(--lh-snug) var(--font-sans);
+--type-label-sm:var(--fw-medium) var(--fs-sm)/var(--lh-snug) var(--font-sans);
+--type-caption:var(--fw-regular) var(--fs-xs)/var(--lh-body) var(--font-sans);
+}

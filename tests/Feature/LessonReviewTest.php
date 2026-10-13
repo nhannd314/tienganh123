@@ -6,6 +6,7 @@ use App\Models\LessonReview;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Word;
+use App\Services\LessonScoreCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
@@ -54,8 +55,8 @@ it('shows part 1 with the lesson words as questions and the restart button hidde
         ->assertSee('Chọn nghĩa đúng cho mỗi từ nhé!')
         ->assertSeeInOrder(['Trang chủ', 'Khóa học', 'Tiếng Anh lớp 3', 'Chào hỏi bạn mới', 'Ôn tập'])
         ->assertSee('data-review', false)
-        ->assertSee('Đúng: <b data-correct-count class="font-semibold text-fg-score">0</b>', false)
-        ->assertDontSee('Điểm:')
+        ->assertSee('Điểm: <b data-correct-count class="font-semibold text-fg-score">0</b>', false)
+        ->assertDontSee('Đúng:')
         ->assertSee('Trả lời nghĩa')
         ->assertSee('Nhớ phát âm')
         ->assertSee('Hoàn thành.')
@@ -275,12 +276,24 @@ it('shows an empty state when the lesson has no words', function () {
         ->assertDontSee('data-review-config', false);
 });
 
-it('shows a coming soon notice for the parts that are not built yet', function (int $step) {
-    $this->get(reviewUrl(reviewLesson(), $step))
+it('shows part 6 with the meanings of each word and a microphone, without listening to or showing the word', function () {
+    config(['services.azure_speech' => ['key' => 'speech-key', 'region' => 'southeastasia', 'endpoint' => null]]);
+    $lesson = reviewLesson(3);
+
+    $response = $this->get(reviewUrl($lesson, 6))
         ->assertOk()
-        ->assertSee('Phần này đang được xây dựng')
-        ->assertDontSee('data-review-config', false);
-})->with([6]);
+        ->assertSee('Nhớ phát âm')
+        ->assertSee('data-record', false)
+        ->assertSee('"mode":"speak"', false)
+        ->assertSee('Bấm micro rồi đọc to từ tiếng Anh của nghĩa này nhé!')
+        ->assertDontSee('data-audio-button', false);
+
+    foreach (reviewQuestions($response->getContent()) as $question) {
+        $word = Word::find($question['id']);
+
+        expect($question)->toMatchArray(['prompt' => $word->allMeaningsLabel(), 'phonetic' => null, 'word' => $word->word]);
+    }
+});
 
 it('returns not found for an unknown part or an unpublished lesson, unit or course', function () {
     $lesson = reviewLesson();
@@ -366,14 +379,24 @@ it('rejects results that do not match the questions of the lesson', function (ar
     [['case' => 'no duration']],
 ]);
 
-it('does not accept results for a part that is not built yet', function () {
+it('grades part 6 from the scores Azure gave this session', function () {
+    config(['services.azure_speech' => ['key' => 'speech-key', 'region' => 'southeastasia', 'endpoint' => null]]);
+    Http::fake(['*' => azureAssessment(85)]);
     signIn();
-    $lesson = reviewLesson(1);
+    $lesson = reviewLesson(2);
+    [$first, $second] = $lesson->words;
 
-    $this->postJson(reviewUrl($lesson, 6, 'lessons.review.store'), [
-        'duration' => 5,
-        'answers' => [['word_id' => $lesson->words->first()->id, 'selected' => 'x']],
-    ])->assertNotFound();
+    $this->get(reviewUrl($lesson, 6));
+    pronounce($lesson, $first)->assertJson(['score' => 9, 'passed' => true]);
+
+    $this->postJson(reviewUrl($lesson, 6, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => $first->id, 'selected' => '0'],
+        ['word_id' => $second->id, 'selected' => '10'],
+    ]])
+        ->assertCreated()
+        ->assertJson(['total' => 2, 'correct' => 1]);
+
+    expect(LessonReview::sole())->step->toBe(6);
 });
 
 it('marks only the parts the signed-in user passed with at least 80% right', function () {
@@ -416,7 +439,7 @@ it('returns the progress over all parts when a part is saved, completing a part 
     $this->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), ['duration' => 100, 'answers' => $answers(3)])
         ->assertCreated()
         ->assertJsonPath('progress', [
-            'percent' => 0, 'completedParts' => 0, 'parts' => 6, 'done' => 5, 'correct' => 3, 'wrong' => 2, 'total' => 30, 'seconds' => 100,
+            'percent' => 0, 'completedParts' => 0, 'parts' => 6, 'done' => 5, 'correct' => 3, 'wrong' => 2, 'total' => 30, 'seconds' => 100, 'pronunciation' => 0, 'pronunciationWords' => 0,
         ]);
 
     $this->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), ['duration' => 70, 'answers' => $answers(4)])
@@ -446,7 +469,7 @@ it('shows the progress of the signed-in user only', function () {
         ->assertSee('data-total-time class="tabular-nums">02:05<', false)
         ->assertSee('aria-label="Hoàn thành 0%"', false)
         ->assertDontSee('<div class="type-body-sm text-fg-body">Hoàn thành</div>', false)
-        ->assertSeeInOrder(['Điểm', '<span data-score class="type-h1 text-accent-text">100</span>', 'Thứ hạng'], false);
+        ->assertSeeInOrder(['Điểm', '<span data-score class="type-h1 text-accent-text">0</span>', 'Thứ hạng', '<span data-rank class="type-h2 text-primary-text">—</span>'], false);
 });
 
 it('plays without saving for a guest and says results need a login', function () {
@@ -647,4 +670,87 @@ it('shows a single US English listen button on part 5', function () {
 
     expect(substr_count($content, 'data-audio-button'))->toBe(1)
         ->and($content)->toContain('data-lang="en-US"');
+});
+
+it('averages the pronunciation scores of parts 5 and 6 in the progress', function () {
+    $user = User::factory()->create();
+    $lesson = Lesson::factory()->create();
+
+    expect($lesson->reviewProgress($user)['pronunciation'])->toBe(0.0);
+
+    foreach ([5 => ['8', '8'], 6 => ['9', '10']] as $step => $scores) {
+        LessonReview::factory()->create([
+            'lesson_id' => $lesson->id,
+            'user_id' => $user->id,
+            'step' => $step,
+            'answers' => collect($scores)->map(fn (string $score, int $index): array => ['word_id' => $index, 'selected' => $score, 'correct' => true])->all(),
+        ]);
+    }
+
+    expect($lesson->reviewProgress($user)['pronunciation'])->toBe(8.8);
+});
+
+it('scores a lesson from right and wrong answers, pronunciation, speed and completion', function () {
+    $calculator = new LessonScoreCalculator;
+    $progress = ['done' => 60, 'correct' => 58, 'wrong' => 2, 'total' => 60, 'seconds' => 300, 'pronunciation' => 9.0, 'pronunciationWords' => 20];
+
+    // 58 right (580) - 2 wrong (8) + 20 words read 2 above the pass score (80) = 652; full speed bonus 20% (130);
+    // 96% of the questions right +10% (65): 847 points, 85 once divided by 10.
+    expect($calculator->calculate($progress))->toBe([
+        'score' => 85, 'correct' => 580, 'penalty' => 8, 'pronunciation' => 80, 'speed' => 130, 'completion' => 65,
+    ]);
+
+    $withCorrect = fn (int $correct): array => $calculator->calculate([...$progress, 'correct' => $correct, 'wrong' => 60 - $correct]);
+
+    expect($calculator->calculate([...$progress, 'seconds' => 900])['speed'])->toBe(0)
+        ->and($calculator->calculate([...$progress, 'pronunciation' => 6.0])['pronunciation'])->toBe(0)
+        ->and($withCorrect(58)['completion'])->toBe(65)
+        ->and($withCorrect(54)['completion'])->toBe(0 + (int) round((540 - 24 + 80) * 0.05))
+        ->and($withCorrect(53)['completion'])->toBe(0)
+        ->and($withCorrect(20)['speed'])->toBe(0)
+        ->and($calculator->calculate(['done' => 0, 'correct' => 0, 'wrong' => 0, 'total' => 60, 'seconds' => 0, 'pronunciation' => 0.0, 'pronunciationWords' => 0])['score'])->toBe(0);
+});
+
+it('never scores below zero and gives longer lessons more points', function () {
+    $calculator = new LessonScoreCalculator;
+    $base = ['total' => 100, 'seconds' => 0, 'pronunciation' => 0.0, 'pronunciationWords' => 0];
+
+    expect($calculator->calculate([...$base, 'done' => 10, 'correct' => 0, 'wrong' => 10])['score'])->toBe(0)
+        ->and($calculator->calculate([...$base, 'done' => 20, 'correct' => 20, 'wrong' => 0])['score'])
+        ->toBeGreaterThan($calculator->calculate([...$base, 'done' => 10, 'correct' => 10, 'wrong' => 0])['score']);
+});
+
+it('keeps the best lesson score of a user and ranks the learners', function () {
+    $lesson = Lesson::factory()->create();
+    $user = User::factory()->create();
+    $other = User::factory()->create(['name' => 'Bạn Cùng Lớp']);
+
+    LessonReview::factory()->create(['lesson_id' => $lesson->id, 'user_id' => $user->id, 'step' => 1, 'total' => 10, 'correct' => 10, 'duration_seconds' => 0]);
+    $first = $lesson->recordScore($user)->score;
+    expect($first)->toBeGreaterThan(0);
+
+    LessonReview::factory()->create(['lesson_id' => $lesson->id, 'user_id' => $user->id, 'step' => 1, 'total' => 10, 'correct' => 2, 'duration_seconds' => 0]);
+    expect($lesson->recordScore($user)->score)->toBe($first)
+        ->and($lesson->scores()->count())->toBe(1);
+
+    $lesson->scores()->create(['user_id' => $other->id, 'score' => $first + 50, 'percent' => 50]);
+
+    expect($lesson->standingOf($user))->toBe(['score' => $first, 'rank' => 2, 'learners' => 2])
+        ->and($lesson->topScores()->first()->user->name)->toBe('Bạn Cùng Lớp')
+        ->and($lesson->standingOf(User::factory()->create()))->toBe(['score' => 0, 'rank' => null, 'learners' => 2]);
+});
+
+it('saves the score when a part is saved and shows the top learners in the sidebar', function () {
+    $lesson = reviewLesson(3);
+    $user = User::factory()->create();
+    $rival = User::factory()->create(['name' => 'Đối Thủ Giỏi']);
+    $lesson->scores()->create(['user_id' => $rival->id, 'score' => 9999, 'percent' => 100]);
+
+    $answers = $lesson->reviewWords()->map(fn (Word $word): array => ['word_id' => $word->id, 'selected' => 'x'])->all();
+
+    $this->actingAs($user)->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), ['duration' => 30, 'answers' => $answers])
+        ->assertCreated()
+        ->assertJsonPath('standing.rank', '2/2');
+
+    $this->actingAs($user)->get(reviewUrl($lesson))->assertSee('Đối Thủ Giỏi')->assertSee('9999');
 });

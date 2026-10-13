@@ -24,8 +24,8 @@ it('groups the admin menu into learning content, vocabulary and pricing, in that
         ->all();
 
     expect($labelsOf('Learning content'))->toBe(['Courses', 'Units', 'Lessons'])
-        ->and($labelsOf('Vocabulary'))->toBe(['Words', 'Flashcard Sets', 'Vocabularies', 'Tags'])
-        ->and($labelsOf('Pricing'))->toBe(['Membership plans', 'Token packages', 'AI services', 'Payments']);
+        ->and($labelsOf('Vocabulary'))->toBe(['Words', 'Flashcards', 'Flashcard Sets', 'Vocabularies', 'Tags'])
+        ->and($labelsOf('Pricing'))->toBe(['Payments']);
 });
 
 it('gives every menu item its own icon', function () {
@@ -34,7 +34,7 @@ it('gives every menu item its own icon', function () {
         ->filter(fn ($item) => $item->getLabel() !== 'Dashboard')
         ->map(fn ($item) => $item->getIcon());
 
-    expect($icons)->toHaveCount(11)
-        ->and($icons->unique())->toHaveCount(11)
+    expect($icons)->toHaveCount(9)
+        ->and($icons->unique())->toHaveCount(9)
         ->and($icons->filter(fn ($icon) => blank($icon)))->toBeEmpty();
 });

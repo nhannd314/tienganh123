@@ -28,7 +28,7 @@ if (root) {
 function startReview(root) {
     const config = JSON.parse(root.querySelector('[data-review-config]').textContent);
     const { questions, submitUrl, csrf, autoAdvanceMs, canSave, optionsLang, passPercent, autoListen, mode } = config;
-    const { pronounceUrl, pronunciationPassScore } = config;
+    const { pronounceUrl, pronunciationPassScore, recordHint } = config;
     const total = questions.length;
 
     const answersBox = root.querySelector('[data-answers]');
@@ -55,14 +55,32 @@ function startReview(root) {
         bar.querySelector('[data-progress-fill]').style.width = `${max > 0 ? (value / max) * 100 : 0}%`;
     };
 
-    // The part being played: its progress bar and its number of right answers.
+    // Speak mode shows the average of the best score of each word read so far, e.g. "8,5"; the other modes the number of right answers.
+    const formatScore = (score) => (Math.round(score * 10) / 10).toString().replace('.', ',');
+    const formatAverage = (scores) => formatScore(scores.length === 0 ? 0 : scores.reduce((sum, score) => sum + score, 0) / scores.length);
+
+    // The part being played: its progress bar and its score.
     const renderPartStats = () => {
         const answered = state.answers.filter(Boolean);
-        const correct = answered.filter((answer) => answer.correct).length;
+        const correct = mode === 'speak' ? formatAverage(answered.map((answer) => answer.score)) : answered.filter((answer) => answer.correct).length;
 
         setFill(root.querySelector('[data-part-bar]'), answered.length, total);
         document.querySelectorAll('[data-correct-count]').forEach((element) => {
             element.textContent = String(correct);
+        });
+    };
+
+    // The sidebar: the best score of the user in the lesson and their rank, as saved on the server.
+    const applyStanding = (standing) => {
+        if (!standing) {
+            return;
+        }
+
+        document.querySelectorAll('[data-score]').forEach((element) => {
+            element.textContent = String(standing.score);
+        });
+        document.querySelectorAll('[data-rank]').forEach((element) => {
+            element.textContent = standing.rank;
         });
     };
 
@@ -78,6 +96,10 @@ function startReview(root) {
             });
             document.querySelectorAll(`[data-stat-bar="${key}"]`).forEach((bar) => setFill(bar, progress[key], progress.total));
         });
+        document.querySelectorAll('[data-pronunciation-text]').forEach((element) => {
+            element.textContent = formatScore(progress.pronunciation);
+        });
+        document.querySelectorAll('[data-pronunciation-bar]').forEach((bar) => setFill(bar, progress.pronunciation, 10));
         document.querySelectorAll('[data-stat-total]').forEach((element) => {
             element.textContent = String(progress.total);
         });
@@ -328,7 +350,7 @@ function startReview(root) {
         recordButton.disabled = false;
         recordButton.setAttribute('aria-label', 'Bấm để đọc');
         recordScore.hidden = true;
-        setRecordStatus('Bấm micro rồi đọc to từ này nhé!');
+        setRecordStatus(recordHint ?? 'Bấm micro rồi đọc to từ này nhé!');
     };
 
     const showScore = (score) => {
@@ -383,7 +405,12 @@ function startReview(root) {
 
             if (passed || attemptsLeft <= 0) {
                 setRecordStatus(passed ? 'Tuyệt vời!' : `Điểm cao nhất của bạn: ${best}/10`);
-                record(question, String(best), passed);
+
+                // Part 6 hides the word while it is read from memory; show it once the word is over.
+                if (question.word) {
+                    setRecordStatus(`${recordStatus.textContent} Từ đúng: ${question.word}`);
+                }
+                record(question, String(best), passed, best);
                 alertBox.replaceChildren(template(passed ? 'alert-success' : 'alert-speak-low'));
 
                 return;
@@ -440,8 +467,8 @@ function startReview(root) {
     };
 
     // Keeps the answer, plays its sound and moves on to the next question or, after the last, to the summary.
-    const record = (question, selected, isCorrect) => {
-        state.answers[state.index] = { wordId: question.id, selected, correct: isCorrect };
+    const record = (question, selected, isCorrect, score = null) => {
+        state.answers[state.index] = { wordId: question.id, selected, correct: isCorrect, score };
 
         (isCorrect ? playCorrect : playWrong)();
         renderPartStats();
@@ -479,6 +506,7 @@ function startReview(root) {
 
             try {
                 applyProgress(body.progress);
+                applyStanding(body.standing);
             } catch {
                 // nothing to retry
             }

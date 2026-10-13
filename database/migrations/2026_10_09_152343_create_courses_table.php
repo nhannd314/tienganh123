@@ -8,6 +8,8 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * `monthly_price` is the price of one month in VND (0 means free); `regular_price` is the crossed-out price, empty when no sale is shown.
      */
     public function up(): void
     {
@@ -20,6 +22,8 @@ return new class extends Migration
             $table->unsignedSmallInteger('lesson_count')->nullable();
             $table->string('level', 50)->nullable();
             $table->string('thumbnail')->nullable();
+            $table->unsignedInteger('monthly_price')->default(0);
+            $table->unsignedInteger('regular_price')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_published')->default(false);
             $table->timestamps();
