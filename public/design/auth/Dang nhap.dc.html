@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/layout.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/base.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/styles.css">
+  <script src="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/_ds_bundle.js"></script>
+  <style>
+    body{margin:0;background:var(--surface-page);font-family:var(--font-sans);color:var(--text-body)}
+    a{color:var(--text-link)} a:hover{color:var(--text-link-hover)}
+    input::placeholder{color:var(--text-placeholder)}
+  </style>
+</helmet>
+
+<main style="min-height:100vh;display:flex;background:var(--surface-page)">
+
+  <section data-screen-label="Form" style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-9) var(--space-5)">
+    <div style="width:100%;max-width:440px;display:flex;flex-direction:column;gap:var(--space-6)">
+      <a href="Trang chu.dc.html" style="align-self:center;text-decoration:none;font:var(--fw-bold) var(--fs-3xl)/var(--lh-tight) var(--font-sans);color:var(--primary-text)">FunEnglish</a>
+
+      <div style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-8) var(--space-7);display:flex;flex-direction:column;gap:var(--space-6)">
+        <div style="display:flex;flex-direction:column;gap:var(--space-2);text-align:center">
+          <h1 style="margin:0;font:var(--type-h1);color:var(--text-strong)">Đăng nhập</h1>
+          <p style="margin:0;font:var(--type-body);color:var(--text-muted)">Chào mừng bạn quay lại FunEnglish!</p>
+        </div>
+
+        <sc-if value="{{ googleTop }}" hint-placeholder-val="{{ true }}">
+          <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="outline" size="lg" full-width="{{ true }}" icon-left="{{ googleIcon }}" loading="{{ googleLoading }}" on-click="{{ onGoogle }}" hint-size="100%,56px">Đăng nhập với Google</x-import>
+          <div role="separator" style="display:flex;align-items:center;gap:var(--space-3);font:var(--type-body-sm);color:var(--text-muted)">
+            <span style="flex:1;height:1px;background:var(--border-subtle)"></span>
+            <span>hoặc đăng nhập bằng email</span>
+            <span style="flex:1;height:1px;background:var(--border-subtle)"></span>
+          </div>
+        </sc-if>
+
+        <form onSubmit="{{ onSubmit }}" noValidate="{{ true }}" style="display:flex;flex-direction:column;gap:var(--space-5)">
+          <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.TextInput" label="Email" placeholder="ten@email.com" value="{{ email }}" on-change="{{ setEmail }}" state="{{ emailState }}" hint="{{ emailHint }}" hint-size="100%,84px"></x-import>
+
+          <div style="display:grid;gap:var(--space-2)">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-3)">
+              <label for="pw" style="font:var(--type-label);color:var(--text-body)">Mật khẩu</label>
+              <a href="#" style="font:var(--type-body-sm)">Quên mật khẩu?</a>
+            </div>
+            <div style="position:relative">
+              <input id="pw" type="{{ pwType }}" value="{{ password }}" onChange="{{ onPw }}" placeholder="Nhập mật khẩu" autoComplete="current-password" aria-invalid="{{ pwInvalid }}" style="box-sizing:border-box;width:100%;height:var(--control-h-lg);padding:0 var(--space-10) 0 var(--space-4);border-radius:var(--radius-md);border:var(--border-width-thin) solid {{ pwBorder }};background:{{ pwBg }};outline:0;font:var(--fw-regular) var(--fs-xl)/var(--lh-snug) var(--font-sans);color:var(--text-strong);transition:var(--transition-interactive)" style-hover="border-color:var(--border-hover)" style-focus="box-shadow:var(--focus-ring)">
+              <button type="button" onClick="{{ togglePw }}" aria-label="{{ pwToggleLabel }}" aria-pressed="{{ pwShown }}" style="position:absolute;right:var(--space-1);top:50%;transform:translateY(-50%);width:var(--control-h-md);height:var(--control-h-md);display:flex;align-items:center;justify-content:center;border:0;border-radius:var(--radius-sm);background:transparent;color:var(--text-muted);cursor:pointer" style-hover="background:var(--primary-bg);color:var(--primary-text)">
+                <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Icon" name="{{ pwIcon }}" size="md" hint-size="20px,20px"></x-import>
+              </button>
+            </div>
+            <sc-if value="{{ pwInvalid }}" hint-placeholder-val="{{ false }}">
+              <span style="font:var(--type-body-sm);color:var(--danger-text)">Bạn chưa nhập mật khẩu.</span>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Checkbox" checked="{{ remember }}" on-change="{{ setRemember }}" label="Ghi nhớ đăng nhập" hint-size="24px,24px"></x-import>
+            <span onClick="{{ toggleRemember }}" style="font:var(--type-body);color:var(--text-body);cursor:pointer;user-select:none">Ghi nhớ đăng nhập</span>
+          </div>
+
+          <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" type="submit" variant="primary" size="lg" full-width="{{ true }}" loading="{{ loading }}" hint-size="100%,56px">Đăng nhập</x-import>
+        </form>
+
+        <sc-if value="{{ googleBottom }}" hint-placeholder-val="{{ false }}">
+          <div role="separator" style="display:flex;align-items:center;gap:var(--space-3);font:var(--type-body-sm);color:var(--text-muted)">
+            <span style="flex:1;height:1px;background:var(--border-subtle)"></span>
+            <span>hoặc</span>
+            <span style="flex:1;height:1px;background:var(--border-subtle)"></span>
+          </div>
+          <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="outline" size="lg" full-width="{{ true }}" icon-left="{{ googleIcon }}" loading="{{ googleLoading }}" on-click="{{ onGoogle }}" hint-size="100%,56px">Đăng nhập với Google</x-import>
+        </sc-if>
+      </div>
+
+      <p style="margin:0;text-align:center;font:var(--type-body);color:var(--text-body)">Chưa có tài khoản? <a href="Dang ky.dc.html" style="font-weight:var(--fw-semibold)">Đăng ký ngay</a></p>
+    </div>
+  </section>
+</main>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;googlePosition&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;top&quot;,&quot;bottom&quot;],&quot;default&quot;:&quot;top&quot;,&quot;tsType&quot;:&quot;'top' | 'bottom'&quot;}}">
+class Component extends DCLogic {
+  state = { email: '', password: '', pwShown: false, remember: true, tried: false, loading: false, googleLoading: false };
+  componentWillUnmount() { clearTimeout(this.t); }
+  go() { this.t = setTimeout(() => { window.location.href = 'Trang chu.dc.html'; }, 900); }
+  renderVals() {
+    const s = this.state;
+    const googleFirst = (this.props.googlePosition ?? 'top') === 'top';
+    const emailOk = /^\S+@\S+\.\S+$/.test(s.email);
+    const emailBad = s.tried && !emailOk;
+    const pwBad = s.tried && !s.password;
+    const g = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>');
+    return {
+      googleTop: googleFirst, googleBottom: !googleFirst,
+      googleIcon: React.createElement('img', { src: g, alt: '', width: 24, height: 24, style: { display: 'block' } }),
+      googleLoading: s.googleLoading, loading: s.loading,
+      onGoogle: () => { this.setState({ googleLoading: true }); this.go(); },
+      email: s.email, setEmail: v => this.setState({ email: v }),
+      emailState: emailBad ? 'wrong' : undefined,
+      emailHint: emailBad ? (s.email ? 'Email chưa đúng định dạng, bạn kiểm tra lại nhé.' : 'Bạn chưa nhập email.') : undefined,
+      password: s.password, onPw: e => this.setState({ password: e.target.value }),
+      pwType: s.pwShown ? 'text' : 'password', pwShown: s.pwShown,
+      pwIcon: s.pwShown ? 'eye-off' : 'eye', pwToggleLabel: s.pwShown ? 'Ẩn mật khẩu' : 'Hiện mật khẩu',
+      togglePw: () => this.setState(x => ({ pwShown: !x.pwShown })),
+      pwInvalid: pwBad, pwBorder: pwBad ? 'var(--danger-border)' : 'var(--border-default)', pwBg: pwBad ? 'var(--danger-bg)' : 'var(--surface-card)',
+      remember: s.remember, setRemember: v => this.setState({ remember: v }), toggleRemember: () => this.setState(x => ({ remember: !x.remember })),
+      onSubmit: e => {
+        e.preventDefault();
+        if (!emailOk || !s.password) { this.setState({ tried: true }); return; }
+        this.setState({ tried: true, loading: true }); this.go();
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

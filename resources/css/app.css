@@ -1,0 +1,341 @@
+/* Lucide icon font, layered so Tailwind utilities (text-*, size) can override its 16px default. */
+@import url('https://unpkg.com/lucide-static@0.454.0/font/lucide.css') layer(base);
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+/*
+ * FunEnglish Design System tokens.
+ * Source: claude.ai/design "FunEnglish Design System" (tokens/*.css).
+ * Spacing keeps Tailwind's 4px scale: design --space-1…10 (4·8·12·16·20·24·32·40·48·64)
+ * map to 1·2·3·4·5·6·8·10·12·16. Control heights 40·48·56·64 map to h-10·12·14·16.
+ */
+@theme {
+    /* Colour — 5 hues + ink, nothing else. */
+    --color-*: initial;
+    --color-white: #ffffff;
+
+    --color-blue-50: #eaf3fe;
+    --color-blue-100: #d6e7ff;
+    --color-blue-200: #b3d3ff;
+    --color-blue-500: #1675fe;
+    --color-blue-600: #0f62e0;
+    --color-blue-700: #0b4db3;
+
+    --color-pink-50: #fff0f7;
+    --color-pink-100: #ffe1ef;
+    --color-pink-200: #fbc7e0;
+    --color-pink-500: #f958a9;
+    --color-pink-600: #cc2a7e;
+    --color-pink-700: #b3226e;
+
+    --color-yellow-50: #fff8e6;
+    --color-yellow-100: #fff0c2;
+    --color-yellow-200: #ffe38a;
+    --color-yellow-500: #ffd23f;
+    --color-yellow-600: #f2b800;
+    --color-yellow-700: #8a6400;
+
+    --color-green-50: #e8f9ee;
+    --color-green-100: #cdf2da;
+    --color-green-200: #a3e6ba;
+    --color-green-500: #25c559;
+    --color-green-600: #14903f;
+    --color-green-700: #11793a;
+
+    --color-red-50: #ffeded;
+    --color-red-100: #ffd6d6;
+    --color-red-200: #ffb3b3;
+    --color-red-500: #fb3f40;
+    --color-red-600: #dc2627;
+    --color-red-700: #a81b1c;
+
+    --color-ink-50: #f6f7fa;
+    --color-ink-100: #eef0f5;
+    --color-ink-200: #e0e4ee;
+    --color-ink-300: #b5b9cc;
+    --color-ink-400: #878ba2;
+    --color-ink-500: #5a5f7d;
+    --color-ink-600: #474c6b;
+    --color-ink-700: #33385a;
+    --color-ink-800: #262a4a;
+    --color-ink-900: #1b1f3b;
+
+    /* Roles — each exposes base · -strong · -bg · -bg-hover · -border · -text. */
+    --color-primary: var(--color-blue-600);
+    --color-primary-strong: var(--color-blue-700);
+    --color-primary-bg: var(--color-blue-50);
+    --color-primary-bg-hover: var(--color-blue-100);
+    --color-primary-border: var(--color-blue-200);
+    --color-primary-text: var(--color-blue-700);
+
+    --color-secondary: var(--color-pink-600);
+    --color-secondary-strong: var(--color-pink-700);
+    --color-secondary-bg: var(--color-pink-50);
+    --color-secondary-bg-hover: var(--color-pink-100);
+    --color-secondary-border: var(--color-pink-200);
+    --color-secondary-text: var(--color-pink-700);
+
+    --color-accent: var(--color-yellow-500);
+    --color-accent-strong: var(--color-yellow-600);
+    --color-accent-bg: var(--color-yellow-50);
+    --color-accent-bg-hover: var(--color-yellow-100);
+    --color-accent-border: var(--color-yellow-200);
+    --color-accent-text: var(--color-yellow-700);
+
+    --color-success: var(--color-green-600);
+    --color-success-strong: var(--color-green-700);
+    --color-success-bg: var(--color-green-50);
+    --color-success-bg-hover: var(--color-green-100);
+    --color-success-border: var(--color-green-200);
+    --color-success-text: var(--color-green-700);
+
+    --color-warning: var(--color-yellow-500);
+    --color-warning-strong: var(--color-yellow-600);
+    --color-warning-bg: var(--color-yellow-50);
+    --color-warning-bg-hover: var(--color-yellow-100);
+    --color-warning-border: var(--color-yellow-200);
+    --color-warning-text: var(--color-yellow-700);
+
+    --color-danger: var(--color-red-600);
+    --color-danger-strong: var(--color-red-700);
+    --color-danger-bg: var(--color-red-50);
+    --color-danger-bg-hover: var(--color-red-100);
+    --color-danger-border: var(--color-red-200);
+    --color-danger-text: var(--color-red-700);
+
+    --color-info: var(--color-blue-600);
+    --color-info-strong: var(--color-blue-700);
+    --color-info-bg: var(--color-blue-50);
+    --color-info-bg-hover: var(--color-blue-100);
+    --color-info-border: var(--color-blue-200);
+    --color-info-text: var(--color-blue-700);
+
+    /* Text (design --text-*) → text-fg-* */
+    --color-fg-strong: var(--color-ink-900);
+    --color-fg-body: var(--color-ink-700);
+    --color-fg-muted: var(--color-ink-500);
+    --color-fg-placeholder: var(--color-ink-500);
+    --color-fg-disabled: var(--color-ink-400);
+    --color-fg-link: var(--color-primary);
+    --color-fg-link-hover: var(--color-primary-strong);
+    --color-fg-score: var(--color-warning-text);
+    --color-on-primary: var(--color-white);
+    --color-on-secondary: var(--color-white);
+    --color-on-accent: var(--color-ink-900);
+    --color-on-danger: var(--color-white);
+
+    /* Surfaces (design --surface-*) → bg-surface-* */
+    --color-surface-page: var(--color-ink-50);
+    --color-surface-card: var(--color-white);
+    --color-surface-header: var(--color-white);
+    --color-surface-hover: var(--color-ink-100);
+    --color-surface-disabled: var(--color-ink-100);
+    --color-surface-track: var(--color-ink-200);
+    --color-surface-quiz: var(--color-accent-bg);
+    --color-surface-selected: var(--color-primary-bg);
+
+    /* Borders (design --border-*) → border-line-* */
+    --color-line-subtle: var(--color-ink-100);
+    --color-line-default: var(--color-ink-200);
+    --color-line-strong: var(--color-ink-400);
+    --color-line-hover: var(--color-ink-300);
+    --color-line-disabled: var(--color-ink-200);
+    --color-line-selected: var(--color-primary);
+
+    --color-focus: var(--color-blue-200);
+
+    /* Type — one family, Lexend. */
+    --font-*: initial;
+    --font-sans: 'Lexend', system-ui, sans-serif;
+
+    --text-*: initial;
+    --text-xs: 12px;
+    --text-sm: 14px;
+    --text-base: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 30px;
+    --text-4xl: 36px;
+    --text-5xl: 44px;
+
+    --leading-none: 1;
+    --leading-tight: 1.15;
+    --leading-snug: 1.3;
+    --leading-body: 1.5;
+
+    --tracking-tight: -0.01em;
+
+    /* Radii — controls sm/md, cards lg, bubbles xl, pills rounded-full. */
+    --radius-*: initial;
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+
+    /* Shadows — one ink tint. Buttons use the edge-* utility instead. */
+    --shadow-*: initial;
+    --shadow-xs: 0 1px 2px rgb(27 31 59 / 0.06);
+    --shadow-card: 0 6px 24px rgb(27 31 59 / 0.08), 0 1px 3px rgb(27 31 59 / 0.05);
+    --shadow-raised: 0 10px 30px rgb(27 31 59 / 0.14);
+    --shadow-halo: 0 0 0 8px var(--color-primary-bg-hover);
+    --shadow-focus: 0 0 0 3px var(--color-focus);
+
+    /* Motion */
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* Layout */
+    --container-layout: 1536px;
+
+    --animate-spin: spin 1s linear infinite;
+}
+
+/* Composite type styles (design --type-*). */
+@utility type-word {
+    font-weight: 700;
+    font-size: var(--text-5xl);
+    line-height: var(--leading-tight);
+}
+
+@utility type-h1 {
+    font-weight: 600;
+    font-size: var(--text-4xl);
+    line-height: var(--leading-tight);
+}
+
+@utility type-h2 {
+    font-weight: 600;
+    font-size: var(--text-2xl);
+    line-height: var(--leading-snug);
+}
+
+@utility type-h3 {
+    font-weight: 600;
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+}
+
+@utility type-answer {
+    font-weight: 400;
+    font-size: var(--text-2xl);
+    line-height: var(--leading-snug);
+}
+
+@utility type-body-lg {
+    font-weight: 400;
+    font-size: var(--text-lg);
+    line-height: var(--leading-body);
+}
+
+@utility type-body {
+    font-weight: 400;
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+}
+
+@utility type-body-sm {
+    font-weight: 400;
+    font-size: var(--text-sm);
+    line-height: var(--leading-body);
+}
+
+@utility type-label-xl {
+    font-weight: 500;
+    font-size: var(--text-xl);
+    line-height: var(--leading-snug);
+}
+
+@utility type-label-lg {
+    font-weight: 500;
+    font-size: var(--text-lg);
+    line-height: var(--leading-snug);
+}
+
+@utility type-label {
+    font-weight: 500;
+    font-size: var(--text-base);
+    line-height: var(--leading-snug);
+}
+
+@utility type-label-sm {
+    font-weight: 500;
+    font-size: var(--text-sm);
+    line-height: var(--leading-snug);
+}
+
+@utility type-caption {
+    font-weight: 400;
+    font-size: var(--text-xs);
+    line-height: var(--leading-body);
+}
+
+/*
+ * Button hard bottom edge: `edge-primary-strong`. Press sinks it with
+ * `active:[--edge:1px]`; the outline variant sets a thinner --edge because its border already shows the colour.
+ */
+@utility edge-* {
+    box-shadow: 0 var(--edge, 4px) 0 --value(--color-*);
+}
+
+@utility transition-interactive {
+    transition-property: background-color, border-color, color, box-shadow, transform, filter;
+    transition-duration: 120ms;
+    transition-timing-function: var(--ease-out);
+}
+
+@layer base {
+    body {
+        @apply bg-surface-page font-sans type-body text-fg-body antialiased;
+    }
+
+    a {
+        color: var(--color-fg-link);
+    }
+
+    a:hover {
+        color: var(--color-fg-link-hover);
+        text-decoration: underline;
+    }
+
+    :focus-visible {
+        outline: 3px solid var(--color-focus);
+        outline-offset: 0;
+    }
+
+    input:focus-visible {
+        outline: none;
+    }
+
+    ::placeholder {
+        color: var(--color-fg-placeholder);
+        opacity: 1;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *:not([data-spin]),
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        [data-spin] {
+            animation-duration: 2s !important;
+        }
+    }
+}
+
+@media print {
+    body[data-print-only] > :not([data-print-root]) {
+        display: none !important;
+    }
+
+    [data-print-root] * {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}
