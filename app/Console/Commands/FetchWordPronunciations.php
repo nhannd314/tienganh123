@@ -37,7 +37,7 @@ class FetchWordPronunciations extends Command
         $this->info("Queued {$queued} word(s).");
 
         if (! $dictionary->isEnabled()) {
-            $this->warn('The dictionary lookup is disabled (OXFORD_LEARNERS_ENABLED), so the queued jobs will do nothing.');
+            $this->warn('The dictionary lookup is disabled (OXFORD_LEARNERS_ENABLED), so the queued jobs will not fetch any IPA.');
         }
 
         return self::SUCCESS;

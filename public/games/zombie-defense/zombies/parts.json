@@ -1,0 +1,138 @@
+[
+    {
+        "width": 188,
+        "height": 286,
+        "parts": {
+            "head": {
+                "file": "zombie-1-head.webp",
+                "x": 37,
+                "y": 0,
+                "width": 98,
+                "height": 103
+            },
+            "body": {
+                "file": "zombie-1-body.webp",
+                "x": 32,
+                "y": 85,
+                "width": 155,
+                "height": 104
+            },
+            "legback": {
+                "file": "zombie-1-legback.webp",
+                "x": 0,
+                "y": 167,
+                "width": 81,
+                "height": 120
+            },
+            "legfront": {
+                "file": "zombie-1-legfront.webp",
+                "x": 73,
+                "y": 167,
+                "width": 87,
+                "height": 120
+            }
+        }
+    },
+    {
+        "width": 188,
+        "height": 286,
+        "parts": {
+            "head": {
+                "file": "zombie-2-head.webp",
+                "x": 35,
+                "y": 0,
+                "width": 99,
+                "height": 103
+            },
+            "body": {
+                "file": "zombie-2-body.webp",
+                "x": 32,
+                "y": 85,
+                "width": 156,
+                "height": 104
+            },
+            "legback": {
+                "file": "zombie-2-legback.webp",
+                "x": 0,
+                "y": 167,
+                "width": 81,
+                "height": 119
+            },
+            "legfront": {
+                "file": "zombie-2-legfront.webp",
+                "x": 74,
+                "y": 167,
+                "width": 87,
+                "height": 119
+            }
+        }
+    },
+    {
+        "width": 187,
+        "height": 287,
+        "parts": {
+            "head": {
+                "file": "zombie-3-head.webp",
+                "x": 36,
+                "y": 0,
+                "width": 98,
+                "height": 103
+            },
+            "body": {
+                "file": "zombie-3-body.webp",
+                "x": 32,
+                "y": 85,
+                "width": 155,
+                "height": 104
+            },
+            "legback": {
+                "file": "zombie-3-legback.webp",
+                "x": 0,
+                "y": 167,
+                "width": 82,
+                "height": 120
+            },
+            "legfront": {
+                "file": "zombie-3-legfront.webp",
+                "x": 74,
+                "y": 167,
+                "width": 86,
+                "height": 120
+            }
+        }
+    },
+    {
+        "width": 187,
+        "height": 284,
+        "parts": {
+            "head": {
+                "file": "zombie-4-head.webp",
+                "x": 36,
+                "y": 0,
+                "width": 97,
+                "height": 103
+            },
+            "body": {
+                "file": "zombie-4-body.webp",
+                "x": 33,
+                "y": 85,
+                "width": 154,
+                "height": 104
+            },
+            "legback": {
+                "file": "zombie-4-legback.webp",
+                "x": 0,
+                "y": 167,
+                "width": 82,
+                "height": 118
+            },
+            "legfront": {
+                "file": "zombie-4-legfront.webp",
+                "x": 75,
+                "y": 167,
+                "width": 86,
+                "height": 117
+            }
+        }
+    }
+]

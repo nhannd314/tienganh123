@@ -3,10 +3,12 @@
 namespace App\Jobs;
 
 use App\Models\Word;
+use App\Services\AzureTextToSpeech;
 use App\Services\OxfordLearnersPronunciation;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class FetchWordPronunciation implements ShouldQueue
 {
@@ -28,10 +30,17 @@ class FetchWordPronunciation implements ShouldQueue
     }
 
     /**
-     * Fetch the IPA and the MP3 of each accent from Oxford Learner's Dictionaries.
-     * Does nothing when the lookup is disabled or the dictionary has no entry for the word.
+     * Fetch the IPA of each accent from Oxford Learner's Dictionaries, and read the word aloud in each accent with Azure.
+     * The IPA is skipped when the lookup is disabled or the dictionary has no entry for the word; the audio, when Azure
+     * is not configured. An accent Azure fails to read is retried.
      */
-    public function handle(OxfordLearnersPronunciation $dictionary): void
+    public function handle(OxfordLearnersPronunciation $dictionary, AzureTextToSpeech $speech): void
+    {
+        $this->fetchIpa($dictionary);
+        $this->generateAudio($speech);
+    }
+
+    private function fetchIpa(OxfordLearnersPronunciation $dictionary): void
     {
         if (! $dictionary->isEnabled()) {
             return;
@@ -43,15 +52,8 @@ class FetchWordPronunciation implements ShouldQueue
             return;
         }
 
-        $disk = Storage::disk('public');
-
         foreach ($pronunciations as $accent => $pronunciation) {
-            $path = "audio/{$accent}/{$this->word->slug}.mp3";
             $ipaColumn = "ipa_{$accent}";
-
-            if ($pronunciation['audio'] !== null && ($this->overwrite || ! $disk->exists($path))) {
-                $disk->put($path, $dictionary->download($pronunciation['audio']));
-            }
 
             if ($pronunciation['ipa'] !== null && ($this->overwrite || blank($this->word->{$ipaColumn}))) {
                 $this->word->{$ipaColumn} = $pronunciation['ipa'];
@@ -59,5 +61,37 @@ class FetchWordPronunciation implements ShouldQueue
         }
 
         $this->word->save();
+    }
+
+    private function generateAudio(AzureTextToSpeech $speech): void
+    {
+        if (! $speech->isConfigured()) {
+            return;
+        }
+
+        $disk = Storage::disk('public');
+        $failed = false;
+
+        foreach (['us', 'uk'] as $accent) {
+            $path = "audio/{$accent}/{$this->word->slug}.mp3";
+
+            if (! $this->overwrite && $disk->exists($path)) {
+                continue;
+            }
+
+            $mp3 = $speech->synthesize($this->word->word, $speech->wordVoice($accent));
+
+            if ($mp3 === null) {
+                $failed = true;
+
+                continue;
+            }
+
+            $disk->put($path, $mp3);
+        }
+
+        if ($failed) {
+            throw new RuntimeException("Azure did not return audio for every accent of the word {$this->word->id}.");
+        }
     }
 }

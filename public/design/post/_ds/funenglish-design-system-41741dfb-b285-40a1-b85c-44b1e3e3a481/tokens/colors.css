@@ -1,0 +1,30 @@
+/* 5 hues + 1 neutral. Every hue uses the same 6 steps:
+   50 bg · 100 hover bg · 200 border · 500 brand/graphic · 600 action fill (white text ≥ 4.5:1) · 700 text & strong edge */
+:root{
+--blue-50:#EAF3FE;--blue-100:#D6E7FF;--blue-200:#B3D3FF;--blue-500:#1675FE;--blue-600:#0F62E0;--blue-700:#0B4DB3;
+--pink-50:#FFF0F7;--pink-100:#FFE1EF;--pink-200:#FBC7E0;--pink-500:#F958A9;--pink-600:#CC2A7E;--pink-700:#B3226E;
+--yellow-50:#FFF8E6;--yellow-100:#FFF0C2;--yellow-200:#FFE38A;--yellow-500:#FFD23F;--yellow-600:#F2B800;--yellow-700:#8A6400;
+--green-50:#E8F9EE;--green-100:#CDF2DA;--green-200:#A3E6BA;--green-500:#25C559;--green-600:#14903F;--green-700:#11793A;
+--red-50:#FFEDED;--red-100:#FFD6D6;--red-200:#FFB3B3;--red-500:#FB3F40;--red-600:#DC2627;--red-700:#A81B1C;
+--white:#FFFFFF;--ink-50:#F6F7FA;--ink-100:#EEF0F5;--ink-200:#E0E4EE;--ink-300:#B5B9CC;--ink-400:#878BA2;--ink-500:#5A5F7D;--ink-600:#474C6B;--ink-700:#33385A;--ink-800:#262A4A;--ink-900:#1B1F3B;
+
+/* Roles — every role exposes the same 6 slots: base · -strong (one step darker: button edge, link hover) · -bg · -bg-hover · -border · -text */
+--primary:var(--blue-600);--primary-strong:var(--blue-700);--primary-bg:var(--blue-50);--primary-bg-hover:var(--blue-100);--primary-border:var(--blue-200);--primary-text:var(--blue-700);
+--secondary:var(--pink-600);--secondary-strong:var(--pink-700);--secondary-bg:var(--pink-50);--secondary-bg-hover:var(--pink-100);--secondary-border:var(--pink-200);--secondary-text:var(--pink-700);
+--accent:var(--yellow-500);--accent-strong:var(--yellow-600);--accent-bg:var(--yellow-50);--accent-bg-hover:var(--yellow-100);--accent-border:var(--yellow-200);--accent-text:var(--yellow-700);
+--success:var(--green-600);--success-strong:var(--green-700);--success-bg:var(--green-50);--success-bg-hover:var(--green-100);--success-border:var(--green-200);--success-text:var(--green-700);
+--warning:var(--yellow-500);--warning-strong:var(--yellow-600);--warning-bg:var(--yellow-50);--warning-bg-hover:var(--yellow-100);--warning-border:var(--yellow-200);--warning-text:var(--yellow-700);
+--danger:var(--red-600);--danger-strong:var(--red-700);--danger-bg:var(--red-50);--danger-bg-hover:var(--red-100);--danger-border:var(--red-200);--danger-text:var(--red-700);
+--info:var(--blue-600);--info-strong:var(--blue-700);--info-bg:var(--blue-50);--info-bg-hover:var(--blue-100);--info-border:var(--blue-200);--info-text:var(--blue-700);
+
+/* Text */
+--text-strong:var(--ink-900);--text-body:var(--ink-700);--text-muted:var(--ink-500);--text-placeholder:var(--ink-500);--text-disabled:var(--ink-400);
+--text-link:var(--primary);--text-link-hover:var(--primary-strong);--text-score:var(--warning-text);
+--text-on-primary:var(--white);--text-on-secondary:var(--white);--text-on-accent:var(--ink-900);--text-on-danger:var(--white);
+/* Surfaces */
+--surface-page:var(--ink-50);--surface-card:var(--white);--surface-header:var(--white);--surface-hover:var(--ink-100);--surface-disabled:var(--ink-100);
+--surface-track:var(--ink-200);--surface-quiz:var(--accent-bg);--surface-selected:var(--primary-bg);
+/* Borders — subtle (dividers) · default (decorative outlines) · strong (form controls, ≥ 3:1) */
+--border-subtle:var(--ink-100);--border-default:var(--ink-200);--border-strong:var(--ink-400);--border-hover:var(--ink-300);--border-disabled:var(--ink-200);--border-selected:var(--primary);
+--focus-color:var(--blue-200);
+}

@@ -41,7 +41,7 @@
             class="min-w-0 flex-[999_1_600px] overflow-hidden rounded-lg bg-surface-card shadow-card"
         >
             <div class="flex flex-col gap-2 px-6 pt-6 sm:px-8">
-                <h1 class="type-h1 text-balance text-fg-strong">Ôn tập {{ $lesson->title }}</h1>
+                <h1 class="type-page-title tracking-tight text-balance text-fg-strong">Ôn tập {{ $lesson->title }}</h1>
                 <p class="type-body-lg text-fg-muted">{{ $stepInfo['hint'] }}</p>
             </div>
 
@@ -159,7 +159,11 @@
         </section>
 
         @if ($firstQuestion)
-            <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5" />
+            <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5">
+                <x-slot:after-progress>
+                    <x-game-promo :href="route('lessons.games', [$course, $unit, $lesson])" />
+                </x-slot:after-progress>
+            </x-lesson-sidebar>
         @endif
     </div>
 

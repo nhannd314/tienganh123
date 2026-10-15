@@ -170,20 +170,21 @@ it('offers the registration button on a paid course and none on a free course', 
         ->assertDontSee('Bạn cần');
 });
 
-it('shows Bắt đầu học, linking to the first lesson, instead of the registration button to an admin and a subscriber', function (string $who) {
+it('shows the course heading instead of the registration button to an admin and a subscriber', function (string $who) {
     $course = paidCourse();
     $unit = Unit::factory()->published()->for($course)->create(['sort_order' => 1]);
-    $first = Lesson::factory()->published()->for($unit)->create(['sort_order' => 1]);
-    Lesson::factory()->published()->for($unit)->create(['sort_order' => 2]);
+    Lesson::factory()->published()->for($unit)->create(['sort_order' => 1]);
 
     $user = match ($who) {
         'admin' => User::factory()->admin()->create(),
         'subscriber' => tap(User::factory()->create(), fn (User $user) => Subscription::factory()->for($user)->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id])),
     };
 
-    $this->actingAs($user)->get(route('courses.show', $course))
-        ->assertSee('Bắt đầu học')
-        ->assertSee(route('lessons.show', [$course, $unit, $first]), false)
+    $response = $this->actingAs($user)->get(route('courses.show', $course));
+
+    $response
+        ->assertSee('Thông tin khóa học')
+        ->assertDontSee('Bắt đầu học')
         ->assertDontSee('Đăng ký khóa học')
         ->assertDontSee(route('courses.enroll', $course), false);
 })->with(['admin', 'subscriber']);
@@ -193,14 +194,15 @@ it('keeps the registration button for a user without access, even when the subsc
     $user = User::factory()->create();
     Subscription::factory()->for($user)->expired()->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id]);
 
-    $this->actingAs($user)->get(route('courses.show', $course))
+    $response = $this->actingAs($user)->get(route('courses.show', $course));
+
+    $response
         ->assertSee('Đăng ký khóa học')
-        ->assertDontSee('Bắt đầu học');
+        ->assertDontSee('Thông tin khóa học');
 });
 
-it('shows no button at all to someone with access when the course has no lessons yet', function () {
+it('shows no registration button to someone with access when the course has no lessons yet', function () {
     $this->actingAs(User::factory()->admin()->create())->get(route('courses.show', paidCourse()))
-        ->assertDontSee('Bắt đầu học')
         ->assertDontSee('Đăng ký khóa học');
 });
 

@@ -7,10 +7,10 @@
     $navItems = [
         ['id' => 'home', 'label' => 'Trang chủ', 'icon' => 'house', 'href' => route('home')],
         ['id' => 'courses', 'label' => 'Khóa học', 'icon' => 'book-open', 'href' => route('courses.index')],
-        ['id' => 'vocab', 'label' => 'Từ vựng', 'icon' => 'book-a', 'href' => '#'],
-        ['id' => 'tests', 'label' => 'Bài kiểm tra', 'icon' => 'clipboard-check', 'href' => '#'],
-        ['id' => 'games', 'label' => 'Trò chơi', 'icon' => 'gamepad-2', 'href' => '#'],
+        ['id' => 'vocab', 'label' => 'Từ vựng', 'icon' => 'book-a', 'href' => route('vocabularies.index')],
+        ['id' => 'flashcards', 'label' => 'Flashcard', 'icon' => 'layers', 'href' => route('flashcards.index')],
+        ['id' => 'posts', 'label' => 'Blog tiếng Anh', 'icon' => 'book-text', 'href' => route('posts.index')],
     ];
 @endphp
 
-<x-nav-bar :items="$navItems" :active="$active" :home-href="route('home')" :notifications="2" />
+<x-nav-bar :items="$navItems" :active="$active" :home-href="route('home')" />

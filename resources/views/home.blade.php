@@ -127,7 +127,6 @@
                             :title="$course->title"
                             :description="$course->description"
                             :thumbnail="$course->thumbnail_url"
-                            thumbnail-fit="contain"
                             :href="route('courses.show', $course)"
                             :price="$course->priceLabel()"
                             :price-tone="$course->isFree() ? 'success' : 'danger'"

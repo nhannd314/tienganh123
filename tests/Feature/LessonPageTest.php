@@ -79,47 +79,51 @@ it('shows the examples of the word itself in the vocabulary table', function () 
 });
 
 it('lists the lesson example sentences in their own card with a toggle for the meaning', function () {
-    $lesson = publishedLesson();
-    attachWords($lesson, [
-        Word::factory()->create(['examples' => [[
-            'sentence' => 'I eat an apple every day.',
-            'translation' => 'Tôi ăn một quả táo mỗi ngày.',
-            'audio' => 'audio/examples/apple.mp3',
-        ]]]),
-        Word::factory()->create(['examples' => [['sentence' => 'Water is cold.']]]),
-        Word::factory()->create(['examples' => null]),
-    ]);
+    $lesson = publishedLesson(['example_sentences' => [
+        ['sentence' => 'I eat an apple every day.', 'translation' => 'Tôi ăn một quả táo mỗi ngày.', 'audio' => 'lessons/sentence-audio/apple.mp3'],
+        ['sentence' => 'Water is cold.', 'translation' => null, 'audio' => null],
+        ['sentence' => '', 'translation' => 'Bỏ qua', 'audio' => null],
+    ]]);
+    attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'A word example, not a lesson sentence.']]]));
 
     $response = $this->get(lessonUrl($lesson))
         ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'I eat an apple every day.', 'Hiện nghĩa', 'Water is cold.'])
         ->assertSee('Tôi ăn một quả táo mỗi ngày.')
-        ->assertSee('audio/examples/apple.mp3', false);
+        ->assertSee('lessons/sentence-audio/apple.mp3', false)
+        ->assertDontSee('Bỏ qua');
 
     expect(substr_count($response->getContent(), 'data-example '))->toBe(2)
         ->and(substr_count($response->getContent(), 'data-example-toggle="'))->toBe(1)
         ->and($response->getContent())->toMatch('/<p data-example-meaning class="invisible/');
 });
 
-it('labels the word of an example sentence with a popover, including a simple inflection', function () {
-    $lesson = publishedLesson();
-    attachWords($lesson, [
-        Word::factory()->create(['word' => 'apple', 'ipa_us' => '/ˈæp.əl/', 'meanings' => [['pos' => 'n', 'meaning' => 'quả táo']], 'examples' => [['sentence' => 'I ate Apples and pineapple.']]]),
-        Word::factory()->create(['word' => 'water', 'examples' => [['sentence' => 'No match here.']]]),
-    ]);
+it('labels the words in backticks of an example sentence with a popover and leaves unknown ones as text', function () {
+    Word::factory()->create(['word' => 'apple', 'ipa_us' => '/ˈæp.əl/', 'meanings' => [['pos' => 'n', 'meaning' => 'quả táo']]]);
+    Word::factory()->create(['word' => 'pear', 'meanings' => [['pos' => 'n', 'meaning' => 'quả lê']]]);
+    $lesson = publishedLesson(['example_sentences' => [
+        ['sentence' => 'I have an `Apple` and a `pear`.'],
+        ['sentence' => 'A `pineapple` is not a word here.'],
+    ]]);
 
-    $this->get(lessonUrl($lesson))
-        ->assertSee('popovertarget="example-word-0"', false)
-        ->assertSeeInOrder(['I ate', '>Apples</button>', 'and pineapple.'], false)
+    $content = $this->get(lessonUrl($lesson))
+        ->assertSee('popovertarget="example-word-0-1"', false)
+        ->assertSee('popovertarget="example-word-0-3"', false)
+        ->assertSee('I have an <span class="inline">', false)
+        ->assertSeeInOrder(['>Apple</button>', '</span> and a <span class="inline">', '>pear</button>', '</span>.'], false)
         ->assertSee('quả táo')
-        ->assertSee('No match here.')
-        ->assertDontSee('example-word-1', false);
+        ->assertSee('A pineapple is not a word here.')
+        ->assertSee('data-text="I have an Apple and a pear."', false)
+        ->getContent();
+
+    expect($content)->not->toContain('`')
+        ->and($content)->not->toContain('example-word-1-');
 });
 
-it('hides the example sentence card when no word has an example sentence', function () {
-    $lesson = publishedLesson();
-    attachWords($lesson, Word::factory()->create(['examples' => null]));
+it('hides the example sentence card when the lesson has no example sentence', function () {
+    $lesson = publishedLesson(['example_sentences' => null]);
+    attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'Water is cold.']]]));
 
-    $this->get(lessonUrl($lesson))->assertDontSee('data-example', false);
+    $this->get(lessonUrl($lesson))->assertDontSee('data-example ', false);
 });
 
 it('puts the part of speech next to each meaning and offers a full view on mobile', function () {
@@ -285,15 +289,14 @@ it('shows a flashcard with the title or the linked word, its first meaning, and 
 });
 
 it('plays the example audio file from the listen button, which speaks the sentence when there is no file', function () {
-    $lesson = publishedLesson();
-    attachWords($lesson, [
-        Word::factory()->create(['examples' => [['sentence' => 'I eat an apple.', 'audio' => 'audio/examples/apple.mp3']]]),
-        Word::factory()->create(['examples' => [['sentence' => 'Water is cold.']]]),
-    ]);
+    $lesson = publishedLesson(['example_sentences' => [
+        ['sentence' => 'I eat an apple.', 'audio' => 'lessons/sentence-audio/apple.mp3'],
+        ['sentence' => 'Water is cold.'],
+    ]]);
 
     $content = $this->get(lessonUrl($lesson))->assertDontSee('<audio', false)->getContent();
 
-    expect(substr_count($content, 'data-src="'.Storage::disk('public')->url('audio/examples/apple.mp3').'"'))->toBe(1)
+    expect(substr_count($content, 'data-src="'.Storage::disk('public')->url('lessons/sentence-audio/apple.mp3').'"'))->toBe(1)
         ->and($content)->toContain('data-text="I eat an apple."', 'data-text="Water is cold."');
 });
 

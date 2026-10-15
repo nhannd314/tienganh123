@@ -1,5 +1,5 @@
 {{--
-    Button with a hard bottom edge (no blurred shadow). Hover darkens filled variants or tints
+    Button with a hard bottom edge (no blurred shadow). Below 640px every size is one step smaller (sm 36 · md 44 · lg 48). Hover darkens filled variants or tints
     outline/ghost; press sinks the button onto its edge. Renders an <a> when `href` is given.
     Pass `icon` (without a slot) for an icon-only square/circle button — see x-icon-button.
 --}}
@@ -34,9 +34,9 @@
     };
 
     $sizes = [
-        'sm' => ['base' => 'h-10 min-w-10 gap-2 type-label', 'padding' => 'px-4', 'square' => 'w-10', 'radius' => 'rounded-sm', 'icon' => 'md'],
-        'md' => ['base' => 'h-12 min-w-12 gap-2 type-label-lg', 'padding' => 'px-6', 'square' => 'w-12', 'radius' => 'rounded-md', 'icon' => 'md'],
-        'lg' => ['base' => 'h-14 min-w-14 gap-3 type-label-xl', 'padding' => 'px-8', 'square' => 'w-14', 'radius' => 'rounded-md', 'icon' => 'lg'],
+        'sm' => ['base' => 'h-10 min-w-10 gap-2 type-label max-sm:h-9 max-sm:min-w-9', 'padding' => 'px-4 max-sm:px-3', 'square' => 'w-10 max-sm:w-9', 'radius' => 'rounded-sm', 'icon' => 'md'],
+        'md' => ['base' => 'h-12 min-w-12 gap-2 type-label-lg max-sm:h-11 max-sm:min-w-11', 'padding' => 'px-6 max-sm:px-5', 'square' => 'w-12 max-sm:w-11', 'radius' => 'rounded-md', 'icon' => 'md'],
+        'lg' => ['base' => 'h-14 min-w-14 gap-3 type-label-xl max-sm:h-12 max-sm:min-w-12', 'padding' => 'px-8 max-sm:px-6', 'square' => 'w-14 max-sm:w-12', 'radius' => 'rounded-md', 'icon' => 'lg'],
     ];
     $sizeConfig = $sizes[$size] ?? $sizes['md'];
 

@@ -26,10 +26,10 @@
 ]) }}>
     <div class="flex justify-center">
         @if ($image)
-            <img data-flashcard-image src="{{ $image }}" alt="" class="size-26 object-contain group-data-[word-hidden]/card:mx-auto group-data-[word-hidden]/card:h-40 group-data-[word-hidden]/card:w-full">
+            <img data-flashcard-image src="{{ $image }}" alt="" class="size-26 object-contain group-data-[word-hidden]/card:mx-auto group-data-[word-hidden]/card:h-52 group-data-[word-hidden]/card:w-full">
         @else
             {{-- Same placeholder as a course card without a thumbnail: a plain tile with the image icon --}}
-            <span data-flashcard-image aria-hidden="true" class="flex size-26 items-center justify-center rounded-md bg-surface-card text-fg-disabled group-data-[word-hidden]/card:h-40 group-data-[word-hidden]/card:w-full">
+            <span data-flashcard-image aria-hidden="true" class="flex size-26 items-center justify-center rounded-md bg-surface-card text-fg-disabled group-data-[word-hidden]/card:h-52 group-data-[word-hidden]/card:w-full">
                 <x-icon name="image" size="xl" />
             </span>
         @endif

@@ -20,11 +20,11 @@ class VocabularyResource extends Resource
 {
     protected static ?string $model = Vocabulary::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQueueList;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleBottomCenterText;
 
     protected static string|UnitEnum|null $navigationGroup = 'Vocabulary';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'title';
 

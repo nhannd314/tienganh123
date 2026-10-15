@@ -8,6 +8,8 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * `example_sentences` is a list of {sentence, translation, audio}; audio is a path on the public disk.
      */
     public function up(): void
     {
@@ -19,6 +21,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->longText('passage')->nullable();
             $table->string('passage_audio')->nullable();
+            $table->json('example_sentences')->nullable();
             $table->longText('content')->nullable();
             $table->json('attachments')->nullable();
             $table->unsignedInteger('sort_order')->default(0);

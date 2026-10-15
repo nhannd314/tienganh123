@@ -53,30 +53,6 @@ class Word extends Model
     }
 
     /**
-     * Split an example sentence around the first occurrence of the word, tolerating a plain inflection (s, es, ed, d, ing).
-     *
-     * `label` is null when the word does not appear in the sentence.
-     *
-     * @return array{before: string, label: string|null, after: string}
-     */
-    public function exampleSentenceParts(string $sentence): array
-    {
-        $pattern = '/\b'.preg_quote($this->word, '/').'(?:e?s|ed|d|ing)?\b/iu';
-
-        if (! preg_match($pattern, $sentence, $match, PREG_OFFSET_CAPTURE)) {
-            return ['before' => $sentence, 'label' => null, 'after' => ''];
-        }
-
-        [$label, $offset] = $match[0];
-
-        return [
-            'before' => substr($sentence, 0, $offset),
-            'label' => $label,
-            'after' => substr($sentence, $offset + strlen($label)),
-        ];
-    }
-
-    /**
      * Every meaning as the label shown in a quiz option, e.g. "(noun) quả táo".
      *
      * @return list<string>
@@ -97,6 +73,17 @@ class Word extends Model
     public function allMeaningsLabel(): string
     {
         return implode("\n", $this->meaningLabels());
+    }
+
+    /**
+     * Every meaning without its part of speech, joined by "; ", e.g. "quả táo; ăn táo".
+     */
+    public function plainMeaningsLabel(): string
+    {
+        return collect($this->meanings ?? [])
+            ->map(fn (array $meaning): string => trim($meaning['meaning'] ?? ''))
+            ->filter()
+            ->implode('; ');
     }
 
     /**

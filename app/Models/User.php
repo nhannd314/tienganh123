@@ -76,11 +76,19 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * The last word of the name: the given name, for a Vietnamese one.
+     */
+    public function lastName(): string
+    {
+        return Str::afterLast(trim($this->name), ' ');
+    }
+
+    /**
      * The first letter of the last word of the name, shown in the avatar circle.
      */
     public function initial(): string
     {
-        return Str::upper(Str::substr(Str::afterLast(trim($this->name), ' '), 0, 1));
+        return Str::upper(Str::substr($this->lastName(), 0, 1));
     }
 
     /**

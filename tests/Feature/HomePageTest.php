@@ -85,13 +85,13 @@ it('shows an empty leaderboard when nobody has scored', function () {
     $this->get(route('home'))->assertSee('Chưa có học sinh nào ghi điểm.');
 });
 
-it('shows 5 random flashcards with a picture as buttons that play their audio', function () {
+it('shows 4 random flashcards with a picture as buttons that play their audio', function () {
     Flashcard::factory()->count(7)->create(['image' => 'flashcards/images/card.png', 'audio' => 'flashcards/audio/card.mp3']);
     Flashcard::factory()->create(['title' => 'No Picture Card', 'image' => null]);
 
     $html = $this->get(route('home'))->getContent();
 
-    expect(substr_count($html, 'data-flashcard-image'))->toBe(5)
+    expect(substr_count($html, 'data-flashcard-image'))->toBe(4)
         ->and($html)->toContain('data-src="'.Storage::disk('public')->url('flashcards/audio/card.mp3').'"')
         ->and($html)->not->toContain('No Picture Card');
 });
@@ -108,4 +108,10 @@ it('speaks a flashcard without audio and uses the picture of its word', function
 
 it('hides the flashcards when there are none', function () {
     $this->get(route('home'))->assertDontSee('data-flashcard-image', false);
+});
+
+it('shows a floating Messenger chat button linking to the Facebook page of the site', function () {
+    $this->get(route('home'))
+        ->assertSee('href="https://m.me/nhannd314"', false)
+        ->assertSee('aria-label="Chat Messenger"', false);
 });

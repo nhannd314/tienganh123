@@ -39,7 +39,7 @@
 
         @if ($thumbnail)
             <img src="{{ $thumbnail }}" alt="" @class([
-                'size-full transition-transform duration-200 ease-out group-hover:scale-104',
+                'size-full',
                 'object-contain p-6' => $thumbnailFit === 'contain',
                 'object-cover' => $thumbnailFit !== 'contain',
             ])>

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\FlashcardSetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -37,6 +38,27 @@ class FlashcardSet extends Model
             ->withTimestamps()
             ->orderByPivot('sort_order')
             ->orderBy('flashcards.id');
+    }
+
+    /**
+     * Cards of the set that have an image, the first of which is the thumbnail of the set.
+     *
+     * @return BelongsToMany<Flashcard, $this>
+     */
+    public function imageFlashcards(): BelongsToMany
+    {
+        return $this->flashcards()->whereNotNull('flashcards.image');
+    }
+
+    /**
+     * Public URL of the image of the first card that has one, or null when no card has an image.
+     * Needs the imageFlashcards relation loaded to avoid a query per set.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function thumbnailUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->imageFlashcards->first()?->image_url);
     }
 
     /**

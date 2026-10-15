@@ -4,6 +4,8 @@ use App\Filament\Resources\Lessons\Pages\CreateLesson;
 use App\Filament\Resources\Lessons\Pages\EditLesson;
 use App\Filament\Resources\Lessons\RelationManagers\FlashcardSetsRelationManager;
 use App\Filament\Resources\Lessons\RelationManagers\VocabulariesRelationManager;
+use App\Filament\Resources\Lessons\Schemas\LessonForm;
+use App\Jobs\GenerateLessonSentenceAudio;
 use App\Models\Course;
 use App\Models\FlashcardSet;
 use App\Models\Lesson;
@@ -13,6 +15,8 @@ use App\Models\Vocabulary;
 use Filament\Actions\AttachAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -41,6 +45,61 @@ it('generates the slug from the title and saves the passage and the rich content
         ->is_published->toBeFalse()
         ->passage->toBe('<p>A <code>hello</code> story.</p>')
         ->content->toBe('<p>Say hello.</p>');
+});
+
+it('saves the example sentences and queues the Azure audio of those that have none', function () {
+    Queue::fake();
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+
+    Livewire::test(CreateLesson::class)
+        ->fillForm([
+            'unit_id' => Unit::factory()->create()->id,
+            'title' => 'Fruit',
+            'example_sentences' => [['sentence' => 'I eat an apple.', 'translation' => 'Tôi ăn một quả táo.']],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors()
+        ->assertNotified('The sentence audio is being generated');
+
+    $lesson = Lesson::firstWhere('title', 'Fruit');
+
+    expect($lesson->example_sentences)->toHaveCount(1)
+        ->and($lesson->example_sentences[0])->toMatchArray(['sentence' => 'I eat an apple.', 'translation' => 'Tôi ăn một quả táo.']);
+
+    Queue::assertPushed(GenerateLessonSentenceAudio::class, fn (GenerateLessonSentenceAudio $job) => $job->lesson->is($lesson));
+});
+
+it('does not queue the sentence audio when every sentence has audio or Azure is not configured', function () {
+    Queue::fake();
+    Storage::fake('public')->put('lessons/sentence-audio/hi.mp3', 'MP3-BYTES');
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    $withAudio = Lesson::factory()->create(['example_sentences' => [['sentence' => 'Hi.', 'audio' => 'lessons/sentence-audio/hi.mp3']]]);
+
+    Livewire::test(EditLesson::class, ['record' => $withAudio->getRouteKey()])->call('save')->assertHasNoFormErrors();
+
+    config(['services.azure_speech.key' => null]);
+    $withoutAudio = Lesson::factory()->create(['example_sentences' => [['sentence' => 'Hello.']]]);
+
+    Livewire::test(EditLesson::class, ['record' => $withoutAudio->getRouteKey()])
+        ->call('save')
+        ->assertNotified('The sentence audio was not generated');
+
+    Queue::assertNothingPushed();
+});
+
+it('drops the audio of a sentence whose text changed so it is read again, and keeps the others', function () {
+    $lesson = Lesson::factory()->create(['example_sentences' => [
+        ['sentence' => 'Old text.', 'audio' => 'lessons/sentence-audio/old.mp3'],
+        ['sentence' => 'Same text.', 'audio' => 'lessons/sentence-audio/same.mp3'],
+    ]]);
+
+    $data = LessonForm::dropStaleSentenceAudio(['example_sentences' => [
+        ['sentence' => 'New text.', 'translation' => null, 'audio' => 'lessons/sentence-audio/old.mp3'],
+        ['sentence' => 'Same text.', 'translation' => null, 'audio' => 'lessons/sentence-audio/same.mp3'],
+        ['sentence' => 'Uploaded.', 'translation' => null, 'audio' => 'lessons/sentence-audio/uploaded.mp3'],
+    ]], $lesson);
+
+    expect(array_column($data['example_sentences'], 'audio'))->toBe([null, 'lessons/sentence-audio/same.mp3', 'lessons/sentence-audio/uploaded.mp3']);
 });
 
 it('rejects a slug already used within the same unit', function () {
@@ -124,7 +183,7 @@ it('lays the form out in pairs: unit with title, slug with sort order, toggles t
 
     expect($names)->toBe([
         'unit_id', 'title', 'slug', 'sort_order', 'is_free', 'is_published', 'description',
-        'passage', 'passage_audio', 'content', 'attachments',
+        'passage', 'passage_audio', 'example_sentences', 'content', 'attachments',
     ])
         ->and($schema->getComponent('passage_audio')->getColumnSpan('default'))->toBe('full')
         ->and($schema->getComponent('attachments')->getColumnSpan('default'))->toBe('full');

@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Storage;
     'description',
     'passage',
     'passage_audio',
+    'example_sentences',
     'content',
     'attachments',
     'sort_order',
@@ -67,6 +68,7 @@ class Lesson extends Model
     protected function casts(): array
     {
         return [
+            'example_sentences' => 'array',
             'attachments' => 'array',
             'sort_order' => 'integer',
             'is_free' => 'boolean',
@@ -138,6 +140,47 @@ class Lesson extends Model
             ->filter(fn (Word $word): bool => $word->meaningLabels() !== [])
             ->take(self::REVIEW_QUESTIONS_PER_PART)
             ->values();
+    }
+
+    /**
+     * The example sentence as it is read aloud: without the backticks that mark its words, e.g. "I have an `apple`.".
+     */
+    public static function spokenSentence(string $sentence): string
+    {
+        return str_replace('`', '', $sentence);
+    }
+
+    /**
+     * The example sentence cut into plain text and the words marked with backticks, in order.
+     *
+     * @return list<array{text: string, isMarked: bool}>
+     */
+    public static function sentenceSegments(string $sentence): array
+    {
+        $pieces = preg_split('/(`[^`]+`)/u', $sentence, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+
+        return array_map(
+            fn (string $piece): array => preg_match('/^`([^`]+)`$/u', $piece, $match)
+                ? ['text' => $match[1], 'isMarked' => true]
+                : ['text' => str_replace('`', '', $piece), 'isMarked' => false],
+            $pieces,
+        );
+    }
+
+    /**
+     * The text of the example sentences that have no audio yet, without repeats.
+     *
+     * @param  array<int, mixed>|null  $exampleSentences
+     * @return list<string>
+     */
+    public static function sentencesWithoutAudio(?array $exampleSentences): array
+    {
+        return collect($exampleSentences ?? [])
+            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['sentence'] ?? null) && blank($example['audio'] ?? null))
+            ->map(fn (array $example): string => $example['sentence'])
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**

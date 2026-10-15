@@ -149,13 +149,26 @@ document.addEventListener('click', (event) => {
         field.remove();
     }
 
+    // The icon turns into a check for a moment; a `[data-copy-label]` inside the button also swaps its text for its
+    // `data-copied` text.
     const icon = button.querySelector('i[class*="icon-"]');
+    const label = button.querySelector('[data-copy-label]');
 
-    if (icon) {
-        icon.className = icon.className.replace(/icon-[\w-]+/, 'icon-check');
+    if (icon || label) {
+        const originalIcon = button.copyOriginalIcon ??= icon?.className.match(/icon-[\w-]+/)?.[0];
+        const originalLabel = button.copyOriginalLabel ??= label?.textContent;
+
+        icon?.classList.replace(originalIcon, 'icon-check');
+        if (label) {
+            label.textContent = label.dataset.copied ?? originalLabel;
+        }
+
         clearTimeout(button.copyTimer);
         button.copyTimer = setTimeout(() => {
-            icon.className = icon.className.replace(/icon-[\w-]+/, 'icon-copy');
+            icon?.classList.replace('icon-check', originalIcon);
+            if (label) {
+                label.textContent = originalLabel;
+            }
         }, 1500);
     }
 });
@@ -215,6 +228,7 @@ const printElement = (element) => {
     };
 
     clone.setAttribute('data-expanded', '');
+    clone.querySelectorAll('.shake').forEach((image) => image.classList.remove('shake'));
     root.dataset.printRoot = '';
     root.append(clone);
     document.body.append(root);

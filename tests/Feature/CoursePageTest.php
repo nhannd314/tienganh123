@@ -48,7 +48,7 @@ it('numbers lessons continuously across units and skips unpublished ones', funct
     Lesson::factory()->published()->for($secondUnit)->create(['title' => 'Lesson B', 'sort_order' => 1]);
 
     $this->get(route('courses.show', $course))
-        ->assertSeeInOrder(['Unit 1: Hello!', 'Lesson A', 'Unit 2: My family', 'Lesson B'])
+        ->assertSeeInOrder(['Hello!', 'Lesson A', 'My family', 'Lesson B'])
         ->assertDontSee('Hidden Lesson')
         ->assertSee('2 bài học')
         ->assertSee('2 unit');
@@ -89,13 +89,15 @@ it('shows an empty state when the course has no lessons', function () {
     $this->get(route('courses.show', $course))->assertSee('Chưa có bài học nào');
 });
 
-it('lets a guest start a free course at its first lesson without registering', function () {
-    $course = Course::factory()->published()->create(['monthly_price' => 0]);
+it('shows a guest a free course without asking to register', function () {
+    $course = Course::factory()->published()->create(['monthly_price' => 0, 'title' => 'Lớp 1']);
     $unit = Unit::factory()->published()->for($course)->create();
     $lesson = Lesson::factory()->published()->for($unit)->create();
 
-    $this->get(route('courses.show', $course))
-        ->assertSee('Bắt đầu học')
+    $response = $this->get(route('courses.show', $course));
+
+    $response
+        ->assertSee('Thông tin khóa học')
         ->assertSee(route('lessons.show', [$course, $unit, $lesson]), false)
         ->assertDontSee('Đăng ký khóa học');
 });
@@ -211,4 +213,13 @@ it('ranks the learners of a course by the total score of its lessons', function 
     ]);
 
     $this->get(route('courses.show', $course))->assertSeeInOrder(['Top 10 khóa học này', 'Học Sinh Giỏi', '70', 'Học Sinh Khá', '60']);
+});
+
+it('shows the description of a unit under its title', function () {
+    $course = Course::factory()->published()->create();
+    $unit = Unit::factory()->published()->for($course)->create(['title' => 'Hello!', 'description' => 'Greet new friends']);
+    Lesson::factory()->published()->for($unit)->create(['title' => 'Lesson A']);
+
+    $this->get(route('courses.show', $course))
+        ->assertSeeInOrder(['Hello!', 'Greet new friends', 'Lesson A']);
 });

@@ -32,9 +32,10 @@ class CourseController extends Controller
         $reviewPercents = $user ? Lesson::reviewPercentsFor($user, $lessonIds) : collect();
 
         $lessonNumber = 0;
-        $unitRows = $units->map(function ($unit, int $unitIndex) use (&$lessonNumber, $wordCounts, $reviewPercents, $course, $hasCourseAccess): array {
+        $unitRows = $units->map(function ($unit) use (&$lessonNumber, $wordCounts, $reviewPercents, $course, $hasCourseAccess): array {
             return [
-                'title' => 'Unit '.($unitIndex + 1).': '.$unit->title,
+                'title' => $unit->title,
+                'description' => $unit->description,
                 'lessons' => $unit->lessons->map(function ($lesson) use (&$lessonNumber, $wordCounts, $reviewPercents, $course, $unit, $hasCourseAccess): array {
                     $lessonNumber++;
                     $access = match (true) {
@@ -66,7 +67,6 @@ class CourseController extends Controller
                 filled($course->level) ? ['icon' => 'graduation-cap', 'label' => 'Trình độ: '.$course->level] : null,
             ])),
             'hasPaidAccess' => $hasPaidAccess,
-            'startUrl' => $unitRows[0]['lessons'][0]['url'] ?? null,
             'topLearners' => $course->topLearners()->all(),
         ]);
     }

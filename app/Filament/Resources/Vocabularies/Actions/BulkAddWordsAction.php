@@ -8,6 +8,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\DB;
 
 class BulkAddWordsAction extends Action
@@ -30,8 +31,10 @@ class BulkAddWordsAction extends Action
                 Textarea::make('words')
                     ->required()
                     ->rows(12)
-                    ->placeholder("apple (noun) quả táo, táo\nwork (noun) công việc (verb) làm việc")
-                    ->helperText('One word per line: word (part of speech) meaning, another meaning (part of speech) meaning. New words are created; existing words get the missing meanings.'),
+                    ->placeholder("apple [noun] quả táo, táo | I have an apple = Tôi có một quả táo\nwork [noun] công việc [verb] làm việc")
+                    ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác [từ loại] nghĩa | câu ví dụ = bản dịch | câu ví dụ khác. Gõ một từ đã có rồi bấm Tab hoặc click ra ngoài ô để tự nạp nghĩa của từ đó. Từ mới sẽ được tạo; từ đã có chỉ được thêm các nghĩa và ví dụ còn thiếu.')
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn (Set $set, ?string $state) => $set('words', self::loadKnownWords((string) $state))),
             ])
             ->action(function (array $data, RelationManager $livewire): void {
                 $result = self::apply($livewire->getOwnerRecord(), self::parse($data['words']));
@@ -45,18 +48,20 @@ class BulkAddWordsAction extends Action
     }
 
     /**
-     * Parse one word per line: `word (pos) meaning, meaning (pos) meaning`.
+     * Parse one word per line: `word [pos] meaning, meaning [pos] meaning | example = translation | example = translation`.
+     * An example is a sentence and its translation, e.g. "I have an apple = Tôi có một quả táo". A comma inside round brackets, a
+     * note on a meaning, does not split it.
      *
-     * @return list<array{word: string, meanings: list<array{pos: string, meaning: string}>}>
+     * @return list<array{word: string, meanings: list<array{pos: string, meaning: string}>, examples: list<array{sentence: string, translation: string|null}>}>
      */
     public static function parse(string $text): array
     {
         $entries = [];
 
         foreach (preg_split('/\R/u', $text) as $line) {
-            $line = trim($line);
-            $parenthesis = mb_strpos($line, '(');
-            $word = trim($parenthesis === false ? $line : mb_substr($line, 0, $parenthesis));
+            [$head, $examplePieces] = [...explode('|', trim($line), 2), ''];
+            $bracket = mb_strpos($head, '[');
+            $word = trim($bracket === false ? $head : mb_substr($head, 0, $bracket));
 
             if ($word === '') {
                 continue;
@@ -64,11 +69,11 @@ class BulkAddWordsAction extends Action
 
             $meanings = [];
 
-            if ($parenthesis !== false) {
-                preg_match_all('/\(([^)]*)\)\s*([^(]*)/u', mb_substr($line, $parenthesis), $matches, PREG_SET_ORDER);
+            if ($bracket !== false) {
+                preg_match_all('/\[([^\]]*)\]\s*([^\[]*)/u', mb_substr($head, $bracket), $matches, PREG_SET_ORDER);
 
                 foreach ($matches as [, $pos, $meaningList]) {
-                    foreach (explode(',', $meaningList) as $meaning) {
+                    foreach (preg_split('/,(?![^()]*\))/u', $meaningList) as $meaning) {
                         $meaning = trim($meaning);
                         $pos = mb_strtolower(trim($pos));
 
@@ -79,16 +84,65 @@ class BulkAddWordsAction extends Action
                 }
             }
 
-            $entries[] = ['word' => $word, 'meanings' => array_values($meanings)];
+            $examples = [];
+
+            foreach (explode('|', $examplePieces) as $piece) {
+                [$sentence, $translation] = [...explode('=', $piece, 2), ''];
+                $sentence = trim($sentence);
+
+                if ($sentence !== '') {
+                    $examples[mb_strtolower($sentence)] ??= ['sentence' => $sentence, 'translation' => filled(trim($translation)) ? trim($translation) : null];
+                }
+            }
+
+            $entries[] = ['word' => $word, 'meanings' => array_values($meanings), 'examples' => array_values($examples)];
         }
 
         return $entries;
     }
 
     /**
-     * Create the missing words, add the missing meanings to existing words and attach them all to the vocabulary.
+     * The word as a line to be parsed again, with its meanings: `word [pos] meaning, meaning [pos] meaning`.
+     */
+    public static function formatLine(Word $word): string
+    {
+        $meanings = collect($word->meanings ?? [])
+            ->filter(fn (array $meaning): bool => filled($meaning['meaning'] ?? null))
+            ->groupBy(fn (array $meaning): string => (string) ($meaning['pos'] ?? ''))
+            ->map(fn ($group, string $pos): string => trim(($pos !== '' ? "[{$pos}] " : '').$group->pluck('meaning')->implode(', ')))
+            ->implode(' ');
+
+        return trim($word->word.' '.$meanings);
+    }
+
+    /**
+     * Replace each line that is only a word already in the list of words by that word with its meanings.
+     */
+    public static function loadKnownWords(string $text): string
+    {
+        $lines = preg_split('/\R/u', $text);
+        $typed = collect($lines)
+            ->map(fn (string $line): string => trim($line))
+            ->filter(fn (string $line): bool => $line !== '' && ! str_contains($line, '[') && ! str_contains($line, '|'));
+
+        if ($typed->isEmpty()) {
+            return $text;
+        }
+
+        $known = Word::query()
+            ->whereIn(DB::raw('lower(word)'), $typed->map(fn (string $line): string => mb_strtolower($line))->unique()->all())
+            ->get()
+            ->keyBy(fn (Word $word): string => mb_strtolower($word->word));
+
+        return collect($lines)
+            ->map(fn (string $line): string => $known->has(mb_strtolower(trim($line))) && $typed->contains(trim($line)) ? self::formatLine($known->get(mb_strtolower(trim($line)))) : $line)
+            ->implode("\n");
+    }
+
+    /**
+     * Create the missing words, add the missing meanings and examples to existing words and attach them all to the vocabulary.
      *
-     * @param  list<array{word: string, meanings: list<array{pos: string, meaning: string}>}>  $entries
+     * @param  list<array{word: string, meanings: list<array{pos: string, meaning: string}>, examples: list<array{sentence: string, translation: string|null}>}>  $entries
      * @return array{created: int, updated: int, attached: int}
      */
     public static function apply(Vocabulary $vocabulary, array $entries): array
@@ -101,9 +155,10 @@ class BulkAddWordsAction extends Action
 
             foreach ($entries as $entry) {
                 $word = Word::query()->whereRaw('lower(word) = ?', [mb_strtolower($entry['word'])])->first();
+                $examples = array_map(fn (array $example): array => [...$example, 'audio' => null], $entry['examples']);
 
                 if (! $word) {
-                    $word = Word::create(['word' => $entry['word'], 'meanings' => $entry['meanings']]);
+                    $word = Word::create(['word' => $entry['word'], 'meanings' => $entry['meanings'], 'examples' => $examples]);
                     $result['created']++;
                 } else {
                     $meanings = $word->meanings ?? [];
@@ -113,8 +168,15 @@ class BulkAddWordsAction extends Action
                         fn (array $meaning): bool => ! in_array(mb_strtolower($meaning['pos'].'|'.$meaning['meaning']), $known, true),
                     ));
 
-                    if ($missing !== []) {
-                        $word->update(['meanings' => [...$meanings, ...$missing]]);
+                    $storedExamples = $word->examples ?? [];
+                    $knownSentences = collect($storedExamples)->map(fn (array $example): string => mb_strtolower(trim($example['sentence'] ?? '')))->all();
+                    $missingExamples = array_values(array_filter(
+                        $examples,
+                        fn (array $example): bool => ! in_array(mb_strtolower($example['sentence']), $knownSentences, true),
+                    ));
+
+                    if ($missing !== [] || $missingExamples !== []) {
+                        $word->update(['meanings' => [...$meanings, ...$missing], 'examples' => [...$storedExamples, ...$missingExamples]]);
                         $result['updated']++;
                     }
                 }

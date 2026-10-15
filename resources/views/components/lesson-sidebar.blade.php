@@ -3,7 +3,7 @@
 
     `progress` is the review progress of the signed-in user (see Lesson::reviewProgress), or null for a guest, who gets a
     note that results are only saved after signing in. The slot goes under the progress (the review button on the lesson
-    page). The data-* hooks are updated by resources/js/review.js. `score` is the best score of the user in the lesson
+    page), inside its card; the `afterProgress` slot goes below that card (the game card of the review). The data-* hooks are updated by resources/js/review.js. `score` is the best score of the user in the lesson
     and `rank` their place among the learners who scored, e.g. "3/12" (see Lesson::standingOf).
 
     `enrollCourse` is the course to offer on top when the visitor has not enrolled in it yet (see Course::needsEnrollmentBy).
@@ -94,6 +94,8 @@
 
         {{ $slot }}
     </div>
+
+    {{ $afterProgress ?? '' }}
 
     <x-top-learners title="Top 10 bài học này" :learners="$topLearners" />
 </aside>

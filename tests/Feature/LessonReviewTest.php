@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\FetchWordPronunciation;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonReview;
@@ -11,9 +12,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
+
+beforeEach(fn () => Queue::fake([FetchWordPronunciation::class]));
 
 function reviewLesson(int $wordCount = 5): Lesson
 {
@@ -67,6 +71,14 @@ it('shows part 1 with the lesson words as questions and the restart button hidde
 
     expect(substr_count($response->getContent(), 'data-review-restart="'))->toBe(1)
         ->and(reviewQuestions($response->getContent()))->toHaveCount(5);
+});
+
+it('shows the game card right under the learning progress in the sidebar', function () {
+    signIn();
+
+    $this->get(reviewUrl(reviewLesson()))
+        ->assertOk()
+        ->assertSeeInOrder(['Tiến độ học tập', 'Chơi game giải trí', 'Vừa chơi vừa học', 'Tăng tốc độ phản xạ', 'Tăng tốc độ đánh máy', 'Chơi ngay', 'Top 10 bài học này']);
 });
 
 it('gives each question four distinct options that include the right meaning of the word', function () {

@@ -21,13 +21,15 @@ function oxfordEntry(string $ukIpa = '/ˈæpl/', string $usIpa = '/ˈæpl/'): st
 
 function fakeOxford(): void
 {
-    config(['services.oxford_learners.enabled' => true]);
+    config([
+        'services.oxford_learners.enabled' => true,
+        'services.azure_speech' => ['key' => 'speech-key', 'region' => 'southeastasia', 'endpoint' => null, 'voice' => 'en-US-AnaNeural', 'voice_style' => null],
+    ]);
 
     Http::fake([
         '*/definition/english/apple' => Http::response(oxfordEntry('/ˈæpl/', '/ˈæpəl/')),
         '*/definition/english/*' => Http::response('Word not found', 404),
-        '*/media/uk/*' => Http::response('uk-bytes'),
-        '*/media/us/*' => Http::response('us-bytes'),
+        '*.tts.speech.microsoft.com/*' => Http::response('azure-bytes'),
     ]);
 }
 
@@ -57,15 +59,22 @@ describe('job', function () {
         Storage::fake('public');
     });
 
-    it('stores the audio and fills the IPA of both accents', function () {
+    it('fills the IPA from the dictionary and reads the word with Azure in both accents, with an adult voice', function () {
         $word = Word::factory()->create(['word' => 'apple', 'slug' => 'apple', 'ipa_us' => null, 'ipa_uk' => null]);
         fakeOxford();
 
         FetchWordPronunciation::dispatchSync($word);
 
-        expect(Storage::disk('public')->get('audio/us/apple.mp3'))->toBe('us-bytes')
-            ->and(Storage::disk('public')->get('audio/uk/apple.mp3'))->toBe('uk-bytes')
+        expect(Storage::disk('public')->get('audio/us/apple.mp3'))->toBe('azure-bytes')
+            ->and(Storage::disk('public')->get('audio/uk/apple.mp3'))->toBe('azure-bytes')
             ->and($word->fresh())->ipa_us->toBe('/ˈæpəl/')->ipa_uk->toBe('/ˈæpl/');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'tts.speech')
+            && preg_match('/<voice name="en-US-(Jenny|Guy)Neural">/', $request->body()) === 1
+            && str_contains($request->body(), 'xml:lang="en-US"'));
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'tts.speech')
+            && preg_match('/<voice name="en-GB-(Sonia|Ryan)Neural">/', $request->body()) === 1
+            && str_contains($request->body(), 'xml:lang="en-GB"'));
     });
 
     it('keeps the audio and IPA already there unless told to overwrite', function () {
@@ -81,26 +90,35 @@ describe('job', function () {
 
         FetchWordPronunciation::dispatchSync($word, overwrite: true);
 
-        expect(Storage::disk('public')->get('audio/us/apple.mp3'))->toBe('us-bytes')
+        expect(Storage::disk('public')->get('audio/us/apple.mp3'))->toBe('azure-bytes')
             ->and($word->fresh()->ipa_us)->toBe('/ˈæpəl/');
     });
 
-    it('does nothing when the dictionary has no entry for the word', function () {
+    it('still reads the word when the dictionary has no entry for it', function () {
         $word = Word::factory()->create(['word' => 'zzzqqx', 'slug' => 'zzzqqx', 'ipa_us' => null]);
         fakeOxford();
 
         FetchWordPronunciation::dispatchSync($word);
 
-        Storage::disk('public')->assertMissing('audio/us/zzzqqx.mp3');
-        expect($word->fresh()->ipa_us)->toBeNull();
+        expect(Storage::disk('public')->get('audio/us/zzzqqx.mp3'))->toBe('azure-bytes')
+            ->and($word->fresh()->ipa_us)->toBeNull();
     });
 
-    it('does nothing when the lookup is disabled', function () {
+    it('skips the IPA when the lookup is disabled and the audio when Azure is not configured', function () {
         $word = Word::factory()->create();
+        config(['services.oxford_learners.enabled' => false, 'services.azure_speech.key' => null]);
         Http::fake();
 
         FetchWordPronunciation::dispatchSync($word);
 
         Http::assertNothingSent();
+    });
+
+    it('retries the job when Azure gives no audio', function () {
+        $word = Word::factory()->create(['word' => 'apple', 'slug' => 'apple']);
+        Http::fake(['*.tts.speech.microsoft.com/*' => Http::response('', 500)]);
+        fakeOxford();
+
+        expect(fn () => FetchWordPronunciation::dispatchSync($word))->toThrow(RuntimeException::class);
     });
 });

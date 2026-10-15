@@ -19,11 +19,11 @@ class FlashcardResource extends Resource
 {
     protected static ?string $model = Flashcard::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
 
     protected static string|UnitEnum|null $navigationGroup = 'Vocabulary';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $recordTitleAttribute = 'title';
 

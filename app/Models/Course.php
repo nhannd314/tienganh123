@@ -87,6 +87,25 @@ class Course extends Model
     }
 
     /**
+     * The public avatars of some learners who have scored in the lessons of the course, in a random order, each with the last
+     * word of the name of the learner. A learner with no avatar is left out.
+     *
+     * @return list<array{url: string, name: string}>
+     */
+    public function learnerAvatars(int $limit = 12): array
+    {
+        return User::query()
+            ->whereNotNull('avatar')
+            ->whereIn('id', LessonScore::query()->whereIn('lesson_id', $this->lessons()->select('lessons.id'))->select('user_id'))
+            ->inRandomOrder()
+            ->limit($limit)
+            ->get()
+            ->map(fn (User $user): array => ['url' => $user->avatar_url, 'name' => $user->lastName()])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return MorphMany<Subscription, $this>
      */
     public function subscriptions(): MorphMany

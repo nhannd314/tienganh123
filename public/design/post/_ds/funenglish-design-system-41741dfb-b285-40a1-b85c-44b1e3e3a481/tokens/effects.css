@@ -1,0 +1,15 @@
+/* Surfaces: soft ink-tinted shadows. Buttons: a hard bottom edge in the role's darker step (--{role}-strong), no blur. */
+:root{
+--shadow-xs:0 1px 2px rgba(27,31,59,.06);
+--shadow-card:0 6px 24px rgba(27,31,59,.08),0 1px 3px rgba(27,31,59,.05);
+--shadow-raised:0 10px 30px rgba(27,31,59,.14);
+--button-edge:4px;--button-edge-pressed:1px;
+--shadow-halo:0 0 0 8px var(--primary-bg-hover);
+--focus-ring:0 0 0 3px var(--focus-color);
+--ease-bounce:cubic-bezier(.34,1.56,.64,1); /* @kind other */
+--ease-out:cubic-bezier(.22,1,.36,1); /* @kind other */
+--dur-fast:120ms; /* @kind other */
+--dur-base:200ms; /* @kind other */
+--dur-slow:400ms; /* @kind other */
+--transition-interactive:background-color var(--dur-fast) var(--ease-out),border-color var(--dur-fast) var(--ease-out),color var(--dur-fast) var(--ease-out),box-shadow var(--dur-fast) var(--ease-out),transform var(--dur-fast) var(--ease-out),filter var(--dur-fast) var(--ease-out); /* @kind other */
+}

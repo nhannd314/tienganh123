@@ -16,7 +16,7 @@ class HomeController extends Controller
 
     private const LEADERBOARD_SIZE = 10;
 
-    private const FLASHCARD_TILES = 5;
+    private const FLASHCARD_TILES = 4;
 
     /**
      * Show the home page with the latest published courses and the leaderboard.

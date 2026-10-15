@@ -25,6 +25,8 @@
 
         {{ $footer ?? '' }}
 
+        <x-messenger-button />
+
         {{ $scripts ?? '' }}
     </body>
 </html>

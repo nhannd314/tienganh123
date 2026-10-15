@@ -1,5 +1,5 @@
 {{--
-    Site header: brand mark, main navigation, search, notifications and account.
+    Site header: brand mark, main navigation, search and account.
     `items` is a list of ['id' => ..., 'label' => ..., 'icon' => ..., 'href' => ...]; `active` is the current item id.
     Below xl (1280px) it collapses into a sticky bar with search and menu toggles (see resources/js/app.js).
 --}}
@@ -7,20 +7,14 @@
     'items' => [],
     'active' => null,
     'homeHref' => '/',
-    'logoSrc' => null,
     'avatarSrc' => null,
-    'notifications' => 0,
 ])
 
 <header {{ $attributes->class(['sticky top-0 z-20 border-b border-line-subtle bg-surface-header shadow-xs xl:static']) }}>
     {{-- Desktop --}}
     <div class="mx-auto hidden h-20 max-w-layout items-center gap-10 px-10 xl:flex">
-        <a href="{{ $homeHref }}" aria-label="FunEnglish — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline">
-            @if ($logoSrc)
-                <img src="{{ $logoSrc }}" alt="" class="h-14">
-            @else
-                <b class="text-3xl leading-none font-bold tracking-tight text-primary">FunEnglish</b>
-            @endif
+        <a href="{{ $homeHref }}" aria-label="Học Tiếng Anh — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline">
+            <x-logo :size="48" />
         </a>
 
         <nav aria-label="Chính" class="flex min-w-0 flex-1 gap-1">
@@ -44,18 +38,9 @@
         </nav>
 
         <div class="flex flex-none items-center gap-3">
-            <x-search-input name="q" shape="pill" />
-
-            <x-badge :count="$notifications" inset>
-                <x-icon-button
-                    icon="bell"
-                    :label="'Thông báo'.($notifications ? ' ('.$notifications.' mới)' : '')"
-                    variant="ghost"
-                    shape="circle"
-                />
-            </x-badge>
-
-            <span aria-hidden="true" class="h-8 w-px bg-line-default"></span>
+            <form method="GET" action="{{ route('search') }}" role="search">
+                <x-search-input name="q" :value="request('q')" shape="pill" />
+            </form>
 
             @if ($avatarSrc)
                 <button type="button" aria-label="Tài khoản" class="flex cursor-pointer rounded-full">
@@ -89,7 +74,7 @@
     {{-- Mobile / tablet --}}
     <div class="xl:hidden">
         <div class="flex h-16 items-center justify-between gap-3 px-4">
-            <a href="{{ $homeHref }}" aria-label="FunEnglish — Trang chủ" class="text-2xl leading-none font-bold tracking-tight text-primary no-underline hover:text-primary hover:no-underline">FunEnglish</a>
+            <a href="{{ $homeHref }}" aria-label="Học Tiếng Anh — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline"><x-logo :size="38" /></a>
 
             <div class="flex items-center gap-2">
                 <x-icon-button
@@ -121,7 +106,9 @@
         </div>
 
         <div id="nav-mobile-search" hidden class="border-t border-line-subtle px-4 py-3">
-            <x-search-input name="q" placeholder="Tìm khóa học, từ vựng..." shape="pill" class="w-full" />
+            <form method="GET" action="{{ route('search') }}" role="search">
+                <x-search-input name="q" :value="request('q')" placeholder="Tìm khóa học, từ vựng, flashcard..." shape="pill" class="w-full" />
+            </form>
         </div>
 
         <nav id="nav-mobile-menu" hidden aria-label="Chính" class="flex flex-col gap-1 border-t border-line-subtle px-4 pt-2 pb-4">

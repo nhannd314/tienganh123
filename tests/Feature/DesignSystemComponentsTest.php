@@ -69,10 +69,11 @@ it('highlights the active nav bar item', function () {
         ['id' => 'courses', 'label' => 'Khóa học', 'icon' => 'book-open', 'href' => '/khoa-hoc'],
     ];
 
-    $this->blade('<x-nav-bar :items="$items" active="courses" :notifications="3" />', ['items' => $items])
+    $this->blade('<x-nav-bar :items="$items" active="courses" />', ['items' => $items])
         ->assertSeeInOrder(['Trang chủ', 'aria-current="page"', 'Khóa học'], false)
-        ->assertSee('Thông báo (3 mới)')
-        ->assertSee('FunEnglish');
+        ->assertDontSee('Thông báo')
+        ->assertSee('Học Tiếng Anh — Trang chủ')
+        ->assertSee('<svg viewBox="0 -6 94 94"', false);
 });
 
 it('renders breadcrumbs with the last item as the current page', function () {

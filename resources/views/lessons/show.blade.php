@@ -7,16 +7,6 @@
         'danger' => 'text-danger',
         'secondary' => 'text-secondary',
     ];
-
-    $headerCell = 'bg-surface-hover px-2 py-3 md:px-4 text-left text-[length:calc(var(--text-base)*var(--vs,1))] font-medium whitespace-nowrap text-fg-muted';
-    $bodyCell = 'border-t border-line-subtle px-2 py-3 md:px-4 align-middle';
-
-    $copyText = $words
-        ->map(fn ($word) => $word->word.' '.collect($word->meanings)
-            ->map(fn (array $meaning): string => '('.($meaning['pos'] ?? '').') '.($meaning['meaning'] ?? ''))
-            ->implode(' '))
-        ->implode("\n");
-
 @endphp
 
 <x-layouts.app :title="$lesson->title" main-class="flex flex-col gap-10 pt-6 pb-10">
@@ -33,7 +23,7 @@
 
     {{-- Lesson header --}}
     <section class="flex flex-col items-start gap-4">
-        <h1 class="type-word tracking-tight text-balance text-fg-strong">{{ $lesson->title }}</h1>
+        <h1 class="type-page-title tracking-tight text-balance text-fg-strong">{{ $lesson->title }}</h1>
         @if ($lesson->description)
             <p class="max-w-200 type-body-lg text-pretty text-fg-body">{{ $lesson->description }}</p>
         @endif
@@ -55,100 +45,21 @@
             @endif
 
             {{-- Vocabulary --}}
-            <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-                <div class="flex flex-wrap items-center justify-between gap-4">
-                    <h2 class="type-h2 text-fg-strong">Từ vựng</h2>
+            <x-vocabulary-table :words="$words" empty-message="Bài học này chưa có từ vựng." />
 
-                    <div class="flex items-center gap-2">
-                        <x-icon-button
-                            icon="eye"
-                            label="Hiển thị đầy đủ"
-                            size="sm"
-                            aria-pressed="false"
-                            data-vocab-action="expand"
-                            class="md:hidden"
-                        />
-                        <x-icon-button icon="printer" label="In bảng từ vựng" size="sm" data-vocab-action="print" />
-                        <x-icon-button icon="copy" label="Sao chép từ vựng" size="sm" data-vocab-action="copy" />
-                        <x-icon-button icon="a-arrow-down" label="Giảm cỡ chữ" size="sm" data-vocab-action="zoom-out" />
-                        <x-icon-button icon="a-arrow-up" label="Tăng cỡ chữ" size="sm" data-vocab-action="zoom-in" />
-                    </div>
-                </div>
-
-                @if ($words->isEmpty())
-                    <p class="type-body text-fg-muted">Bài học này chưa có từ vựng.</p>
-                @else
-                    <div
-                        data-vocab-table
-                        data-copy-text="{{ $copyText }}"
-                        class="group/vocab overflow-x-auto rounded-md border border-line-default"
-                    >
-                        <table class="w-full border-collapse max-md:group-data-[expanded]/vocab:min-w-190 md:min-w-190">
-                            <thead>
-                                <tr>
-                                    <th scope="col" class="{{ $headerCell }}">Từ vựng</th>
-                                    <th scope="col" class="{{ $headerCell }}">UK</th>
-                                    <th scope="col" class="{{ $headerCell }}">US</th>
-                                    <th scope="col" class="{{ $headerCell }}">Nghĩa</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($words as $word)
-                                    <tr>
-                                        <td lang="en" class="{{ $bodyCell }} text-[length:calc(var(--text-lg)*var(--vs,1))] font-medium text-primary-text">{{ $word->word }}</td>
-                                        <td class="{{ $bodyCell }}">
-                                            <div class="flex items-center gap-2 md:gap-3">
-                                                <x-audio-button size="sm" :text="$word->word" lang="en-GB" />
-                                                <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_uk }}</span>
-                                            </div>
-                                        </td>
-                                        <td class="{{ $bodyCell }}">
-                                            <div class="flex items-center gap-2 md:gap-3">
-                                                <x-audio-button size="sm" tone="secondary" :text="$word->word" lang="en-US" />
-                                                <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_us }}</span>
-                                            </div>
-                                        </td>
-                                        <td class="{{ $bodyCell }} text-[length:calc(var(--text-lg)*var(--vs,1))] text-fg-strong">
-                                            @foreach ($word->meanings as $meaning)
-                                                <div class="font-semibold"><span class="font-normal text-fg-muted">({{ $meaning['pos'] ?? '' }})</span> {{ $meaning['meaning'] ?? '' }}</div>
-                                            @endforeach
-
-                                            @if (filled($word->examples))
-                                                <div class="max-md:group-not-data-[expanded]/vocab:hidden mt-3 flex flex-col gap-1.5">
-                                                    @foreach ($word->examples as $example)
-                                                        <div class="text-[length:calc(var(--text-base)*var(--vs,1))]">
-                                                            <p lang="en" class="text-fg-strong"><span class="text-fg-muted italic">e.g.</span> {{ $example['sentence'] ?? '' }}</p>
-                                                            @if (filled($example['translation'] ?? null))
-                                                                <p class="text-fg-muted">{{ $example['translation'] }}</p>
-                                                            @endif
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </section>
-
-            {{-- Example sentences of the lesson's new words --}}
+            {{-- Example sentences of the lesson; a word in backticks that matches a stored word gets its popover --}}
             @if ($exampleSentences->isNotEmpty())
                 <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
                     <h2 class="type-h2 text-fg-strong">Câu mẫu</h2>
 
                     <ul class="flex flex-col divide-y divide-line-subtle">
                         @foreach ($exampleSentences as $example)
-                            @php($word = $example['word'])
-                            @php($parts = $example['parts'])
                             <li data-example class="flex flex-wrap items-start gap-4 py-4 first:pt-0 last:pb-0">
                                 <x-audio-button size="sm" tone="secondary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" />
 
                                 <div class="min-w-0 flex-1">
                                     <p lang="en" class="type-body-lg text-fg-strong">
-                                        {{ $parts['before'] }}@if ($parts['label'] !== null)<x-word-popover :word="$word" :label="$parts['label']" :popover-id="'example-word-'.$loop->index" />@endif{{ $parts['after'] }}
+                                        @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="'example-word-'.$loop->parent->index.'-'.$loop->index" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
                                     </p>
                                     @if ($example['translation'])
                                         <div class="mt-2 grid">
@@ -177,7 +88,7 @@
                         </div>
                     </div>
 
-                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
+                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(260px,calc((100%_-_2rem)/3))),1fr))] gap-4">
                         @foreach ($cards as $flashcard)
                             @php($word = $flashcard->word)
                             <x-flashcard
@@ -242,6 +153,10 @@
         {{-- Sidebar --}}
         <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'">
             <x-button size="lg" icon-left="book-open" full-width :href="route('lessons.review.show', [$course, $unit, $lesson, 1])">Ôn tập ngay</x-button>
+
+            <x-slot:after-progress>
+                <x-game-promo :href="route('lessons.games', [$course, $unit, $lesson])" />
+            </x-slot:after-progress>
         </x-lesson-sidebar>
     </div>
 

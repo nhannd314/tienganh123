@@ -203,6 +203,16 @@
     line-height: var(--leading-tight);
 }
 
+@utility type-page-title {
+    font-weight: 700;
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+
+    @media (width >= 40rem) {
+        font-size: var(--text-5xl);
+    }
+}
+
 @utility type-h1 {
     font-weight: 600;
     font-size: var(--text-4xl);
@@ -334,6 +344,11 @@
 @media print {
     body[data-print-only] > :not([data-print-root]) {
         display: none !important;
+    }
+
+    [data-print-root] .shake {
+        animation: none !important;
+        transform: none !important;
     }
 
     [data-print-root] * {

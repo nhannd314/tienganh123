@@ -13,8 +13,7 @@
     ]" class="-mb-4" />
 
     <section class="flex flex-col items-start gap-3">
-        <x-pill tone="success" icon="sparkle">Khóa học</x-pill>
-        <h1 class="type-word tracking-tight text-balance text-fg-strong">Tất cả khóa học</h1>
+        <h1 class="type-page-title tracking-tight text-balance text-fg-strong">Tất cả khóa học</h1>
         <p class="max-w-160 type-body-lg text-pretty text-fg-muted">
             Lộ trình từ lớp 1 đến ôn thi vào lớp 10 — chọn khóa học phù hợp và bắt đầu hành trình của bạn nhé!
         </p>
@@ -33,7 +32,6 @@
                     :title="$course->title"
                     :description="$course->description"
                     :thumbnail="$course->thumbnail_url"
-                    thumbnail-fit="contain"
                     :href="route('courses.show', $course)"
                     :price="$course->priceLabel()"
                     :price-tone="$course->isFree() ? 'success' : 'danger'"

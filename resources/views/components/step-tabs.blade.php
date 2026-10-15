@@ -15,7 +15,7 @@
     $total = count($steps);
 @endphp
 
-<nav aria-label="{{ $label }}" {{ $attributes }}>
+<nav aria-label="{{ $label }}" {{ $attributes->class(['[--r:1.5rem] max-sm:[--r:1.25rem]']) }}>
     <ol class="m-0 grid list-none items-start p-0" style="grid-template-columns: repeat({{ max($total, 1) }}, minmax(0, 1fr))">
         @foreach ($steps as $index => $step)
             @php
@@ -35,7 +35,7 @@
                             'bg-success' => $isDone($index - 1),
                             'bg-line-strong' => ! $isDone($index - 1),
                         ])
-                        style="top: calc(0.5rem + 1.5rem - 1px); left: calc(-50% + 1.5rem + 0.5rem); right: calc(50% + 1.5rem + 0.5rem)"
+                        style="top: calc(0.5rem + var(--r) - 1px); left: calc(-50% + var(--r) + 0.5rem); right: calc(50% + var(--r) + 0.5rem)"
                     ></span>
                 @endif
 
@@ -46,7 +46,7 @@
                     class="group flex w-full cursor-pointer flex-col items-center gap-3 rounded-md border-0 bg-transparent px-1 py-2 no-underline transition-interactive hover:no-underline active:translate-y-px"
                 >
                     <span aria-hidden="true" @class([
-                        'flex size-12 flex-none items-center justify-center rounded-full border-2 text-lg leading-none font-bold transition-interactive',
+                        'flex size-12 flex-none items-center justify-center rounded-full border-2 text-lg leading-none font-bold transition-interactive max-sm:size-10 max-sm:text-base',
                         'border-secondary bg-secondary text-on-secondary shadow-[0_0_0_5px_var(--color-secondary-bg-hover)]' => $isCurrent,
                         'border-success bg-success text-white' => $isStepDone,
                         'border-line-strong bg-surface-card text-fg-muted group-hover:border-secondary group-hover:text-secondary-text' => ! $isCurrent && ! $isStepDone,
@@ -58,7 +58,7 @@
                         @endif
                     </span>
                     <span @class([
-                        'max-w-full type-label-lg text-center text-balance',
+                        'max-w-full type-label-lg text-center text-balance max-sm:type-label',
                         'text-secondary-text' => $isCurrent,
                         'text-fg-body' => $isStepDone,
                         'text-fg-muted group-hover:text-fg-body' => ! $isCurrent && ! $isStepDone,

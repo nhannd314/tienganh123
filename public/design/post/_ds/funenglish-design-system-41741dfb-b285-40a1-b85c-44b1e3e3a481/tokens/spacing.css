@@ -1,0 +1,7 @@
+:root{
+--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-7:32px;--space-8:40px;--space-9:48px;--space-10:64px;
+--radius-xs:6px;--radius-sm:10px;--radius-md:14px;--radius-lg:18px;--radius-xl:24px;--radius-pill:999px;
+--border-width-thin:1px;--border-width:2px;
+--control-h-sm:40px;--control-h-md:48px;--control-h-lg:56px;--control-h-xl:64px;
+--icon-sm:16px;--icon-md:20px;--icon-lg:24px;--icon-xl:32px;
+}

@@ -1,7 +1,9 @@
 <?php
 
 use App\Jobs\GenerateFlashcardAudio;
+use App\Jobs\GenerateLessonSentenceAudio;
 use App\Models\Flashcard;
+use App\Models\Lesson;
 use App\Services\AzureTextToSpeech;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -74,6 +76,42 @@ it('stores the audio of a flashcard that has none, and leaves one that has audio
     (new GenerateFlashcardAudio($flashcard))->handle(app(AzureTextToSpeech::class));
 
     Http::assertSentCount(1);
+});
+
+it('stores the audio of the lesson sentences that have none, and keeps an edit made while Azure was reading', function () {
+    Storage::fake('public');
+    $lesson = Lesson::factory()->create(['example_sentences' => [
+        ['sentence' => 'I eat an `apple`.', 'translation' => 'Tôi ăn một quả táo.'],
+        ['sentence' => 'Hello.', 'audio' => 'lessons/sentence-audio/hello.mp3'],
+    ]]);
+    Http::fake(['*' => function () use ($lesson) {
+        $lesson->update(['example_sentences' => [...$lesson->example_sentences, ['sentence' => 'Added meanwhile.']]]);
+
+        return Http::response('MP3-BYTES');
+    }]);
+
+    (new GenerateLessonSentenceAudio($lesson))->handle(app(AzureTextToSpeech::class));
+
+    $sentences = $lesson->fresh()->example_sentences;
+
+    expect($sentences)->toHaveCount(3)
+        ->and($sentences[0]['translation'])->toBe('Tôi ăn một quả táo.')
+        ->and($sentences[0]['audio'])->toStartWith('lessons/sentence-audio/')->toEndWith('.mp3')
+        ->and(Storage::disk('public')->get($sentences[0]['audio']))->toBe('MP3-BYTES')
+        ->and($sentences[1]['audio'])->toBe('lessons/sentence-audio/hello.mp3')
+        ->and($sentences[2])->toBe(['sentence' => 'Added meanwhile.']);
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn ($request) => str_contains($request->body(), '>I eat an apple.</prosody>')
+        && preg_match('/<voice name="en-US-(Jenny|Guy)Neural">/', $request->body()) === 1);
+});
+
+it('retries the lesson sentence job when Azure gives no audio', function () {
+    Http::fake(['*' => Http::response('', 500)]);
+    $lesson = Lesson::factory()->create(['example_sentences' => [['sentence' => 'Hello.']]]);
+
+    expect(fn () => (new GenerateLessonSentenceAudio($lesson))->handle(app(AzureTextToSpeech::class)))
+        ->toThrow(RuntimeException::class);
 });
 
 it('retries the job when Azure gives no audio', function () {

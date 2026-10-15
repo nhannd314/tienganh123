@@ -5,7 +5,10 @@ namespace App\Filament\Resources\Vocabularies\Schemas;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Str;
 
 class VocabularyForm
 {
@@ -14,9 +17,19 @@ class VocabularyForm
         return $schema
             ->components([
                 TextInput::make('title')
-                    ->required(),
+                    ->required()
+                    ->maxLength(255)
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(function (Get $get, Set $set, ?string $state, string $operation): void {
+                        if ($operation === 'create' && blank($get('slug'))) {
+                            $set('slug', Str::slug($state ?? ''));
+                        }
+                    }),
                 TextInput::make('slug')
-                    ->required(),
+                    ->maxLength(255)
+                    ->alphaDash()
+                    ->unique(ignoreRecord: true)
+                    ->helperText('Leave empty to generate it from the title.'),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 Select::make('tags')

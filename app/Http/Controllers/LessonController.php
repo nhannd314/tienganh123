@@ -11,6 +11,7 @@ use DOMElement;
 use Filament\Forms\Components\RichEditor\RichContentRenderer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -27,20 +28,7 @@ class LessonController extends Controller
         $lesson->load(['flashcardSets.flashcards.word']);
 
         $words = $lesson->words;
-        $exampleSentences = $words
-            ->map(function (Word $word): ?array {
-                $example = collect($word->examples ?? [])->first(fn ($example): bool => is_array($example) && filled($example['sentence'] ?? null));
-
-                return $example ? [
-                    'word' => $word,
-                    'sentence' => $example['sentence'],
-                    'translation' => $example['translation'] ?? null,
-                    'audioUrl' => filled($example['audio'] ?? null) ? Storage::disk('public')->url($example['audio']) : null,
-                    'parts' => $word->exampleSentenceParts($example['sentence']),
-                ] : null;
-            })
-            ->filter()
-            ->values();
+        $exampleSentences = $this->exampleSentences($lesson);
 
         return view('lessons.show', [
             'course' => $course,
@@ -56,6 +44,40 @@ class LessonController extends Controller
             'enrollCourse' => $course->needsEnrollmentBy($request->user()) ? $course : null,
             'topLearners' => $this->lessonTopLearners($lesson),
             'standing' => $request->user() ? $this->lessonStanding($lesson, $request->user()) : null,
+        ]);
+    }
+
+    /**
+     * The example sentences of the lesson, each cut into segments: a word marked with backticks that matches a stored
+     * word carries it, to be shown as a popover label; any other segment is plain text.
+     *
+     * @return Collection<int, array{sentence: string, translation: ?string, audioUrl: ?string, segments: list<array{text: string, word: ?Word}>}>
+     */
+    private function exampleSentences(Lesson $lesson): Collection
+    {
+        $examples = collect($lesson->example_sentences ?? [])
+            ->filter(fn (mixed $example): bool => is_array($example) && filled(trim(Lesson::spokenSentence($example['sentence'] ?? ''))))
+            ->map(fn (array $example): array => [...$example, 'segments' => Lesson::sentenceSegments($example['sentence'])])
+            ->values();
+
+        $markedWords = $examples->flatMap(fn (array $example): array => $example['segments'])
+            ->filter(fn (array $segment): bool => $segment['isMarked'])
+            ->map(fn (array $segment): string => mb_strtolower(trim($segment['text'])))
+            ->unique();
+
+        $words = $markedWords->isEmpty() ? collect() : Word::query()
+            ->whereIn(DB::raw('lower(word)'), $markedWords->all())
+            ->get()
+            ->keyBy(fn (Word $word): string => mb_strtolower($word->word));
+
+        return $examples->map(fn (array $example): array => [
+            'sentence' => Lesson::spokenSentence($example['sentence']),
+            'translation' => $example['translation'] ?? null,
+            'audioUrl' => filled($example['audio'] ?? null) ? Storage::disk('public')->url($example['audio']) : null,
+            'segments' => array_map(fn (array $segment): array => [
+                'text' => $segment['text'],
+                'word' => $segment['isMarked'] ? $words->get(mb_strtolower(trim($segment['text']))) : null,
+            ], $example['segments']),
         ]);
     }
 

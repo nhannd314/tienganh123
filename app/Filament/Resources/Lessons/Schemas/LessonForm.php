@@ -2,13 +2,18 @@
 
 namespace App\Filament\Resources\Lessons\Schemas;
 
+use App\Jobs\GenerateLessonSentenceAudio;
+use App\Models\Lesson;
 use App\Models\Unit;
+use App\Services\AzureTextToSpeech;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
@@ -78,6 +83,33 @@ class LessonForm
                     ->maxSize(10240)
                     ->downloadable()
                     ->columnSpanFull(),
+                Repeater::make('example_sentences')
+                    ->label('Example sentences')
+                    ->schema([
+                        TextInput::make('sentence')
+                            ->required()
+                            ->maxLength(500)
+                            ->helperText('Wrap a word in backticks, e.g. I have an `apple`., to show its IPA, audio and meaning in a popover when the word exists.'),
+                        TextInput::make('translation')
+                            ->label('Meaning')
+                            ->maxLength(500),
+                        FileUpload::make('audio')
+                            ->acceptedFileTypes(['audio/mpeg'])
+                            ->disk('public')
+                            ->directory('lessons/sentence-audio')
+                            ->visibility('public')
+                            ->maxSize(2048)
+                            ->downloadable()
+                            ->helperText('Leave empty to have Azure read the sentence when the lesson is saved.')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2)
+                    ->defaultItems(0)
+                    ->addActionLabel('Add sentence')
+                    ->reorderable()
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => $state['sentence'] ?? null)
+                    ->columnSpanFull(),
                 self::richContentEditor('content'),
                 FileUpload::make('attachments')
                     ->multiple()
@@ -89,6 +121,62 @@ class LessonForm
                     ->downloadable()
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * Drop the audio of a sentence whose text was changed, so the new text is read again.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function dropStaleSentenceAudio(array $data, Lesson $lesson): array
+    {
+        $sentenceByAudio = collect($lesson->example_sentences ?? [])
+            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['audio'] ?? null))
+            ->mapWithKeys(fn (array $example): array => [$example['audio'] => $example['sentence'] ?? null]);
+
+        $data['example_sentences'] = collect($data['example_sentences'] ?? [])
+            ->map(function (array $example) use ($sentenceByAudio): array {
+                $audio = $example['audio'] ?? null;
+
+                if (filled($audio) && $sentenceByAudio->has($audio) && $sentenceByAudio->get($audio) !== ($example['sentence'] ?? null)) {
+                    $example['audio'] = null;
+                }
+
+                return $example;
+            })
+            ->values()
+            ->all();
+
+        return $data;
+    }
+
+    /**
+     * Queue the Azure voice of the example sentences that have no audio; it appears on the lesson once the job has run.
+     */
+    public static function queueMissingSentenceAudio(Lesson $lesson): void
+    {
+        if (Lesson::sentencesWithoutAudio($lesson->example_sentences) === []) {
+            return;
+        }
+
+        if (! app(AzureTextToSpeech::class)->isConfigured()) {
+            Notification::make()
+                ->title('The sentence audio was not generated')
+                ->body('AZURE_SPEECH_KEY and AZURE_SPEECH_REGION are not set. Upload an audio file instead.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        GenerateLessonSentenceAudio::dispatch($lesson);
+
+        Notification::make()
+            ->title('The sentence audio is being generated')
+            ->body('It will appear on the lesson in a moment.')
+            ->success()
+            ->send();
     }
 
     /**

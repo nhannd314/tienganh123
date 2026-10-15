@@ -11,7 +11,7 @@
 
     {{-- Course header --}}
     <section class="flex flex-col items-start gap-4">
-        <h1 class="type-word tracking-tight text-balance text-fg-strong">{{ $course->title }}</h1>
+        <h1 class="type-page-title tracking-tight text-balance text-fg-strong">{{ $course->title }}</h1>
         @if ($course->description)
             <p class="max-w-200 type-body-lg text-pretty text-fg-body">{{ $course->description }}</p>
         @endif
@@ -22,7 +22,12 @@
         <section class="flex min-w-0 flex-[999_1_560px] flex-col gap-5">
             @forelse ($units as $unit)
                 <div class="overflow-hidden rounded-lg bg-surface-card shadow-card">
-                    <h3 class="px-6 py-5 type-h2 text-fg-strong">{{ $unit['title'] }}</h3>
+                    <div class="flex flex-col gap-2 px-6 py-5">
+                        <h3 class="type-h2 text-fg-strong">{{ $unit['title'] }}</h3>
+                        @if (filled($unit['description']))
+                            <p class="type-body text-pretty text-fg-muted">{{ $unit['description'] }}</p>
+                        @endif
+                    </div>
 
                     <ol class="flex flex-col gap-3 px-6 pb-5">
                         @foreach ($unit['lessons'] as $lesson)
@@ -83,16 +88,10 @@
         <aside class="flex min-w-0 flex-[1_1_360px] flex-col gap-6">
             <div class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
                 @if ($course->isFree() || $hasPaidAccess)
-                    @if ($startUrl)
-                        <x-button variant="primary" size="lg" icon-left="play" full-width :href="$startUrl">Bắt đầu học</x-button>
-                    @endif
-                @else
-                    <x-course-enroll :course="$course" />
+                    <h2 class="type-h2 text-fg-strong">Thông tin khóa học</h2>
                 @endif
 
-                <x-course-benefits :course="$course" class="border-b border-line-subtle pb-5" />
-
-                <ul class="flex flex-col gap-3">
+                <ul class="flex flex-col gap-3 rounded-md bg-primary-bg p-4">
                     @foreach ($meta as $item)
                         <li class="flex items-center gap-3 type-body text-fg-body">
                             <x-icon :name="$item['icon']" class="text-primary" />
@@ -100,6 +99,12 @@
                         </li>
                     @endforeach
                 </ul>
+
+                @unless ($course->isFree() || $hasPaidAccess)
+                    <x-course-enroll :course="$course" />
+                @endunless
+
+                <x-course-benefits :course="$course" />
             </div>
 
             <x-top-learners title="Top 10 khóa học này" :learners="$topLearners" />

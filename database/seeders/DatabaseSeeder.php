@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             WordSeeder::class,
             LessonVocabularySeeder::class,
             FlashcardSetSeeder::class,
+            PageSeeder::class,
         ]);
     }
 }

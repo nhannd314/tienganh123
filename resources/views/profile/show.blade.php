@@ -253,4 +253,8 @@
             @endif
         </div>
     </div>
+
+    <x-slot:footer>
+        <x-site-footer />
+    </x-slot:footer>
 </x-layouts.app>

@@ -11,11 +11,11 @@ beforeEach(function () {
     Filament::setCurrentPanel('admin');
 });
 
-it('groups the admin menu into learning content, vocabulary and pricing, in that order', function () {
+it('groups the admin menu into learning content, vocabulary, content and pricing, in that order', function () {
     $groups = collect(Filament::getNavigation())->filter(fn ($group) => filled($group->getLabel()));
 
     expect($groups->map(fn ($group) => $group->getLabel())->values()->all())
-        ->toBe(['Learning content', 'Vocabulary', 'Pricing']);
+        ->toBe(['Learning content', 'Vocabulary', 'Content', 'Pricing']);
 
     $labelsOf = fn (string $group) => $groups->first(fn ($candidate) => $candidate->getLabel() === $group)
         ->getItems()
@@ -24,7 +24,8 @@ it('groups the admin menu into learning content, vocabulary and pricing, in that
         ->all();
 
     expect($labelsOf('Learning content'))->toBe(['Courses', 'Units', 'Lessons'])
-        ->and($labelsOf('Vocabulary'))->toBe(['Words', 'Flashcards', 'Flashcard Sets', 'Vocabularies', 'Tags'])
+        ->and($labelsOf('Vocabulary'))->toBe(['Words', 'Vocabularies', 'Flashcards', 'Flashcard Sets', 'Tags'])
+        ->and($labelsOf('Content'))->toBe(['Categories', 'Posts', 'Pages'])
         ->and($labelsOf('Pricing'))->toBe(['Payments']);
 });
 
@@ -34,7 +35,16 @@ it('gives every menu item its own icon', function () {
         ->filter(fn ($item) => $item->getLabel() !== 'Dashboard')
         ->map(fn ($item) => $item->getIcon());
 
-    expect($icons)->toHaveCount(9)
-        ->and($icons->unique())->toHaveCount(9)
+    expect($icons)->toHaveCount(13)
+        ->and($icons->unique())->toHaveCount(13)
         ->and($icons->filter(fn ($icon) => blank($icon)))->toBeEmpty();
+});
+
+it('links to the website under the dashboard, in a new tab', function () {
+    $items = collect(Filament::getNavigation())->first(fn ($group) => blank($group->getLabel()))->getItems()->values();
+    $website = $items->first(fn ($item) => $item->getLabel() === 'Website');
+
+    expect($items->map(fn ($item) => $item->getLabel())->all())->toBe(['Dashboard', 'Website'])
+        ->and($website->getUrl())->toBe(route('home'))
+        ->and($website->shouldOpenUrlInNewTab())->toBeTrue();
 });

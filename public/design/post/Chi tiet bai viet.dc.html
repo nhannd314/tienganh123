@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/layout.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/effects.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/tokens/base.css">
+  <link rel="stylesheet" href="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/styles.css">
+  <script src="_ds/funenglish-design-system-41741dfb-b285-40a1-b85c-44b1e3e3a481/_ds_bundle.js"></script>
+  <script src="./image-slot.js"></script>
+  <style>
+    body{margin:0;background:var(--surface-page);font-family:var(--font-sans);color:var(--text-body)}
+    a{color:var(--text-link)} a:hover{color:var(--text-link-hover)}
+    nav[aria-label="Chính"] button{font-weight:var(--fw-medium)!important}
+    header a[aria-label^="FunEnglish"] b{font-size:var(--fs-3xl)!important}
+  </style>
+</helmet>
+
+<div style="min-height:100vh;background:var(--surface-page);display:flex;flex-direction:column">
+  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.NavBar" items="{{ navItems }}" active="home" notifications="{{ 2 }}" hint-size="100%,80px"></x-import>
+  </sc-if>
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+    <header style="position:sticky;top:0;z-index:20;background:var(--surface-header);border-bottom:var(--border-width-thin) solid var(--border-subtle);box-shadow:var(--shadow-xs)">
+      <div style="height:64px;padding:0 var(--space-4);display:flex;align-items:center">
+        <a href="Trang chu.dc.html" style="font:var(--fw-bold) var(--fs-2xl)/var(--lh-none) var(--font-sans);letter-spacing:var(--ls-tight);color:var(--primary);text-decoration:none">FunEnglish</a>
+      </div>
+    </header>
+  </sc-if>
+
+  <main style="width:100%;max-width:1200px;margin:0 auto;padding:var(--space-6) var(--space-5) var(--space-9);box-sizing:border-box;display:flex;flex-direction:column;gap:var(--space-6)">
+    <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Breadcrumbs" items="{{ crumbs }}" hint-size="100%,24px"></x-import>
+
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-6);align-items:flex-start">
+      <article data-screen-label="Bài viết" style="flex:999 1 600px;min-width:0;background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);overflow:hidden">
+        <div style="aspect-ratio:16/8;background:var(--primary-bg)">
+          <image-slot id="article-hero" shape="rect" placeholder="Ảnh bìa bài viết"></image-slot>
+        </div>
+        <div style="padding:var(--space-7) var(--space-7) var(--space-8);display:flex;flex-direction:column;gap:var(--space-5);max-width:760px;box-sizing:border-box">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3)">
+            <span style="height:32px;padding:0 var(--space-3);border-radius:var(--radius-sm);background:var(--secondary-bg);color:var(--secondary-text);font:var(--type-label-sm);font-weight:var(--fw-semibold);display:inline-flex;align-items:center">Mẹo học tập</span>
+            <span style="display:inline-flex;align-items:center;gap:var(--space-1);font:var(--type-body-sm);color:var(--text-muted)"><i class="icon-calendar" aria-hidden="true" style="font-size:var(--icon-sm)"></i>12/10/2026</span>
+            <span style="display:inline-flex;align-items:center;gap:var(--space-1);font:var(--type-body-sm);color:var(--text-muted)"><i class="icon-clock" aria-hidden="true" style="font-size:var(--icon-sm)"></i>5 phút đọc</span>
+          </div>
+          <h1 style="margin:0;font:var(--type-h1);color:var(--text-strong);text-wrap:balance">5 mẹo giúp bé nhớ từ vựng tiếng Anh lâu hơn</h1>
+          <p style="margin:0;font:var(--type-body-lg);color:var(--text-body);text-wrap:pretty">Học từ vựng sẽ dễ hơn nhiều khi bé được nghe, nhìn và dùng từ mỗi ngày. Cùng thử những cách đơn giản dưới đây nhé!</p>
+
+          <sc-for list="{{ sections }}" as="s" hint-placeholder-count="3">
+            <section style="display:flex;flex-direction:column;gap:var(--space-3);padding-top:var(--space-2)">
+              <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">{{ s.h }}</h2>
+              <p style="margin:0;font:var(--type-body-lg);color:var(--text-body);text-wrap:pretty">{{ s.p }}</p>
+            </section>
+          </sc-for>
+
+          <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.TipCard" title="Mẹo nhỏ" hint-size="100%,96px">Mỗi ngày chỉ cần ôn 10 từ trong 10 phút là bé đã tiến bộ rất nhanh đó!</x-import>
+
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);padding-top:var(--space-5);border-top:var(--border-width-thin) solid var(--border-subtle)">
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-2)" data-om-id="cd75a78b:43">
+              <span style="font:var(--type-label-sm);color:var(--text-muted);margin-right:var(--space-1)">Chia sẻ:</span>
+              <sc-for list="{{ socials }}" as="so" hint-placeholder-count="4">
+                <a href="{{ so.href }}" target="_blank" rel="noopener" aria-label="{{ so.label }}" title="{{ so.label }}" style="width:40px;height:40px;border-radius:var(--radius-pill);background:{{ so.bg }};color:var(--text-on-primary);display:inline-flex;align-items:center;justify-content:center;text-decoration:none;box-shadow:0 3px 0 {{ so.edge }};transition:var(--transition-interactive)" style-hover="background:{{ so.edge }}"><i class="{{ so.icon }}" aria-hidden="true" style="font-size:var(--icon-md)"></i></a>
+              </sc-for>
+            </div>
+            <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="{{ copyVariant }}" size="sm" icon-left="{{ copyIcon }}" on-click="{{ copyLink }}" hint-size="140px,40px">{{ copyLabel }}</x-import>
+          </div>
+        </div>
+      </article>
+
+      <aside style="flex:1 1 320px;min-width:0;position:sticky;top:calc(var(--layout-header-h) + var(--space-5));display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:start;gap:var(--space-5)">
+        <section style="background:var(--surface-card);border-radius:var(--radius-lg);box-shadow:var(--shadow-card);padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4)">
+          <div style="display:flex;align-items:center;gap:var(--space-2)">
+            <h2 style="margin:0;font:var(--type-h3);color:var(--text-strong)">Bài viết liên quan</h2>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ related }}" as="r" hint-placeholder-count="4">
+              <a href="Chi tiet bai viet.dc.html" style="display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-top:var(--border-width-thin) solid {{ r.line }};text-decoration:none;color:inherit;transition:var(--transition-interactive)" style-hover="opacity:0.85">
+                <span style="flex:none;width:72px;height:72px;border-radius:var(--radius-md);background:{{ r.bg }};overflow:hidden">
+                  <image-slot id="{{ r.slot }}" shape="rect" fit="contain" src="{{ r.img }}" placeholder="Ảnh"></image-slot>
+                </span>
+                <span style="min-width:0;display:flex;flex-direction:column;gap:var(--space-1)">
+                  <span style="font:var(--type-label);color:var(--text-strong);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.title }}</span>
+                  <span style="display:flex;align-items:center;gap:var(--space-2);font:var(--type-caption);color:var(--text-muted)"><span style="font-weight:var(--fw-semibold);color:{{ r.color }}">{{ r.cat }}</span><span aria-hidden="true">·</span>{{ r.date }}</span>
+                </span>
+              </a>
+            </sc-for>
+          </div>
+        </section>
+        <section style="background:var(--primary-bg);border-radius:var(--radius-lg);padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-4)">
+          <div style="display:flex;align-items:center;gap:var(--space-3)">
+            <span style="flex:none;width:48px;height:48px;border-radius:var(--radius-pill);background:var(--surface-card);color:var(--primary);display:flex;align-items:center;justify-content:center"><i class="icon-gift" aria-hidden="true" style="font-size:var(--icon-lg)"></i></span>
+            <div style="display:flex;flex-direction:column;gap:var(--space-1)">
+              <h2 style="margin:0;font:var(--type-h3);color:var(--text-strong)">Học thử miễn phí</h2>
+              <span style="font:var(--type-body-sm);color:var(--text-body)">Khóa Tiếng Anh lớp 1</span>
+            </div>
+          </div>
+          <a href="Chi tiet khoa hoc.dc.html" style="display:block;text-decoration:none">
+            <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.Button" variant="primary" size="lg" icon-right="arrow-right" full-width="{{ true }}" hint-size="100%,56px">Học ngay</x-import>
+          </a>
+        </section>
+      </aside>
+    </div>
+
+    <section data-screen-label="Khóa học gợi ý" style="display:flex;flex-direction:column;gap:var(--space-5);padding-top:var(--space-4)">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:var(--space-3)">
+        <h2 style="margin:0;font:var(--type-h2);color:var(--text-strong)">Khóa học dành cho bé</h2>
+        <a href="Trang chu.dc.html" style="display:inline-flex;align-items:center;gap:var(--space-1);font:var(--type-label);text-decoration:none">Xem tất cả<i class="icon-arrow-right" aria-hidden="true" style="font-size:var(--icon-sm)"></i></a>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:var(--space-6)">
+        <sc-for list="{{ courses }}" as="c" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column">
+            <x-import component-from-global-scope="FunEnglishDesignSystem_41741d.LessonCard" title="{{ c.titleNode }}" description="{{ c.description }}" thumbnail="{{ c.thumbnail }}" thumbnail-fit="contain" tone="{{ c.tone }}" href="{{ c.href }}" hint-size="100%,320px"></x-import>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { copied: false, isMobile: typeof window !== 'undefined' && window.innerWidth < 1280 };
+  componentDidMount() {
+    this.onResize = () => { const m = window.innerWidth < 1280; if (m !== this.state.isMobile) this.setState({ isMobile: m }); };
+    window.addEventListener('resize', this.onResize); this.onResize();
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this.onResize); clearTimeout(this.t); }
+  copyLink() {
+    const done = () => { this.setState({ copied: true }); clearTimeout(this.t); this.t = setTimeout(() => this.setState({ copied: false }), 1800); };
+    try { navigator.clipboard.writeText(location.href).then(done, done); } catch (e) { done(); }
+  }
+  renderVals() {
+    const c = this.state.copied;
+    return {
+      navItems: [
+        { id: 'home', label: 'Trang chủ', icon: 'house' },
+        { id: 'courses', label: 'Khóa học', icon: 'book-open' },
+        { id: 'vocab', label: 'Từ vựng', icon: 'book-a' },
+        { id: 'tests', label: 'Bài kiểm tra', icon: 'clipboard-check' },
+        { id: 'games', label: 'Trò chơi', icon: 'gamepad-2' }
+      ],
+      crumbs: [{ label: 'Trang chủ', href: 'Trang chu.dc.html' }, { label: 'Bài viết' }, { label: '5 mẹo nhớ từ vựng lâu hơn' }],
+      sections: [
+        { h: '1. Học từ qua hình ảnh', p: 'Bé nhớ hình nhanh hơn chữ. Hãy cho bé xem tranh, flashcard hoặc chỉ vào đồ vật thật khi nói từ tiếng Anh.' },
+        { h: '2. Nghe và nói to', p: 'Bấm nghe phát âm rồi nhắc lại thật to. Nghe nhiều lần giúp bé phát âm chuẩn và nhớ từ lâu hơn.' },
+        { h: '3. Ôn lại đúng lúc', p: 'Ôn từ sau 1 ngày, 3 ngày rồi 1 tuần. Mỗi lần ôn ngắn thôi nhưng đều đặn sẽ hiệu quả hơn học dồn.' },
+        { h: '4. Vừa chơi vừa học', p: 'Trò chơi gõ từ, bắt từ rơi hay ghép hình giúp bé luyện phản xạ mà không thấy chán.' },
+        { h: '5. Dùng từ trong câu', p: 'Khuyến khích bé đặt câu ngắn với từ mới, ví dụ "I like apples". Dùng từ thường xuyên là cách nhớ tốt nhất.' }
+      ],
+      socials: [['Facebook', 'facebook', 'https://www.facebook.com/sharer/sharer.php', 'primary'], ['YouTube', 'youtube', 'https://www.youtube.com', 'danger'], ['Instagram', 'instagram', 'https://www.instagram.com', 'secondary'], ['Email', 'mail', 'mailto:', 'success']]
+        .map(([label, icon, href, t]) => ({ label, icon: 'icon-' + icon, href, bg: 'var(--' + t + ')', edge: 'var(--' + t + '-strong)' })),
+      related: [
+        ['Phát âm', 'Cách giúp bé phát âm chuẩn ngay từ đầu', '08/10/2026', 'primary'],
+        ['Mẹo học tập', 'Lập thời gian biểu học tiếng Anh cho bé', '02/10/2026', 'secondary'],
+        ['Ôn thi', 'Chuẩn bị ôn thi vào lớp 10 hiệu quả', '25/09/2026', 'success'],
+        ['Trò chơi', '3 trò chơi tiếng Anh vui tại nhà', '18/09/2026', 'warning']
+      ].map(([cat, title, date, t], i) => ({ cat, title, date, color: 'var(--' + t + '-text)', bg: 'var(--' + t + '-bg)', line: i ? 'var(--border-subtle)' : 'transparent', slot: 'related-thumb-' + i, img: 'assets/vocab/' + ['apple', 'ant', 'axe', 'car'][i] + '.png' })),
+      courses: [
+        { title: 'Tiếng Anh lớp 1', description: 'Làm quen chữ cái, màu sắc, con số và lời chào đầu tiên.', thumbnail: 'assets/vocab/apple.png', tone: 'danger', free: true },
+        { title: 'Tiếng Anh lớp 2', description: 'Từ vựng về gia đình, đồ vật và các phương tiện quen thuộc.', thumbnail: 'assets/vocab/car.png', tone: 'primary', price: '50,000đ' },
+        { title: 'Tiếng Anh lớp 3', description: 'Mẫu câu giao tiếp đơn giản, động vật và thiên nhiên.', thumbnail: 'assets/vocab/ant.png', tone: 'success', price: '60,000đ' }
+      ].map(k => {
+        const t = k.free ? 'success' : 'primary';
+        const pill = React.createElement('span', { style: { display: 'inline-flex', alignItems: 'center', height: 'var(--space-6)', padding: '0 var(--space-2)', borderRadius: 'var(--radius-xs)', background: 'var(--' + t + '-bg)', color: 'var(--' + t + '-text)', border: 'var(--border-width-thin) solid var(--' + t + '-border)', font: 'var(--type-caption)', fontWeight: 'var(--fw-semibold)', whiteSpace: 'nowrap' } }, k.free ? 'Miễn phí' : k.price);
+        return { ...k, href: 'Chi tiet khoa hoc.dc.html', titleNode: React.createElement(React.Fragment, null, k.title, React.createElement('span', { style: { display: 'flex', marginTop: 'var(--space-2)' } }, pill)) };
+      }),
+      copyLabel: c ? 'Đã sao chép' : 'Sao chép link', copyIcon: c ? 'check' : 'link', copyVariant: c ? 'success' : 'outline',
+      copyLink: () => this.copyLink(),
+      isMobile: this.state.isMobile, isDesktop: !this.state.isMobile
+    };
+  }
+}
+</script>
+</body>
+</html>

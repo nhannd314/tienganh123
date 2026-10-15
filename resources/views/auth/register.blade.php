@@ -1,6 +1,6 @@
 <x-layouts.app title="Đăng ký" main-class="flex min-h-screen flex-col items-center justify-center py-10">
     <div class="flex w-full max-w-110 flex-col gap-6">
-        <a href="{{ route('home') }}" class="self-center text-3xl leading-tight font-bold text-primary-text no-underline hover:text-primary-text hover:no-underline">FunEnglish</a>
+        <a href="{{ route('home') }}" aria-label="Học Tiếng Anh — Trang chủ" class="self-center no-underline hover:no-underline"><x-logo :size="64" domain /></a>
 
         <div class="flex flex-col gap-6 rounded-lg bg-surface-card px-8 py-10 shadow-card">
             <div class="flex flex-col gap-2 text-center">
