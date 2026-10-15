@@ -32,6 +32,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Notification email
+    |--------------------------------------------------------------------------
+    |
+    | Who is mailed about every transfer into the account: paid, short of the price, or without a matching code.
+    |
+    */
+
+    'notify_email' => env('PAYMENT_NOTIFY_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Subscription cycles
     |--------------------------------------------------------------------------
     |

@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PaymentStatus;
+use App\Filament\Resources\Payments\Pages\CreatePayment;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Payments\Pages\ViewPayment;
 use App\Models\Course;
@@ -48,4 +49,45 @@ it('offers no manual confirmation for a payment that is already paid', function 
 it('keeps the payments page from a regular user', function () {
     auth()->logout();
     $this->actingAs(User::factory()->create())->get('/admin/payments')->assertForbidden();
+});
+
+it('adds a payment by hand that is already paid and opens the course', function () {
+    $course = Course::factory()->published()->priced(50000)->create();
+    $user = User::factory()->create();
+
+    Livewire::test(CreatePayment::class)
+        ->fillForm(['user_id' => $user->id, 'course_id' => $course->id, 'months' => 3, 'amount' => 142500, 'is_paid' => true])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $payment = Payment::sole();
+
+    expect($payment)
+        ->status->toBe(PaymentStatus::Paid)
+        ->amount->toBe(142500)
+        ->provider->toBe('bank_transfer')
+        ->provider_reference->toStartWith(config('payment.transfer_prefix'))
+        ->and($payment->meta)->toMatchArray(['months' => 3, 'confirmed_by' => auth()->id()])
+        ->and($user->isSubscribedTo($course))->toBeTrue();
+});
+
+it('adds a pending payment by hand that opens nothing until it is confirmed', function () {
+    $course = Course::factory()->published()->priced(50000)->create();
+    $user = User::factory()->create();
+
+    Livewire::test(CreatePayment::class)
+        ->fillForm(['user_id' => $user->id, 'course_id' => $course->id, 'months' => 1, 'amount' => 50000, 'is_paid' => false])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Payment::sole()->status)->toBe(PaymentStatus::Pending)
+        ->and($user->isSubscribedTo($course))->toBeFalse();
+});
+
+it('fills the amount from the course price and the months chosen', function () {
+    $course = Course::factory()->published()->priced(50000)->create();
+
+    Livewire::test(CreatePayment::class)
+        ->fillForm(['course_id' => $course->id, 'months' => 3])
+        ->assertFormSet(['amount' => $course->priceForMonths(3)]);
 });

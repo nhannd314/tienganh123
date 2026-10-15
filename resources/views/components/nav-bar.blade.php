@@ -44,14 +44,14 @@
 
             @if ($avatarSrc)
                 <button type="button" aria-label="Tài khoản" class="flex cursor-pointer rounded-full">
-                    <img src="{{ $avatarSrc }}" alt="" class="size-12 rounded-full border-2 border-primary-border object-cover">
+                    <img src="{{ $avatarSrc }}" alt="" class="size-12 rounded-full object-cover">
                 </button>
             @elseif (auth()->check())
                 <a
                     href="{{ route('profile.show') }}"
                     aria-label="Hồ sơ của {{ auth()->user()->name }}"
                     @if (request()->routeIs('profile.*')) aria-current="page" @endif
-                    class="flex size-12 items-center justify-center rounded-full border-2 border-primary-border bg-primary-bg text-xl font-semibold text-primary-text no-underline transition-interactive hover:bg-primary-bg-hover hover:no-underline"
+                    class="flex size-12 items-center justify-center rounded-full bg-primary-bg text-xl font-semibold text-primary-text no-underline transition-interactive hover:bg-primary-bg-hover hover:no-underline"
                 >
                     @if (auth()->user()->avatar_url)
                         <img src="{{ auth()->user()->avatar_url }}" alt="" class="size-full rounded-full object-cover">

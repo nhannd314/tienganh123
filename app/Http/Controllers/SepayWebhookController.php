@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\BankTransactionStatus;
 use App\Enums\PaymentStatus;
+use App\Mail\BankTransactionNotice;
 use App\Models\BankTransaction;
 use App\Models\Payment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -85,11 +87,14 @@ class SepayWebhookController extends Controller
             ->first();
 
         if ($payment === null) {
+            $this->notify($transaction);
+
             return;
         }
 
         if ($data['transferAmount'] < $payment->amount) {
             $transaction->update(['status' => BankTransactionStatus::Underpaid, 'payment_id' => $payment->id]);
+            $this->notify($transaction);
 
             return;
         }
@@ -100,6 +105,22 @@ class SepayWebhookController extends Controller
             'status' => BankTransactionStatus::Matched,
             'payment_id' => $payment->id,
         ]);
+        $this->notify($transaction);
+    }
+
+    /**
+     * Mail the owner what became of the transfer once the database transaction is committed. A mail that cannot be sent
+     * is only reported: SePay must still get its 200, or it would retry a transaction that is already stored.
+     */
+    private function notify(BankTransaction $transaction): void
+    {
+        $to = config('payment.notify_email');
+
+        if (blank($to)) {
+            return;
+        }
+
+        DB::afterCommit(fn () => rescue(fn () => Mail::to($to)->send(new BankTransactionNotice($transaction->fresh()))));
     }
 
     /**

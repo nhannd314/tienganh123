@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Payments;
 
+use App\Filament\Resources\Payments\Pages\CreatePayment;
 use App\Filament\Resources\Payments\Pages\ListPayments;
 use App\Filament\Resources\Payments\Pages\ViewPayment;
+use App\Filament\Resources\Payments\Schemas\PaymentForm;
 use App\Filament\Resources\Payments\Schemas\PaymentInfolist;
 use App\Filament\Resources\Payments\Tables\PaymentsTable;
 use App\Models\Payment;
@@ -28,9 +30,9 @@ class PaymentResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'provider_reference';
 
-    public static function canCreate(): bool
+    public static function form(Schema $schema): Schema
     {
-        return false;
+        return PaymentForm::configure($schema);
     }
 
     public static function infolist(Schema $schema): Schema
@@ -47,6 +49,7 @@ class PaymentResource extends Resource
     {
         return [
             'index' => ListPayments::route('/'),
+            'create' => CreatePayment::route('/create'),
             'view' => ViewPayment::route('/{record}'),
         ];
     }

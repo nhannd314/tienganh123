@@ -3,6 +3,7 @@
 use App\Enums\BankTransactionStatus;
 use App\Enums\PaymentStatus;
 use App\Events\PaymentPaid;
+use App\Mail\BankTransactionNotice;
 use App\Models\BankTransaction;
 use App\Models\Course;
 use App\Models\Payment;
@@ -11,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Testing\TestResponse;
 
 uses(RefreshDatabase::class);
@@ -335,4 +337,31 @@ it('marks a payment paid and subscribes the user to the course through the model
         ->and($subscription->isActive())->toBeTrue()
         ->and($payment->markAsPaid())->toBeNull()
         ->and(Subscription::count())->toBe(1);
+});
+
+it('mails the owner about a paid transfer, a short one and one with no matching code', function (array $overrides, bool $hasPayment, string $subject) {
+    Mail::fake();
+    config(['payment.notify_email' => 'owner@example.com']);
+    $hasPayment && pendingPayment();
+
+    sepayWebhook(sepayPayload($overrides))->assertOk();
+
+    Mail::assertSent(BankTransactionNotice::class, fn (BankTransactionNotice $mail): bool => $mail->hasTo('owner@example.com') && str_contains($mail->envelope()->subject, $subject) && str_contains($mail->render(), 'Số tiền nhận'));
+})->with([
+    'paid' => [[], true, 'Thanh toán thành công'],
+    'short of the price' => [['transferAmount' => 10000], true, 'thiếu tiền'],
+    'no pending payment has the code' => [['code' => 'FEZZZZ9999', 'content' => 'x'], true, 'không khớp mã'],
+    'no code at all' => [['code' => null, 'content' => 'chuyen tien'], false, 'không khớp mã'],
+]);
+
+it('sends no mail for money going out or when no owner email is set', function () {
+    Mail::fake();
+    config(['payment.notify_email' => 'owner@example.com']);
+
+    sepayWebhook(sepayPayload(['transferType' => 'out']))->assertOk();
+
+    config(['payment.notify_email' => null]);
+    sepayWebhook(sepayPayload(['id' => 1, 'code' => null, 'content' => 'x']))->assertOk();
+
+    Mail::assertNothingSent();
 });

@@ -137,7 +137,7 @@ class Payment extends Model
     /**
      * A transfer code nobody has used: the prefix and eight letters and digits, e.g. FE7K3QX9AB.
      */
-    private static function newTransferReference(): string
+    public static function newTransferReference(): string
     {
         do {
             $reference = config('payment.transfer_prefix').Str::upper(Str::random(8));
