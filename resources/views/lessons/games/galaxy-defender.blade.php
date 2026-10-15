@@ -97,7 +97,12 @@
         </div>
 
         <aside class="flex min-w-0 max-w-full flex-[1_1_380px] flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-            <h2 class="type-h2 text-fg-strong">Top 10 thời gian nhanh nhất</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex size-12 items-center justify-center rounded-full border border-accent-border bg-accent-bg">
+                    <x-icon name="trophy" size="lg" class="text-accent-text" />
+                </div>
+                <h2 class="type-h2 text-fg-strong">BXH Cao thủ</h2>
+            </div>
             <ol data-best-times class="flex flex-col gap-4">
                 @include('lessons.games.best-times', ['times' => $bestTimes])
             </ol>

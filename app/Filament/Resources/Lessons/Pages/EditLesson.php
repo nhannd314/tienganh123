@@ -17,7 +17,7 @@ class EditLesson extends EditRecord
      */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        return LessonForm::dropStaleSentenceAudio($data, $this->getRecord());
+        return LessonForm::keepSentenceAudio($data, $this->getRecord());
     }
 
     protected function afterSave(): void

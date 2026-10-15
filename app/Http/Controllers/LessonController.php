@@ -98,6 +98,10 @@ class LessonController extends Controller
             ->fileAttachmentsVisibility('public')
             ->toHtml();
 
+        if (blank(trim(str_replace("\u{A0}", ' ', html_entity_decode(strip_tags($html, '<img><video><audio><iframe><hr>')))))) {
+            return '';
+        }
+
         $document = new DOMDocument;
         $document->loadHTML('<?xml encoding="utf-8"?><div id="rich-content">'.$html.'</div>', LIBXML_NOERROR | LIBXML_NOWARNING);
 

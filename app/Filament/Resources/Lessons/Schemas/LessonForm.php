@@ -6,8 +6,8 @@ use App\Jobs\GenerateLessonSentenceAudio;
 use App\Models\Lesson;
 use App\Models\Unit;
 use App\Services\AzureTextToSpeech;
+use Closure;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -83,32 +83,24 @@ class LessonForm
                     ->maxSize(10240)
                     ->downloadable()
                     ->columnSpanFull(),
-                Repeater::make('example_sentences')
+                Textarea::make('example_sentences')
                     ->label('Example sentences')
-                    ->schema([
-                        TextInput::make('sentence')
-                            ->required()
-                            ->maxLength(500)
-                            ->helperText('Wrap a word in backticks, e.g. I have an `apple`., to show its IPA, audio and meaning in a popover when the word exists.'),
-                        TextInput::make('translation')
-                            ->label('Meaning')
-                            ->maxLength(500),
-                        FileUpload::make('audio')
-                            ->acceptedFileTypes(['audio/mpeg'])
-                            ->disk('public')
-                            ->directory('lessons/sentence-audio')
-                            ->visibility('public')
-                            ->maxSize(2048)
-                            ->downloadable()
-                            ->helperText('Leave empty to have Azure read the sentence when the lesson is saved.')
-                            ->columnSpanFull(),
+                    ->rows(8)
+                    ->placeholder('I have an `apple` = Tôi có 1 quả táo.')
+                    ->helperText('One sentence per line: the English sentence, then = and its meaning. Wrap a word in backticks to show its IPA, audio and meaning in a popover when the word exists. Azure reads every sentence when the lesson is saved.')
+                    ->formatStateUsing(fn (mixed $state): string => is_array($state) ? self::sentencesToText($state) : (string) $state)
+                    ->dehydrateStateUsing(fn (?string $state): array => self::textToSentences($state))
+                    ->rules([
+                        fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                            foreach (self::textToSentences(is_string($value) ? $value : null) as $example) {
+                                if (mb_strlen($example['sentence']) > 500 || mb_strlen($example['translation'] ?? '') > 500) {
+                                    $fail('Each sentence and its meaning may not be longer than 500 characters.');
+
+                                    return;
+                                }
+                            }
+                        },
                     ])
-                    ->columns(2)
-                    ->defaultItems(0)
-                    ->addActionLabel('Add sentence')
-                    ->reorderable()
-                    ->collapsible()
-                    ->itemLabel(fn (array $state): ?string => $state['sentence'] ?? null)
                     ->columnSpanFull(),
                 self::richContentEditor('content'),
                 FileUpload::make('attachments')
@@ -124,28 +116,52 @@ class LessonForm
     }
 
     /**
-     * Drop the audio of a sentence whose text was changed, so the new text is read again.
+     * The example sentences as the lines of the textarea: "sentence = meaning", or just "sentence" without a meaning.
+     *
+     * @param  array<int, mixed>  $exampleSentences
+     */
+    public static function sentencesToText(array $exampleSentences): string
+    {
+        return collect($exampleSentences)
+            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['sentence'] ?? null))
+            ->map(fn (array $example): string => filled($example['translation'] ?? null) ? $example['sentence'].' = '.$example['translation'] : $example['sentence'])
+            ->implode('
+');
+    }
+
+    /**
+     * The example sentences of the lines of the textarea; blank lines are skipped and the meaning is what follows the first "=".
+     *
+     * @return list<array{sentence: string, translation: ?string, audio: null}>
+     */
+    public static function textToSentences(?string $text): array
+    {
+        return collect(preg_split('/\R/u', $text ?? '') ?: [])
+            ->map(fn (string $line): array => array_map('trim', explode('=', $line, 2)))
+            ->filter(fn (array $parts): bool => $parts[0] !== '')
+            ->map(fn (array $parts): array => [
+                'sentence' => $parts[0],
+                'translation' => filled($parts[1] ?? null) ? $parts[1] : null,
+                'audio' => null,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Give back the Azure audio of a sentence whose text is unchanged; a new or edited sentence has none, so Azure reads it again.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
-    public static function dropStaleSentenceAudio(array $data, Lesson $lesson): array
+    public static function keepSentenceAudio(array $data, Lesson $lesson): array
     {
-        $sentenceByAudio = collect($lesson->example_sentences ?? [])
-            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['audio'] ?? null))
-            ->mapWithKeys(fn (array $example): array => [$example['audio'] => $example['sentence'] ?? null]);
+        $audioBySentence = collect($lesson->example_sentences ?? [])
+            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['sentence'] ?? null) && filled($example['audio'] ?? null))
+            ->mapWithKeys(fn (array $example): array => [$example['sentence'] => $example['audio']]);
 
         $data['example_sentences'] = collect($data['example_sentences'] ?? [])
-            ->map(function (array $example) use ($sentenceByAudio): array {
-                $audio = $example['audio'] ?? null;
-
-                if (filled($audio) && $sentenceByAudio->has($audio) && $sentenceByAudio->get($audio) !== ($example['sentence'] ?? null)) {
-                    $example['audio'] = null;
-                }
-
-                return $example;
-            })
-            ->values()
+            ->map(fn (array $example): array => [...$example, 'audio' => $audioBySentence->get($example['sentence'])])
             ->all();
 
         return $data;

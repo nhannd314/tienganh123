@@ -94,7 +94,7 @@ it('plays Galaxy Defender with the review words of the lesson, without a time li
         ->assertSeeInOrder(['Trò chơi', 'Galaxy Defender'])
         ->assertSee('data-galaxy-game', false)
         ->assertSee('Không giới hạn thời gian')
-        ->assertSee('Top 10 thời gian nhanh nhất')
+        ->assertSee('BXH Cao thủ')
         ->getContent();
 
     preg_match('/<script type="application\/json" data-game-config>(.*?)<\/script>/s', $content, $match);
@@ -119,7 +119,7 @@ it('plays Zombie Defense with the words of the lesson and four seconds per word'
         ->assertOk()
         ->assertSeeInOrder(['Trò chơi', 'Zombie Defense'])
         ->assertSee('data-zombie-game', false)
-        ->assertSee('Top 10 thời gian nhanh nhất')
+        ->assertSee('BXH Cao thủ')
         ->assertSee('4 giây cho mỗi từ')
         ->getContent();
 
@@ -205,7 +205,7 @@ it('lists the 10 fastest players of the game beside it, fastest first, and marks
     GameScore::factory()->for(gamesLesson())->for(User::factory()->create(['name' => 'Other Lesson']))->create(['milliseconds' => 1000]);
 
     $content = $this->actingAs($me)->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))
-        ->assertSeeInOrder(['Top 10 thời gian nhanh nhất', 'Fast Fox', '5.2s', 'Me Myself', '(bạn)', '8.4s'])
+        ->assertSeeInOrder(['BXH Cao thủ', 'Fast Fox', '5.2s', 'Me Myself', '(bạn)', '8.4s'])
         ->assertDontSee('Other Lesson')
         ->getContent();
 
@@ -274,7 +274,7 @@ it('ranks the time of Galaxy Defender, which allows a minute per word instead of
     $this->actingAs($user)->postJson($url, ['milliseconds' => 45000])->assertOk()->assertJsonPath('html', fn (string $html) => str_contains($html, 'Star Pilot') && str_contains($html, '45.0s'));
     $this->actingAs($user)->postJson($url, ['milliseconds' => 60001])->assertUnprocessable();
 
-    $this->actingAs($user)->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))->assertSeeInOrder(['Top 10 thời gian nhanh nhất', 'Star Pilot', '45.0s']);
+    $this->actingAs($user)->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))->assertSeeInOrder(['BXH Cao thủ', 'Star Pilot', '45.0s']);
     expect(GameScore::where('game', 'galaxy-defender')->count())->toBe(1);
 });
 

@@ -87,9 +87,11 @@
         {{-- Sidebar --}}
         <aside class="flex min-w-0 flex-[1_1_360px] flex-col gap-6">
             <div class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-                @if ($course->isFree() || $hasPaidAccess)
-                    <h2 class="type-h2 text-fg-strong">Thông tin khóa học</h2>
-                @endif
+                @unless ($course->isFree() || $hasPaidAccess)
+                    <x-course-enroll :course="$course" />
+                @endunless
+
+                <h2 class="type-h2 text-fg-strong">Thông tin khóa học</h2>
 
                 <ul class="flex flex-col gap-3 rounded-md bg-primary-bg p-4">
                     @foreach ($meta as $item)
@@ -99,10 +101,6 @@
                         </li>
                     @endforeach
                 </ul>
-
-                @unless ($course->isFree() || $hasPaidAccess)
-                    <x-course-enroll :course="$course" />
-                @endunless
 
                 <x-course-benefits :course="$course" />
             </div>

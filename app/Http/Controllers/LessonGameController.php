@@ -23,7 +23,7 @@ class LessonGameController extends Controller
     public const GAMES = [
         'soldier-and-monster' => ['title' => 'Soldier and Monster', 'thumbnail' => 'games/soldier-and-monster/preview.png', 'icon' => 'swords', 'tone' => 'primary', 'isPlayable' => true, 'hasLeaderboard' => true, 'maxSecondsPerWord' => 6, 'showsPartOfSpeech' => false],
         'galaxy-defender' => ['title' => 'Galaxy Defender', 'thumbnail' => 'games/galaxy-defender/preview.jpg', 'icon' => 'rocket', 'tone' => 'secondary', 'isPlayable' => true, 'hasLeaderboard' => true, 'maxSecondsPerWord' => 60, 'showsPartOfSpeech' => false],
-        'zombie-defense' => ['title' => 'Zombie Defense', 'thumbnail' => 'games/zombie-defense/preview.jpg', 'icon' => 'skull', 'tone' => 'accent', 'isPlayable' => true, 'hasLeaderboard' => true, 'maxSecondsPerWord' => 4, 'showsPartOfSpeech' => false, 'ranksAnyTime' => true],
+        'zombie-defense' => ['title' => 'Zombie Defense', 'thumbnail' => 'games/zombie-defense/thumbnail.png', 'icon' => 'skull', 'tone' => 'accent', 'isPlayable' => true, 'hasLeaderboard' => true, 'maxSecondsPerWord' => 4, 'showsPartOfSpeech' => false, 'ranksAnyTime' => true],
     ];
 
     /**

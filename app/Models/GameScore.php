@@ -77,7 +77,7 @@ class GameScore extends Model
     /**
      * The fastest players of the game of the lesson, fastest first (ties go to whoever was first).
      *
-     * @return Collection<int, array{name: string, seconds: string, isMine: bool}>
+     * @return Collection<int, array{name: string, avatarUrl: ?string, initial: string, seconds: string, isMine: bool}>
      */
     public static function leaderboard(Lesson $lesson, string $game, ?User $viewer = null, int $limit = 10): Collection
     {
@@ -89,6 +89,8 @@ class GameScore extends Model
             ->get()
             ->map(fn (self $score): array => [
                 'name' => $score->user->name,
+                'avatarUrl' => $score->user->avatar_url,
+                'initial' => $score->user->initial(),
                 'seconds' => number_format($score->milliseconds / 1000, 1, '.', ''),
                 'isMine' => $viewer?->is($score->user) ?? false,
             ]);

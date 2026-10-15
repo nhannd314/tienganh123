@@ -208,6 +208,7 @@ it('shows an audio player above the passage when the lesson has passage audio', 
 
 it('hides the passage section when the lesson has no passage', function () {
     $this->get(lessonUrl(publishedLesson(['passage' => null])))->assertDontSee('data-passage', false);
+    $this->get(lessonUrl(publishedLesson(['passage' => '<p></p><p>&nbsp;</p>'])))->assertDontSee('data-passage', false);
 });
 
 it('turns inline code that matches a word into a popover and leaves other code as text', function () {
