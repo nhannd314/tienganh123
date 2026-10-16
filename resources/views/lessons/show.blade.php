@@ -107,17 +107,13 @@
 
             {{-- Video --}}
             @if ($lesson->video_file_url || $lesson->video_embed_url)
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-                    <h2 class="type-h2 text-fg-strong">Video bài học</h2>
-
-                    <div class="aspect-video w-full overflow-hidden rounded-md bg-black">
-                        @if ($lesson->video_file_url)
-                            <video controls preload="metadata" src="{{ $lesson->video_file_url }}" class="size-full"></video>
-                        @else
-                            <iframe src="{{ $lesson->video_embed_url }}" title="{{ $lesson->title }}" class="size-full" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                        @endif
-                    </div>
-                </section>
+                <div class="aspect-video w-full overflow-hidden rounded-md bg-black">
+                    @if ($lesson->video_file_url)
+                        <video controls preload="metadata" src="{{ $lesson->video_file_url }}" class="size-full"></video>
+                    @else
+                        <iframe src="{{ $lesson->video_embed_url }}" title="{{ $lesson->title }}" class="size-full" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                    @endif
+                </div>
             @endif
 
             {{-- Content --}}
