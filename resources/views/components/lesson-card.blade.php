@@ -1,5 +1,5 @@
 {{--
-    Clickable lesson/course tile with a 16:9 thumbnail, title, an optional price label, a two-line description and optional
+    Clickable lesson/course tile with a 3:2 thumbnail, title, an optional price label, a two-line description and optional
     meta (slot). With `discount` (a percentage) the thumbnail carries a sale badge and `originalPrice` is struck through
     beside the price.
 --}}
@@ -32,7 +32,7 @@
     'group flex w-full flex-col overflow-hidden rounded-lg border border-line-subtle bg-surface-card text-left text-inherit no-underline shadow-card transition-interactive',
     'hover:-translate-y-0.5 hover:text-inherit hover:no-underline hover:shadow-raised active:translate-y-0',
 ]) }}>
-    <div @class(['relative flex aspect-video w-full items-center justify-center overflow-hidden', $thumbnailBackground])>
+    <div @class(['relative flex aspect-3/2 w-full items-center justify-center overflow-hidden', $thumbnailBackground])>
         @if ($discount)
             <span class="absolute top-3 left-3 z-1 rounded-sm bg-danger px-2 py-0.5 text-sm font-semibold text-on-danger shadow-xs">Sale {{ $discount }}%</span>
         @endif

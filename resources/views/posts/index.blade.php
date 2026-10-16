@@ -45,7 +45,7 @@
                         </span>
                     </div>
                     <div class="flex flex-1 flex-col gap-3 p-5">
-                        <h2 class="type-h3 text-pretty text-fg-strong">{{ $post->title }}</h2>
+                        <h2 class="type-h3 text-fg-strong">{{ $post->title }}</h2>
                         @if ($post->category)
                             <div class="flex">
                                 <x-category-label :category="$post->category" />
