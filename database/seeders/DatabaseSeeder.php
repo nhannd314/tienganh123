@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             LessonVocabularySeeder::class,
             FlashcardSetSeeder::class,
             PageSeeder::class,
+            LegalPageSeeder::class,
         ]);
     }
 }

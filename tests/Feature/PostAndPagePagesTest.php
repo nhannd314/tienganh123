@@ -154,3 +154,22 @@ it('seeds the three fixed pages with their contact details, without overwriting 
         ->assertSee(route('pages.show', Page::where('slug', 'cau-hoi-thuong-gap')->first()), false)
         ->assertSee(route('pages.show', Page::where('slug', 'danh-cho-phu-huynh')->first()), false);
 });
+
+it('seeds the privacy policy and terms of service in both languages, listed in the footer, without overwriting a page that exists', function () {
+    Page::factory()->published()->create(['slug' => 'dieu-khoan-su-dung', 'title' => 'Điều khoản sử dụng', 'content' => '<p>Đã sửa</p>']);
+
+    $this->seed(LegalPageSeeder::class);
+    $this->seed(LegalPageSeeder::class);
+
+    expect(Page::query()->pluck('slug')->all())->toEqualCanonicalizing(['chinh-sach-bao-mat', 'dieu-khoan-su-dung'])
+        ->and(Page::where('slug', 'dieu-khoan-su-dung')->value('content'))->toBe('<p>Đã sửa</p>');
+
+    $privacyPolicy = Page::where('slug', 'chinh-sach-bao-mat')->first();
+
+    $this->get(route('pages.show', $privacyPolicy))
+        ->assertOk()
+        ->assertSee('Chính sách bảo mật')
+        ->assertSee('Privacy Policy')
+        ->assertSee('nhannd314@gmail.com');
+    $this->get(route('home'))->assertSeeInOrder(['aria-label="Pháp lý"', route('pages.show', $privacyPolicy)], false);
+});

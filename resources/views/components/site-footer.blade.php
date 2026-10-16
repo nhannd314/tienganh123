@@ -1,8 +1,11 @@
-{{-- Site footer: brand, link columns and copyright. The support column lists the published fixed pages; the contact column comes from config/site.php. --}}
+{{--
+    Site footer: brand, link columns and copyright. The support column lists the published fixed pages, except the legal
+    ones (seeded by LegalPageSeeder), which sit at the right of the copyright line; the contact column comes from config/site.php.
+--}}
 @php
-    $supportLinks = \App\Models\Page::query()->published()->orderBy('sort_order')->orderBy('id')->get()
-        ->mapWithKeys(fn ($page) => [$page->title => route('pages.show', $page)])
-        ->all();
+    [$legalPages, $supportPages] = \App\Models\Page::query()->published()->orderBy('sort_order')->orderBy('id')->get()
+        ->partition(fn ($page) => in_array($page->slug, ['chinh-sach-bao-mat', 'dieu-khoan-su-dung'], true));
+    $supportLinks = $supportPages->mapWithKeys(fn ($page) => [$page->title => route('pages.show', $page)])->all();
 
     $contact = config('site.contact');
     $phone = $contact['phone'];
@@ -36,6 +39,15 @@
             @endforeach
         </div>
 
-        <div class="border-t border-line-subtle pt-5 type-body-sm text-fg-muted">© {{ date('Y') }} hoctienganh.pro.vn</div>
+        <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-line-subtle pt-5 type-body-sm text-fg-muted">
+            <span>© {{ date('Y') }} hoctienganh.pro.vn</span>
+            @if ($legalPages->isNotEmpty())
+                <nav aria-label="Pháp lý" class="flex flex-wrap gap-x-5 gap-y-2">
+                    @foreach ($legalPages as $legalPage)
+                        <a href="{{ route('pages.show', $legalPage) }}" class="text-fg-muted no-underline hover:text-fg-link hover:no-underline">{{ $legalPage->title }}</a>
+                    @endforeach
+                </nav>
+            @endif
+        </div>
     </div>
 </footer>
