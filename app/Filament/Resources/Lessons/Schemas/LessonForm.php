@@ -14,6 +14,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -75,8 +76,16 @@ class LessonForm
                     ->columnSpanFull(),
                 self::richContentEditor('passage')
                     ->helperText('Opening passage of the lesson. Wrap a word in inline code (`apple`) to show its IPA, audio and meaning in a popover when the word exists.'),
-                TextInput::make('video')
-                    ->label('Video (YouTube)')
+                ToggleButtons::make('video_source')
+                    ->label('Video')
+                    ->options(['youtube' => 'YouTube link', 'upload' => 'Upload file'])
+                    ->inline()
+                    ->live()
+                    ->default('youtube')
+                    ->helperText('Shown below the flashcards of the lesson.')
+                    ->columnSpanFull(),
+                TextInput::make('video_url')
+                    ->label('YouTube URL')
                     ->url()
                     ->maxLength(255)
                     ->placeholder('https://www.youtube.com/watch?v=...')
@@ -87,7 +96,17 @@ class LessonForm
                             }
                         },
                     ])
-                    ->helperText('Shown below the flashcards of the lesson.')
+                    ->visible(fn (Get $get): bool => $get('video_source') !== 'upload')
+                    ->columnSpanFull(),
+                FileUpload::make('video_upload')
+                    ->label('Video file')
+                    ->acceptedFileTypes(['video/mp4', 'video/webm'])
+                    ->disk('public')
+                    ->directory('lessons/videos')
+                    ->visibility('public')
+                    ->maxSize(204800)
+                    ->downloadable()
+                    ->visible(fn (Get $get): bool => $get('video_source') === 'upload')
                     ->columnSpanFull(),
                 FileUpload::make('passage_audio')
                     ->label('Passage audio')
@@ -128,6 +147,41 @@ class LessonForm
                     ->downloadable()
                     ->columnSpanFull(),
             ]);
+    }
+
+    /**
+     * Split the stored `video` into the form fields: the source, and the link or the uploaded file.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function fillVideoFields(array $data): array
+    {
+        $isUpload = filled($data['video'] ?? null) && ! preg_match('~^https?://~i', $data['video']);
+
+        $data['video_source'] = $isUpload ? 'upload' : 'youtube';
+        $data['video_url'] = $isUpload ? null : ($data['video'] ?? null);
+        $data['video_upload'] = $isUpload ? $data['video'] : null;
+
+        return $data;
+    }
+
+    /**
+     * Merge the link or the uploaded file of the chosen source back into the single `video` column.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function mergeVideoFields(array $data): array
+    {
+        $isUpload = ($data['video_source'] ?? 'youtube') === 'upload';
+        $upload = $data['video_upload'] ?? null;
+
+        $data['video'] = $isUpload ? (is_string($upload) && filled($upload) ? $upload : null) : (filled($data['video_url'] ?? null) ? $data['video_url'] : null);
+
+        unset($data['video_source'], $data['video_url'], $data['video_upload']);
+
+        return $data;
     }
 
     /**

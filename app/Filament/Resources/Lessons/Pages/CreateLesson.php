@@ -10,6 +10,15 @@ class CreateLesson extends CreateRecord
 {
     protected static string $resource = LessonResource::class;
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        return LessonForm::mergeVideoFields($data);
+    }
+
     protected function afterCreate(): void
     {
         LessonForm::queueMissingSentenceAudio($this->getRecord());

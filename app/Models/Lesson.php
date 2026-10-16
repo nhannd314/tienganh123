@@ -333,6 +333,24 @@ class Lesson extends Model
     }
 
     /**
+     * Whether the video is an uploaded file (a path on the public disk) rather than a link.
+     */
+    public function hasUploadedVideo(): bool
+    {
+        return filled($this->video) && ! preg_match('~^https?://~i', $this->video);
+    }
+
+    /**
+     * Public URL of the uploaded lesson video stored on the public disk, or null when it is a link or absent.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function videoFileUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => $this->hasUploadedVideo() ? Storage::disk('public')->url($this->video) : null);
+    }
+
+    /**
      * Scope a query to only include published lessons.
      */
     #[Scope]

@@ -14,6 +14,7 @@ use App\Models\Vocabulary;
 use Filament\Actions\AttachAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -197,7 +198,7 @@ it('lays the form out in pairs: unit with title, slug with sort order, toggles t
 
     expect($names)->toBe([
         'unit_id', 'title', 'slug', 'sort_order', 'is_free', 'is_published', 'description',
-        'passage', 'video', 'passage_audio', 'example_sentences', 'content', 'attachments',
+        'passage', 'video_source', 'video_url', 'passage_audio', 'example_sentences', 'content', 'attachments',
     ])
         ->and($schema->getComponent('passage_audio')->getColumnSpan('default'))->toBe('full')
         ->and($schema->getComponent('attachments')->getColumnSpan('default'))->toBe('full');
@@ -219,4 +220,42 @@ it('lists and reorders the attached vocabularies and flashcard sets of the lesso
 
     expect($lesson->vocabularies()->pluck('vocabularies.id')->all())->toBe([$secondVocabulary->id, $firstVocabulary->id])
         ->and($lesson->flashcardSets()->pluck('flashcard_sets.id')->all())->toBe([$secondSet->id, $firstSet->id]);
+});
+
+it('saves the lesson video as a YouTube link or as an uploaded file in the same field', function () {
+    Storage::fake('public');
+    $unit = Unit::factory()->create();
+
+    Livewire::test(CreateLesson::class)
+        ->fillForm(['unit_id' => $unit->id, 'title' => 'Link', 'sort_order' => 1, 'video_source' => 'youtube', 'video_url' => 'https://youtu.be/dQw4w9WgXcQ'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Lesson::firstWhere('title', 'Link'))
+        ->video->toBe('https://youtu.be/dQw4w9WgXcQ')
+        ->hasUploadedVideo()->toBeFalse();
+
+    Livewire::test(CreateLesson::class)
+        ->fillForm(['unit_id' => $unit->id, 'title' => 'Upload', 'sort_order' => 2, 'video_source' => 'upload', 'video_upload' => UploadedFile::fake()->create('clip.mp4', 100, 'video/mp4')])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $lesson = Lesson::firstWhere('title', 'Upload');
+
+    expect($lesson->hasUploadedVideo())->toBeTrue();
+    Storage::disk('public')->assertExists($lesson->video);
+});
+
+it('shows the saved video in the right mode when editing, and rejects a link that is not YouTube', function () {
+    $link = Lesson::factory()->create(['video' => 'https://youtu.be/dQw4w9WgXcQ']);
+    $upload = Lesson::factory()->create(['video' => 'lessons/videos/clip.mp4']);
+
+    Livewire::test(EditLesson::class, ['record' => $link->getRouteKey()])
+        ->assertSchemaStateSet(['video_source' => 'youtube', 'video_url' => 'https://youtu.be/dQw4w9WgXcQ'])
+        ->fillForm(['video_url' => 'https://example.com/watch?v=dQw4w9WgXcQ'])
+        ->call('save')
+        ->assertHasFormErrors(['video_url']);
+
+    Livewire::test(EditLesson::class, ['record' => $upload->getRouteKey()])
+        ->assertSchemaStateSet(['video_source' => 'upload']);
 });

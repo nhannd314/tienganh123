@@ -15,9 +15,18 @@ class EditLesson extends EditRecord
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        return LessonForm::fillVideoFields($data);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        return LessonForm::keepSentenceAudio($data, $this->getRecord());
+        return LessonForm::keepSentenceAudio(LessonForm::mergeVideoFields($data), $this->getRecord());
     }
 
     protected function afterSave(): void
