@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\YoutubeVideoBlock;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Unit;
@@ -94,6 +95,7 @@ class LessonController extends Controller
         }
 
         $html = RichContentRenderer::make($content)
+            ->customBlocks([YoutubeVideoBlock::class])
             ->fileAttachmentsDisk('public')
             ->fileAttachmentsVisibility('public')
             ->toHtml();

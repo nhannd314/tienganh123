@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Lessons\Schemas;
 
+use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\YoutubeVideoBlock;
 use App\Jobs\GenerateLessonSentenceAudio;
 use App\Models\Lesson;
 use App\Models\Unit;
@@ -74,6 +75,20 @@ class LessonForm
                     ->columnSpanFull(),
                 self::richContentEditor('passage')
                     ->helperText('Opening passage of the lesson. Wrap a word in inline code (`apple`) to show its IPA, audio and meaning in a popover when the word exists.'),
+                TextInput::make('video')
+                    ->label('Video (YouTube)')
+                    ->url()
+                    ->maxLength(255)
+                    ->placeholder('https://www.youtube.com/watch?v=...')
+                    ->rules([
+                        fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
+                            if (filled($value) && Lesson::youtubeEmbedUrl(is_string($value) ? $value : null) === null) {
+                                $fail('This is not a valid YouTube link.');
+                            }
+                        },
+                    ])
+                    ->helperText('Shown below the flashcards of the lesson.')
+                    ->columnSpanFull(),
                 FileUpload::make('passage_audio')
                     ->label('Passage audio')
                     ->acceptedFileTypes(['audio/mpeg'])
@@ -205,9 +220,10 @@ class LessonForm
                 ['bold', 'italic', 'underline', 'strike', 'code', 'link'],
                 ['h2', 'h3'],
                 ['blockquote', 'bulletList', 'orderedList'],
-                ['attachFiles'],
+                ['attachFiles', 'customBlocks'],
                 ['undo', 'redo'],
             ])
+            ->customBlocks([YoutubeVideoBlock::class])
             ->fileAttachmentsDisk('public')
             ->fileAttachmentsDirectory('lessons/content')
             ->fileAttachmentsVisibility('public')

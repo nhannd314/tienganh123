@@ -197,7 +197,7 @@ it('lays the form out in pairs: unit with title, slug with sort order, toggles t
 
     expect($names)->toBe([
         'unit_id', 'title', 'slug', 'sort_order', 'is_free', 'is_published', 'description',
-        'passage', 'passage_audio', 'example_sentences', 'content', 'attachments',
+        'passage', 'video', 'passage_audio', 'example_sentences', 'content', 'attachments',
     ])
         ->and($schema->getComponent('passage_audio')->getColumnSpan('default'))->toBe('full')
         ->and($schema->getComponent('attachments')->getColumnSpan('default'))->toBe('full');

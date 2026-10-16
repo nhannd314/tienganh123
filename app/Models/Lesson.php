@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Storage;
     'example_sentences',
     'content',
     'attachments',
+    'video',
     'sort_order',
     'is_free',
     'is_published',
@@ -309,6 +310,26 @@ class Lesson extends Model
     protected function passageAudioUrl(): Attribute
     {
         return Attribute::get(fn (): ?string => $this->passage_audio ? Storage::disk('public')->url($this->passage_audio) : null);
+    }
+
+    /**
+     * The privacy-friendly embed URL of a YouTube link (watch, share, shorts, live or embed form), or null when it is not one.
+     */
+    public static function youtubeEmbedUrl(?string $url): ?string
+    {
+        $pattern = '~^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})(?:[?&#/].*)?$~i';
+
+        return preg_match($pattern, trim($url ?? ''), $match) ? 'https://www.youtube-nocookie.com/embed/'.$match[1] : null;
+    }
+
+    /**
+     * Embed URL of the lesson video, or null when it has none.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function videoEmbedUrl(): Attribute
+    {
+        return Attribute::get(fn (): ?string => self::youtubeEmbedUrl($this->video));
     }
 
     /**
