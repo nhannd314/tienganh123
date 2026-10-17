@@ -29,7 +29,7 @@
         @endif
     </section>
 
-    <div class="flex flex-wrap items-start gap-10">
+    <div data-sidebar-layout class="group/layout flex flex-wrap items-start gap-10">
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             @php($cards = $flashcards->filter(fn ($card): bool => filled($card->display_title)))
             @if ($cards->isEmpty())
@@ -45,16 +45,17 @@
                         <div class="flex items-center gap-2">
                             <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-flashcard-toggle />
                             <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
+                            <x-icon-button icon="panel-right-close" label="Ẩn thanh bên" size="sm" aria-pressed="false" data-sidebar-toggle />
                         </div>
                     </div>
 
-                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(260px,calc((100%_-_2rem)/3))),1fr))] gap-4">
+                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(260px,calc((100%_-_2rem)/3))),1fr))] gap-4 group-data-[sidebar-hidden]/layout:grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%_-_3rem)/4))),1fr))]">
                         @foreach ($cards as $flashcard)
                             @php($word = $flashcard->word)
                             <x-flashcard
                                 :word="$flashcard->display_title"
                                 :phonetic="$word?->ipa_us"
-                                :meaning="$word?->meaningLabels()[0] ?? null"
+                                :meaning="$word?->firstPlainMeaning()"
                                 :image="$flashcard->image_url ?? $word?->image_url"
                                 :audio="$flashcard->audio_url"
                                 :tone="$cardTones[$loop->index % count($cardTones)]"
@@ -65,7 +66,7 @@
             @endif
         </div>
 
-        <aside class="flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6">
+        <aside class="flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6 group-data-[sidebar-hidden]/layout:hidden">
             <x-course-link-list :courses="$courses" />
             <x-flashcard-set-link-list title="Flashcard cùng chủ đề" :flashcard-sets="$sameTopic" />
             <x-flashcard-set-link-list title="Flashcard liên quan" :flashcard-sets="$sameCourse" />

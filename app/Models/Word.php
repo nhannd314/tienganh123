@@ -87,6 +87,16 @@ class Word extends Model
     }
 
     /**
+     * The first meaning without its part of speech, e.g. "quả táo", or null when the word has no meaning.
+     */
+    public function firstPlainMeaning(): ?string
+    {
+        return collect($this->meanings ?? [])
+            ->map(fn (array $meaning): string => trim($meaning['meaning'] ?? ''))
+            ->first(fn (string $meaning): bool => $meaning !== '');
+    }
+
+    /**
      * Name of the attribute the slug is generated from.
      */
     protected function slugSourceAttribute(): string

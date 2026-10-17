@@ -346,6 +346,11 @@
         display: none !important;
     }
 
+    /* The page is narrow, so the screen's auto-fill would fit only 2 cards per row. */
+    [data-print-root] [data-flashcards] {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
     [data-print-root] .shake {
         animation: none !important;
         transform: none !important;

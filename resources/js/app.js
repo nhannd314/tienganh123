@@ -220,6 +220,7 @@ const copyText = (text) => {
 
 // Print only one element: print a clone of it and hide everything else (see app.css).
 const printElement = (element) => {
+    const heading = element.closest('section')?.querySelector('h2');
     const root = document.createElement('div');
     const clone = element.cloneNode(true);
     const cleanUp = () => {
@@ -230,6 +231,13 @@ const printElement = (element) => {
     clone.setAttribute('data-expanded', '');
     clone.querySelectorAll('.shake').forEach((image) => image.classList.remove('shake'));
     root.dataset.printRoot = '';
+    if (heading) {
+        const title = heading.cloneNode(true);
+
+        title.style.marginBottom = '1.5rem';
+        root.append(title);
+    }
+
     root.append(clone);
     document.body.append(root);
     document.body.dataset.printOnly = '';
@@ -263,6 +271,24 @@ document.addEventListener('click', (event) => {
     if (printButton) {
         printElement(printButton.closest('section').querySelector('[data-flashcards]'));
     }
+});
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-sidebar-toggle]');
+    const layout = button?.closest('[data-sidebar-layout]');
+
+    if (!layout) {
+        return;
+    }
+
+    const hidden = layout.toggleAttribute('data-sidebar-hidden');
+    const label = hidden ? 'Hiện thanh bên' : 'Ẩn thanh bên';
+
+    document.querySelectorAll('[data-sidebar-toggle]').forEach((toggle) => {
+        toggle.setAttribute('aria-pressed', String(hidden));
+        toggle.title = toggle.ariaLabel = label;
+        swapIcon(toggle, hidden ? 'panel-right-open' : 'panel-right-close');
+    });
 });
 
 document.addEventListener('click', (event) => {

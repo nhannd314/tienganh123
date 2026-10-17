@@ -29,7 +29,7 @@
         @endif
     </section>
 
-    <div class="flex flex-wrap items-start gap-10">
+    <div data-sidebar-layout class="group/layout flex flex-wrap items-start gap-10">
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             {{-- Passage --}}
             @if (filled($passageHtml) || $lesson->passage_audio_url)
@@ -85,16 +85,17 @@
                         <div class="flex items-center gap-2">
                             <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-flashcard-toggle />
                             <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
+                            <x-icon-button icon="panel-right-close" label="Ẩn thanh bên" size="sm" aria-pressed="false" data-sidebar-toggle />
                         </div>
                     </div>
 
-                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(260px,calc((100%_-_2rem)/3))),1fr))] gap-4">
+                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(260px,calc((100%_-_2rem)/3))),1fr))] gap-4 group-data-[sidebar-hidden]/layout:grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%_-_3rem)/4))),1fr))]">
                         @foreach ($cards as $flashcard)
                             @php($word = $flashcard->word)
                             <x-flashcard
                                 :word="$flashcard->display_title"
                                 :phonetic="$word?->ipa_us"
-                                :meaning="$word?->meaningLabels()[0] ?? null"
+                                :meaning="$word?->firstPlainMeaning()"
                                 :image="$flashcard->image_url ?? $word?->image_url"
                                 :audio="$flashcard->audio_url"
                                 :tone="$flashcardTones[$loop->index % count($flashcardTones)]"
@@ -162,7 +163,7 @@
         </div>
 
         {{-- Sidebar --}}
-        <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'">
+        <x-lesson-sidebar class="group-data-[sidebar-hidden]/layout:hidden" :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'">
             <x-button size="lg" icon-left="book-open" full-width :href="route('lessons.review.show', [$course, $unit, $lesson, 1])">Ôn tập ngay</x-button>
 
             <x-slot:after-progress>
