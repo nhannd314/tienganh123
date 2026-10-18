@@ -19,18 +19,7 @@
         <p class="type-body text-fg-muted">{{ $empty }}</p>
     @else
         @foreach ($courses as $course)
-            <x-lesson-card
-                :title="$course->title"
-                :description="$course->description"
-                :thumbnail="$course->thumbnail_url"
-                :href="route('courses.show', $course)"
-                :price="$course->priceLabel()"
-                :price-tone="$course->isFree() ? 'success' : 'danger'"
-                :price-icon="$course->isFree() ? 'gift' : 'tag'"
-                :original-price="$course->originalPriceLabel()"
-                :discount="$course->displayDiscountPercent()"
-                :tone="$tones[$loop->index % count($tones)]"
-            />
+            <x-course-card :course="$course" :tone="$tones[$loop->index % count($tones)]" />
         @endforeach
     @endif
 </div>

@@ -1,4 +1,4 @@
-<x-layouts.app :title="$course->title" main-class="flex flex-col gap-10 pt-6 pb-10">
+<x-layouts.app :title="$course->title" main-class="flex flex-col gap-8 pt-6 pb-16">
     <x-slot:header>
         <x-site-header active="courses" />
     </x-slot:header>
@@ -7,69 +7,115 @@
         ['label' => 'Trang chủ', 'href' => route('home')],
         ['label' => 'Khóa học', 'href' => route('courses.index')],
         ['label' => $course->title],
-    ]" class="-mb-4" />
+    ]" />
 
-    {{-- Course header --}}
-    <section class="flex flex-col items-start gap-4">
-        <h1 class="type-page-title tracking-tight text-balance text-fg-strong">{{ $course->title }}</h1>
-        @if ($course->description)
-            <p class="max-w-200 type-body-lg text-pretty text-fg-body">{{ $course->description }}</p>
+    {{-- Course hero --}}
+    <section @class([
+        'grid overflow-hidden rounded-xl bg-surface-card shadow-card',
+        'xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]' => $course->thumbnail_url,
+    ])>
+        <div class="flex min-w-0 flex-col items-start gap-5 p-8">
+            @if (filled($course->level) || filled($course->age_groups))
+                <div class="flex flex-wrap gap-2">
+                    @if (filled($course->level))
+                        <x-pill tone="success" size="sm">{{ $course->level }}</x-pill>
+                    @endif
+                    @foreach ($course->age_groups ?? [] as $ageGroup)
+                        <x-pill tone="primary" size="sm">{{ $ageGroup }}</x-pill>
+                    @endforeach
+                </div>
+            @endif
+
+            <h1 class="type-word tracking-tight text-balance text-fg-strong">{{ $course->title }}</h1>
+
+            @if ($course->description)
+                <p class="text-[17px] leading-body text-pretty text-fg-body">{{ $course->description }}</p>
+            @endif
+
+            <ul class="flex flex-wrap gap-x-12 gap-y-5">
+                @foreach ($stats as $stat)
+                    <li class="flex items-center gap-3">
+                        <span class="flex size-11 items-center justify-center rounded-md bg-primary-bg text-primary">
+                            <x-icon :name="$stat['icon']" />
+                        </span>
+                        <span class="flex flex-col">
+                            <span class="type-h3 text-fg-strong">{{ $stat['value'] }}</span>
+                            <span class="type-body-sm text-fg-muted">{{ $stat['label'] }}</span>
+                        </span>
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+
+        @if ($course->thumbnail_url)
+            <div class="relative min-h-70 min-w-0 overflow-hidden">
+                <img src="{{ $course->thumbnail_url }}" alt="Ảnh bìa khóa học {{ $course->title }}" class="absolute inset-0 size-full object-cover">
+            </div>
         @endif
     </section>
 
-    <div class="flex flex-wrap items-start gap-10">
+    <div class="flex flex-wrap items-start gap-8">
         {{-- Units --}}
-        <section class="flex min-w-0 flex-[999_1_560px] flex-col gap-5">
+        <section class="flex min-w-0 flex-[999_1_640px] flex-col gap-8">
+            @php
+                $statusLabels = ['done' => 'Hoàn thành', 'doing' => 'Đang học', 'todo' => 'Chưa học'];
+            @endphp
             @forelse ($units as $unit)
-                <div class="overflow-hidden rounded-lg bg-surface-card shadow-card">
-                    <div class="flex flex-col gap-2 px-6 py-5">
-                        <h3 class="type-h2 text-fg-strong">{{ $unit['title'] }}</h3>
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-0.5">
+                        <h2 class="type-h2 text-fg-strong">{{ $unit['title'] }}</h2>
                         @if (filled($unit['description']))
                             <p class="type-body text-pretty text-fg-muted">{{ $unit['description'] }}</p>
                         @endif
                     </div>
 
-                    <ol class="flex flex-col gap-3 px-6 pb-5">
+                    <ol class="grid grid-cols-[repeat(auto-fill,minmax(max(260px,calc((100%_-_1rem)/2)),1fr))] gap-4">
                         @foreach ($unit['lessons'] as $lesson)
                             @php
-                                $isDone = $lesson['progress'] === 100;
-                                $percentColor = match (true) {
-                                    $isDone => 'text-success-text',
-                                    $lesson['progress'] > 0 => 'text-primary-text',
-                                    default => 'text-fg-muted',
+                                $status = $lesson['status'];
+                                $isLocked = $lesson['access'] === 'locked' && $status === 'todo';
+                                $actionIcon = match (true) {
+                                    $status === 'done' => 'check',
+                                    $isLocked => 'lock',
+                                    default => 'play',
                                 };
                             @endphp
-                            <li>
-                                <a
-                                    href="{{ $lesson['url'] }}"
-                                    class="grid grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-4 rounded-md border border-line-default bg-surface-card p-4 text-inherit no-underline transition-interactive hover:bg-primary-bg hover:text-inherit hover:no-underline"
-                                >
-                                    <span class="flex size-12 items-center justify-center rounded-full bg-primary-bg type-label-lg text-primary-text">{{ $lesson['number'] }}</span>
+                            <li class="flex min-w-0">
+                                <a href="{{ $lesson['url'] }}" class="flex min-w-0 flex-1 items-center gap-4 rounded-lg border border-line-subtle bg-surface-card p-4 text-inherit no-underline shadow-xs transition-interactive hover:border-line-hover hover:text-inherit hover:no-underline hover:shadow-card">
+                                    <span @class([
+                                        'flex size-14 flex-none items-center justify-center rounded-md type-h2 tabular-nums',
+                                        'bg-success-bg text-success-text' => $status === 'done',
+                                        'bg-primary-bg text-primary-text' => $status === 'doing',
+                                        'bg-secondary-bg text-secondary-text' => $status === 'todo',
+                                    ])>{{ $lesson['number'] }}</span>
 
-                                    <div class="flex min-w-0 flex-col gap-2">
-                                        <div class="flex flex-col gap-1">
-                                            <span class="type-label-lg text-fg-strong">{{ $lesson['title'] }}</span>
-                                            <span class="type-body-sm text-fg-muted">{{ $lesson['newWords'] }} từ mới</span>
-                                        </div>
-                                        <div class="flex items-center gap-3">
-                                            <x-progress-bar
-                                                :value="$lesson['progress']"
-                                                :tone="$isDone ? 'success' : 'primary'"
-                                                :label="$lesson['title']"
-                                                class="max-w-105 min-w-0 flex-1"
-                                            />
-                                            <span @class(['min-w-10 flex-none type-label-sm', $percentColor])>{{ $lesson['progress'] }}%</span>
-                                        </div>
-                                    </div>
-
-                                    @if ($lesson['access'] === 'trial')
-                                        <span class="inline-flex h-10 items-center justify-center gap-2 rounded-sm border-2 border-primary bg-primary px-4 type-label whitespace-nowrap text-on-primary edge-primary-strong">
-                                            <x-icon name="play" />
-                                            Học thử
+                                    <span class="flex min-w-0 flex-1 flex-col gap-1">
+                                        <span class="truncate type-label-lg text-fg-strong" title="{{ $lesson['title'] }}">{{ $lesson['title'] }}</span>
+                                        <span class="flex items-center gap-3 type-body-sm text-fg-muted">
+                                            <span class="inline-flex items-center gap-1">
+                                                <x-icon name="tags" />{{ $lesson['newWords'] }} từ mới
+                                            </span>
+                                            <span @class([
+                                                'font-semibold',
+                                                'text-success-text' => $status === 'done',
+                                                'text-primary-text' => $status === 'doing',
+                                            ])>{{ $statusLabels[$status] }}</span>
                                         </span>
-                                    @elseif ($lesson['access'] === 'locked')
-                                        <x-icon name="lock" size="lg" label="Đã khóa" class="text-fg-muted" />
-                                    @endif
+                                        @if ($status === 'doing')
+                                            <span class="block max-w-50 pt-1">
+                                                <x-progress-bar :value="$lesson['progress']" :label="$lesson['title']" class="h-1.5!" />
+                                            </span>
+                                        @endif
+                                    </span>
+
+                                    <span @class([
+                                        'flex size-10 flex-none items-center justify-center rounded-full transition-interactive',
+                                        'bg-success-bg text-success-text' => $status === 'done',
+                                        'bg-surface-page text-fg-muted hover:text-secondary' => $isLocked,
+                                        'bg-primary-bg text-primary' => $status !== 'done' && ! $isLocked,
+                                    ])>
+                                        <x-icon :name="$actionIcon" :label="$isLocked ? 'Cần đăng ký khóa học' : $statusLabels[$status]" />
+                                    </span>
                                 </a>
                             </li>
                         @endforeach
@@ -85,24 +131,25 @@
         </section>
 
         {{-- Sidebar --}}
-        <aside class="flex min-w-0 flex-[1_1_360px] flex-col gap-6">
+        <aside class="sticky top-21 flex min-w-0 flex-[1_1_360px] flex-col gap-5 xl:top-6">
             <div class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
                 @unless ($course->isFree() || $hasPaidAccess)
-                    <x-course-enroll :course="$course" />
+                    <x-course-enroll :course="$course" :with-price="false" />
                 @endunless
 
                 <h2 class="type-h2 text-fg-strong">Thông tin khóa học</h2>
 
-                <ul class="flex flex-col gap-3 rounded-md bg-primary-bg p-4">
-                    @foreach ($meta as $item)
-                        <li class="flex items-center gap-3 type-body text-fg-body">
+                <dl class="grid grid-cols-2 gap-3">
+                    @foreach ($info as $item)
+                        <div class="flex flex-col gap-2 rounded-md bg-surface-page p-4">
                             <x-icon :name="$item['icon']" class="text-primary" />
-                            {{ $item['label'] }}
-                        </li>
+                            <dt class="type-caption text-fg-muted">{{ $item['label'] }}</dt>
+                            <dd class="type-label text-fg-strong">{{ $item['value'] }}</dd>
+                        </div>
                     @endforeach
-                </ul>
+                </dl>
 
-                <x-course-benefits :course="$course" />
+                <x-course-benefits :course="$course" :with-price="false" class="border-t border-line-subtle pt-5" />
             </div>
 
             <x-top-learners title="Top 10 khóa học này" :learners="$topLearners" />

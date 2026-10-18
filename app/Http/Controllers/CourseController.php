@@ -43,12 +43,18 @@ class CourseController extends Controller
                         $lesson->is_free => 'trial',
                         default => 'locked',
                     };
+                    $progress = $reviewPercents[$lesson->id] ?? 0;
 
                     return [
                         'number' => $lessonNumber,
                         'title' => $lesson->title,
                         'newWords' => (int) ($wordCounts[$lesson->id] ?? 0),
-                        'progress' => $reviewPercents[$lesson->id] ?? 0,
+                        'progress' => $progress,
+                        'status' => match (true) {
+                            $progress >= 100 => 'done',
+                            $progress > 0 => 'doing',
+                            default => 'todo',
+                        },
                         'access' => $access,
                         'url' => $access === 'locked' ? route('courses.enroll', $course) : route('lessons.show', [$course, $unit, $lesson]),
                     ];
@@ -56,15 +62,22 @@ class CourseController extends Controller
             ];
         })->all();
 
-        $lessonCount = $lessonNumber;
+        $unitCount = $course->unit_count ?? count($unitRows);
+        $lessonCount = $course->lesson_count ?? $lessonNumber;
 
         return view('courses.show', [
             'course' => $course,
             'units' => $unitRows,
-            'meta' => array_values(array_filter([
-                ['icon' => 'layers', 'label' => ($course->unit_count ?? count($unitRows)).' unit'],
-                ['icon' => 'book-open', 'label' => ($course->lesson_count ?? $lessonCount).' bài học'],
-                filled($course->level) ? ['icon' => 'graduation-cap', 'label' => 'Trình độ: '.$course->level] : null,
+            'stats' => array_values(array_filter([
+                ['icon' => 'layers', 'value' => $unitCount, 'label' => 'Unit'],
+                ['icon' => 'book-open', 'value' => $lessonCount, 'label' => 'Bài học'],
+                $wordCounts->sum() > 0 ? ['icon' => 'book-a', 'value' => (int) $wordCounts->sum(), 'label' => 'Từ vựng'] : null,
+            ])),
+            'info' => array_values(array_filter([
+                ['icon' => 'layers', 'label' => 'Số unit', 'value' => $unitCount.' unit'],
+                ['icon' => 'book-open', 'label' => 'Số bài học', 'value' => $lessonCount.' bài'],
+                filled($course->level) ? ['icon' => 'graduation-cap', 'label' => 'Trình độ', 'value' => $course->level] : null,
+                filled($course->age_groups) ? ['icon' => 'users', 'label' => 'Độ tuổi', 'value' => implode(', ', $course->age_groups)] : null,
             ])),
             'hasPaidAccess' => $hasPaidAccess,
             'topLearners' => $course->topLearners()->all(),

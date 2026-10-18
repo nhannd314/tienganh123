@@ -56,7 +56,8 @@ document.addEventListener('click', (event) => {
 /*
  * Disclosure toggles: `data-toggle="<id>"` shows/hides the element with that id and keeps aria-expanded in sync.
  * `data-toggle-group` closes the other toggles of the group; `data-toggle-icon` swaps the button's icon while open;
- * `data-toggle-close="<id>"` only closes. Escape closes everything that is open.
+ * `data-toggle-close="<id>"` only closes. Escape closes everything that is open, and a click outside closes an open
+ * target marked `data-toggle-outside` (a dropdown menu).
  */
 const toggleButtons = () => document.querySelectorAll('[data-toggle]');
 
@@ -83,6 +84,12 @@ const setOpen = (id, isOpen) => {
 };
 
 document.addEventListener('click', (event) => {
+    document.querySelectorAll('[data-toggle-outside]:not([hidden])').forEach((target) => {
+        if (!target.contains(event.target) && !event.target.closest(`[data-toggle="${target.id}"]`)) {
+            setOpen(target.id, false);
+        }
+    });
+
     const closer = event.target.closest('[data-toggle-close]');
 
     if (closer) {
@@ -327,25 +334,43 @@ document.addEventListener('click', (event) => {
 
 syncZoomButtons(1);
 
-// Example sentence card (lesson page): reveal the Vietnamese meaning of one sentence and drop the button.
+// Example sentence picture (lesson page): a click on the picture plays the sentence through the audio button laid on it.
+document.addEventListener('click', (event) => {
+    const picture = event.target.closest('[data-example-image]');
+
+    if (picture && !event.target.closest('[data-audio-button]')) {
+        picture.querySelector('[data-audio-button]')?.click();
+    }
+});
+
+// Example sentences (lesson page): the button beside the title shows or hides the Vietnamese meaning of every sentence.
 document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-example-toggle]');
-    const meaning = button?.closest('[data-example]')?.querySelector('[data-example-meaning]');
 
-    if (!meaning) {
+    if (!button) {
         return;
     }
 
-    meaning.classList.remove('invisible');
-    button.hidden = true;
+    const shown = button.getAttribute('aria-pressed') !== 'true';
+
+    button.closest('section').querySelectorAll('[data-example-meaning]').forEach((meaning) => {
+        meaning.classList.toggle('invisible', !shown);
+    });
+
+    const label = shown ? 'Ẩn nghĩa' : 'Hiện nghĩa';
+
+    button.setAttribute('aria-pressed', String(shown));
+    button.title = button.ariaLabel = label;
+    swapIcon(button, shown ? 'eye-off' : 'eye');
 });
 
 /*
  * Payment page: listen on the payment's private channel (`data-payment-channel`) for the `paid` event Reverb pushes
- * when the transfer arrives, then show the success message and go to what was bought. `data-payment-status` is the
- * URL that tells whether it is already paid, asked each time the channel is (re)subscribed.
+ * when the transfer arrives, then show the success message in a dialog, counting down to what was bought (or going
+ * there at once from its button). `data-payment-status` is the URL that tells whether it is already paid, asked each
+ * time the channel is (re)subscribed.
  */
-const PAYMENT_REDIRECT_DELAY_MS = 1500;
+const PAYMENT_REDIRECT_DELAY_SECONDS = 5;
 const paymentStatus = document.querySelector('[data-payment-status]');
 
 if (paymentStatus) {
@@ -359,7 +384,24 @@ if (paymentStatus) {
         isDone = true;
         paymentStatus.querySelector('[data-payment-pending]').hidden = true;
         paymentStatus.querySelector('[data-payment-paid]').hidden = false;
-        setTimeout(() => window.location.assign(redirect), PAYMENT_REDIRECT_DELAY_MS);
+
+        const dialog = paymentStatus.querySelector('[data-payment-paid-dialog]');
+        const countdown = dialog.querySelector('[data-payment-countdown]');
+        let secondsLeft = PAYMENT_REDIRECT_DELAY_SECONDS;
+
+        dialog.querySelector('[data-payment-go]').href = redirect;
+        countdown.textContent = secondsLeft;
+        dialog.showModal();
+
+        const timer = setInterval(() => {
+            secondsLeft -= 1;
+            countdown.textContent = Math.max(secondsLeft, 0);
+
+            if (secondsLeft <= 0) {
+                clearInterval(timer);
+                window.location.assign(redirect);
+            }
+        }, 1000);
     };
 
     // Covers a transfer that arrived before the page subscribed, or while the connection was down.

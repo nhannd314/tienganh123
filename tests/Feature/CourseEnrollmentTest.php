@@ -170,13 +170,14 @@ it('offers the registration button on a paid course and none on a free course', 
         ->assertDontSee('Bạn cần');
 });
 
-it('shows the course heading instead of the registration button to an admin and a subscriber', function (string $who) {
+it('shows the course heading instead of the registration button to an admin, a member and a subscriber', function (string $who) {
     $course = paidCourse();
     $unit = Unit::factory()->published()->for($course)->create(['sort_order' => 1]);
     Lesson::factory()->published()->for($unit)->create(['sort_order' => 1]);
 
     $user = match ($who) {
         'admin' => User::factory()->admin()->create(),
+        'member' => User::factory()->member()->create(),
         'subscriber' => tap(User::factory()->create(), fn (User $user) => Subscription::factory()->for($user)->create(['subscribable_type' => $course->getMorphClass(), 'subscribable_id' => $course->id])),
     };
 
@@ -187,7 +188,7 @@ it('shows the course heading instead of the registration button to an admin and 
         ->assertDontSee('Bắt đầu học')
         ->assertDontSee('Đăng ký khóa học')
         ->assertDontSee(route('courses.enroll', $course), false);
-})->with(['admin', 'subscriber']);
+})->with(['admin', 'member', 'subscriber']);
 
 it('keeps the registration button for a user without access, even when the subscription expired', function () {
     $course = paidCourse();
@@ -198,7 +199,7 @@ it('keeps the registration button for a user without access, even when the subsc
 
     $response
         ->assertSee('Đăng ký khóa học')
-        ->assertDontSee('Thông tin khóa học');
+        ->assertSee(route('courses.enroll', $course), false);
 });
 
 it('shows no registration button to someone with access when the course has no lessons yet', function () {
@@ -220,9 +221,9 @@ it('offers the three cycles with their prices and opens the payment of the chose
 
     $this->actingAs($user)->get(route('courses.enroll', $course))
         ->assertOk()
-        ->assertSeeInOrder(['Bước 1: Chọn chu kỳ thanh toán', '1 tháng', '3 tháng', '6 tháng', 'Bước 2: Quét mã QR chuyển khoản', '0123456789'])
-        ->assertSee('171.000₫')->assertSee('-5%')
-        ->assertSee('324.000₫')->assertSee('-10%');
+        ->assertSeeInOrder(['Chọn chu kỳ thanh toán', '1 tháng', '3 tháng', '6 tháng', 'Quét mã QR chuyển khoản', '0123456789'])
+        ->assertSee('171.000₫')->assertSee('Tiết kiệm 9.000₫')
+        ->assertSee('324.000₫')->assertSee('Tiết kiệm 36.000₫');
 
     expect(Payment::sole()->amount)->toBe(60000);
 
@@ -230,6 +231,31 @@ it('offers the three cycles with their prices and opens the payment of the chose
 
     expect(Payment::count())->toBe(2)
         ->and(Payment::firstWhere('amount', 324000)->meta['months'])->toBe(6);
+});
+
+it('shows the regular price under the heading and works the cycle discounts out from it', function () {
+    $course = Course::factory()->published()->priced(60000)->onSale(100000)->create();
+
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', $course))
+        ->assertSeeInOrder(['Đăng ký khóa học', 'Giá gốc:', '100.000₫/tháng', 'Chọn chu kỳ thanh toán'])
+        ->assertSeeInOrder(['1 tháng', '60.000₫', 'Tổng:', '60.000₫', '<del>100.000₫</del>', 'Tiết kiệm 40.000₫'], false)
+        ->assertSeeInOrder(['3 tháng', '57.000₫', '/ tháng', 'Tổng:', '171.000₫', '<del>300.000₫</del>', 'Tiết kiệm 129.000₫'], false)
+        ->assertSeeInOrder(['6 tháng', '54.000₫', '/ tháng', 'Tổng:', '324.000₫', '<del>600.000₫</del>', 'Tiết kiệm 276.000₫'], false)
+        ->assertDontSee('-40%')
+        ->assertDontSee('Thanh toán hằng tháng');
+});
+
+it('shows the monthly price as the regular price of a course not on sale', function () {
+    $this->actingAs(User::factory()->create())->get(route('courses.enroll', paidCourse(60000)))
+        ->assertSeeInOrder(['Giá gốc:', '60.000₫/tháng', '1 tháng', '3 tháng', 'Tiết kiệm 9.000₫', '6 tháng', 'Tiết kiệm 36.000₫']);
+});
+
+it('shows the price per month of the longer cycles and features the longest one', function () {
+    $response = $this->actingAs(User::factory()->create())->get(route('courses.enroll', paidCourse(100000)))
+        ->assertSeeInOrder(['1 tháng', '3 tháng', '95.000₫', 'Tổng:', '285.000₫', 'Tiết kiệm nhất', '6 tháng', '90.000₫', 'Tổng:', '540.000₫']);
+
+    expect(substr_count($response->getContent(), 'Tiết kiệm nhất'))->toBe(1)
+        ->and(substr_count($response->getContent(), '100.000₫/tháng'))->toBe(1);
 });
 
 it('falls back to one month for an unknown cycle', function () {

@@ -24,8 +24,8 @@ class OpenAiImageGenerator
             return null;
         }
 
-        $prompt = "A cute, adorable cartoon-style illustration representing the word \"{$word}\", ".
-            'for a children\'s vocabulary flashcard. Simple flat design, soft colors, centered composition. No borders, no texts';
+        $prompt = "A cute cartoon-style illustration representing the word \"{$word}\", ".
+            'for a children\'s vocabulary flashcard. Centered composition. No borders, no texts';
 
         $response = Http::withToken($key)
             ->timeout(90)

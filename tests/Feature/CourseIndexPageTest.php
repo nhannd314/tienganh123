@@ -50,29 +50,27 @@ it('links each course to its detail page', function () {
     $this->get(route('courses.index'))->assertSee(route('courses.show', $course), false);
 });
 
-it('labels each course card with its price, Miễn phí for a free course', function () {
-    Course::factory()->published()->create(['title' => 'Khóa mở']);
-    Course::factory()->published()->priced(50000)->create(['title' => 'Khóa có phí']);
+it('tags each course card with its level then its age groups instead of its price', function () {
+    Course::factory()->published()->priced(100000)->onSale(200000)->create([
+        'title' => 'Khóa thiếu nhi',
+        'age_groups' => ['Mầm non', 'Tiểu học'],
+        'level' => 'Sơ cấp',
+    ]);
 
     $this->get(route('courses.index'))
-        ->assertSeeInOrder(['Khóa mở', 'Miễn phí', 'Khóa có phí', '50.000₫'])
-        ->assertDontSee('/tháng')
-        ->assertSee('icon-gift', false)
-        ->assertSee('icon-tag', false);
+        ->assertSeeInOrder(['Khóa thiếu nhi', 'Sơ cấp', 'Mầm non', 'Tiểu học'])
+        ->assertDontSee('100.000₫')
+        ->assertDontSee('Sale 50%');
 });
 
-it('labels the course cards of the home page with their price', function () {
-    Course::factory()->published()->priced(80000)->create();
+it('shows a course card without tags when it has no age group or level', function () {
+    Course::factory()->published()->create(['age_groups' => null, 'level' => null]);
 
-    $this->get(route('home'))->assertSee('80.000₫')->assertSee('icon-tag', false);
+    $this->get(route('courses.index'))->assertDontSee('rounded-sm! px-2! text-xs!', false);
 });
 
-it('shows a paid course card on sale off a struck-through original price, and a free one without', function () {
-    Course::factory()->published()->priced(100000)->onSale(200000)->create(['sort_order' => 1]);
-    Course::factory()->published()->create(['monthly_price' => 0, 'sort_order' => 2]);
+it('tags the course cards of the home page', function () {
+    Course::factory()->published()->create(['age_groups' => ['THCS'], 'level' => 'Trung cấp']);
 
-    $response = $this->get(route('courses.index'))
-        ->assertSeeInOrder(['Sale 50%', '100.000₫', '<del class="type-body-sm text-fg-muted">200.000₫</del>', 'Miễn phí'], false);
-
-    expect(substr_count($response->getContent(), 'Sale 50%'))->toBe(1);
+    $this->get(route('home'))->assertSeeInOrder(['Trung cấp', 'THCS']);
 });

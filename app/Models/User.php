@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Membership;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
@@ -17,7 +18,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'email', 'phone', 'avatar', 'birthday', 'grade', 'school', 'parent_email', 'parent_phone', 'password'])]
+#[Fillable(['name', 'email', 'phone', 'avatar', 'birthday', 'grade', 'school', 'parent_email', 'parent_phone', 'password', 'membership', 'membership_expires_on'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -36,6 +37,8 @@ class User extends Authenticatable implements FilamentUser
             'password' => 'hashed',
             'birthday' => 'date',
             'role' => UserRole::class,
+            'membership' => Membership::class,
+            'membership_expires_on' => 'date',
         ];
     }
 
@@ -68,11 +71,35 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Whether every lesson of the course is open to the user, free or not: an admin or a subscriber.
+     * Whether every lesson of the course is open to the user, free or not: an admin, a member or a subscriber.
      */
     public function hasPaidAccessTo(Course $course): bool
     {
-        return $this->isAdmin() || $this->isSubscribedTo($course);
+        return $this->isAdmin() || $this->isMember() || $this->isSubscribedTo($course);
+    }
+
+    /**
+     * The membership of the user while it runs (through its expiry date, or for ever without one), else null.
+     */
+    public function activeMembership(): ?Membership
+    {
+        if ($this->membership === null) {
+            return null;
+        }
+
+        if ($this->membership_expires_on !== null && $this->membership_expires_on->lt(today())) {
+            return null;
+        }
+
+        return $this->membership;
+    }
+
+    /**
+     * Whether the user has a running membership, of any kind.
+     */
+    public function isMember(): bool
+    {
+        return $this->activeMembership() !== null;
     }
 
     /**

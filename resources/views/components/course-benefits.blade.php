@@ -1,16 +1,24 @@
-{{-- Why the course is worth it: the monthly price (or that it is free) and a checklist of benefits. --}}
+{{--
+    Why the course is worth it: the monthly price (or that it is free) and a checklist of benefits. With `withPrice` false a
+    paid course leaves its price out.
+--}}
 @props([
     'course',
+    'withPrice' => true,
 ])
 
 <div {{ $attributes->class(['flex flex-col gap-3']) }}>
-    <p class="type-body text-pretty text-fg-body">
-        @if ($course->isFree())
-            <b class="text-fg-strong">Hoàn toàn miễn phí</b>, bạn học tiếng Anh vui mà nhớ lâu:
-        @else
-            Chỉ với {{ $course->priceLabel() }}/tháng, bạn học tiếng Anh vui mà nhớ lâu:
-        @endif
-    </p>
+    @if (! $course->isFree() && ! $withPrice)
+        <h3 class="type-h3 text-fg-strong">Học tiếng Anh vui mà nhớ lâu</h3>
+    @else
+        <p class="type-body text-pretty text-fg-body">
+            @if ($course->isFree())
+                <b class="text-fg-strong">Hoàn toàn miễn phí</b>, bạn học tiếng Anh vui mà nhớ lâu:
+            @else
+                Chỉ với {{ $course->priceLabel() }}/tháng, bạn học tiếng Anh vui mà nhớ lâu:
+            @endif
+        </p>
+    @endif
 
     <ul class="flex flex-col gap-2">
         @foreach (array_filter([

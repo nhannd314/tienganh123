@@ -19,7 +19,7 @@
 
         <nav aria-label="Chính" class="flex min-w-0 flex-1 gap-1">
             @foreach ($items as $item)
-                @php($isActive = $item['id'] === $active)
+                @php $isActive = $item['id'] === $active; @endphp
                 <a
                     href="{{ $item['href'] ?? '#' }}"
                     @if ($isActive) aria-current="page" @endif
@@ -47,18 +47,63 @@
                     <img src="{{ $avatarSrc }}" alt="" class="size-12 rounded-full object-cover">
                 </button>
             @elseif (auth()->check())
-                <a
-                    href="{{ route('profile.show') }}"
-                    aria-label="Hồ sơ của {{ auth()->user()->name }}"
-                    @if (request()->routeIs('profile.*')) aria-current="page" @endif
-                    class="flex size-12 items-center justify-center rounded-full bg-primary-bg text-xl font-semibold text-primary-text no-underline transition-interactive hover:bg-primary-bg-hover hover:no-underline"
-                >
-                    @if (auth()->user()->avatar_url)
-                        <img src="{{ auth()->user()->avatar_url }}" alt="" class="size-full rounded-full object-cover">
-                    @else
-                        {{ auth()->user()->initial() }}
-                    @endif
-                </a>
+                @php
+                    $accountUser = auth()->user();
+                    $accountMembership = $accountUser->activeMembership();
+                    $accountLinks = [
+                        ['label' => 'Thành tích học tập', 'icon' => 'trophy', 'href' => route('profile.show')],
+                        ['label' => 'Thông tin cá nhân', 'icon' => 'user-round-pen', 'href' => route('profile.show', ['tab' => 'info'])],
+                        ['label' => 'Khóa học đã mua', 'icon' => 'shopping-bag', 'href' => route('profile.show', ['tab' => 'courses'])],
+                    ];
+                @endphp
+                <div class="relative">
+                    <button
+                        type="button"
+                        aria-label="Tài khoản của {{ $accountUser->name }}"
+                        aria-expanded="false"
+                        aria-controls="nav-account-menu"
+                        data-toggle="nav-account-menu"
+                        class="flex size-12 cursor-pointer items-center justify-center rounded-full bg-primary-bg text-xl font-semibold text-primary-text transition-interactive hover:bg-primary-bg-hover aria-expanded:ring-2 aria-expanded:ring-primary aria-expanded:ring-offset-2"
+                    >
+                        @if ($accountUser->avatar_url)
+                            <img src="{{ $accountUser->avatar_url }}" alt="" class="size-full rounded-full object-cover">
+                        @else
+                            {{ $accountUser->initial() }}
+                        @endif
+                    </button>
+
+                    <div
+                        id="nav-account-menu"
+                        hidden
+                        data-toggle-outside
+                        class="absolute top-full right-0 z-30 mt-2 flex w-64 flex-col gap-1 rounded-lg border border-line-subtle bg-surface-card p-2 shadow-raised"
+                    >
+                        <span aria-hidden="true" class="absolute -top-1.5 right-[18px] size-3 rotate-45 rounded-tl-xs border-t border-l border-line-subtle bg-surface-card"></span>
+
+                        <div class="flex flex-col gap-1 border-b border-line-subtle px-3 pt-2 pb-3">
+                            <b class="truncate type-label-lg text-fg-strong">{{ $accountUser->name }}</b>
+                            <span class="truncate type-body-sm text-fg-muted">{{ $accountUser->email }}</span>
+                            @if ($accountMembership)
+                                <x-pill tone="success" icon="crown" size="sm" class="mt-1 h-6! self-start rounded-sm! px-2! text-xs!">{{ $accountMembership->getLabel() }}</x-pill>
+                            @endif
+                        </div>
+
+                        @foreach ($accountLinks as $link)
+                            <a href="{{ $link['href'] }}" class="flex h-10 items-center gap-3 rounded-md px-3 type-label text-fg-body no-underline transition-interactive hover:bg-surface-hover hover:text-fg-body hover:no-underline">
+                                <x-icon :name="$link['icon']" size="md" class="text-fg-muted" />
+                                {{ $link['label'] }}
+                            </a>
+                        @endforeach
+
+                        <form method="POST" action="{{ route('logout') }}" class="border-t border-line-subtle pt-1">
+                            @csrf
+                            <button type="submit" class="flex h-10 w-full cursor-pointer items-center gap-3 rounded-md px-3 type-label text-danger-text transition-interactive hover:bg-danger-bg">
+                                <x-icon name="log-out" size="md" />
+                                Đăng xuất
+                            </button>
+                        </form>
+                    </div>
+                </div>
             @else
                 <a
                     href="{{ route('login') }}"
@@ -113,7 +158,7 @@
 
         <nav id="nav-mobile-menu" hidden aria-label="Chính" class="flex flex-col gap-1 border-t border-line-subtle px-4 pt-2 pb-4">
             @foreach ($items as $item)
-                @php($isActive = $item['id'] === $active)
+                @php $isActive = $item['id'] === $active; @endphp
                 <a
                     href="{{ $item['href'] ?? '#' }}"
                     @if ($isActive) aria-current="page" @endif

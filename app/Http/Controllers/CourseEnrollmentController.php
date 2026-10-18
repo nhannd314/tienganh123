@@ -43,13 +43,17 @@ class CourseEnrollmentController extends Controller
             'bank' => $bank,
             'payment' => $payment,
             'months' => $months,
-            'cycles' => collect(Course::cycles())->map(fn (int $discount, int $cycleMonths): array => [
+            'basePrice' => number_format($course->basePrice(), 0, ',', '.').'₫',
+            'cycles' => collect(Course::cycles())->keys()->map(fn (int $cycleMonths): array => [
                 'months' => $cycleMonths,
-                'discount' => $discount,
+                'discount' => $course->discountPercentForMonths($cycleMonths),
                 'price' => $course->priceLabelForMonths($cycleMonths),
-                'fullPrice' => $discount > 0 ? number_format($course->monthly_price * $cycleMonths, 0, ',', '.').'₫' : null,
+                'fullPrice' => number_format($course->basePriceForMonths($cycleMonths), 0, ',', '.').'₫',
+                'saving' => number_format($course->basePriceForMonths($cycleMonths) - $course->priceForMonths($cycleMonths), 0, ',', '.').'₫',
+                'monthlyPrice' => $cycleMonths > 1 ? number_format((int) round($course->priceForMonths($cycleMonths) / $cycleMonths), 0, ',', '.').'₫' : null,
+                'isFeatured' => $cycleMonths === max(array_keys(Course::cycles())),
                 'url' => route('courses.enroll', [$course, 'months' => $cycleMonths]),
-            ])->values()->all(),
+            ])->all(),
             'activeUntil' => $activeUntil ? now()->parse($activeUntil) : null,
             'qrUrl' => $payment->qrUrl($bank),
         ]);

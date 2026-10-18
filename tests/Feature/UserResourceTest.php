@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Membership;
 use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
@@ -49,6 +50,19 @@ it('keeps the password when it is left empty on edit', function () {
         ->assertHasNoFormErrors();
 
     expect($learner->fresh())->name->toBe('Tên mới')->password->toBe($password);
+});
+
+it('makes a learner a member until a given day', function () {
+    $learner = User::factory()->create();
+
+    Livewire::test(EditUser::class, ['record' => $learner->getRouteKey()])
+        ->fillForm(['membership' => Membership::Member->value, 'membership_expires_on' => '2027-12-31'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($learner->fresh())
+        ->membership->toBe(Membership::Member)
+        ->membership_expires_on->toDateString()->toBe('2027-12-31');
 });
 
 it('does not let the email of a learner be changed', function () {

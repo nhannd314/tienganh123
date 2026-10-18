@@ -78,7 +78,7 @@ it('shows the examples of the word itself in the vocabulary table', function () 
         ->assertSeeInOrder(['xin chào', 'Hello, nice to meet you.', 'Xin chào, rất vui được gặp bạn.']);
 });
 
-it('lists the lesson example sentences in their own card with a toggle for the meaning', function () {
+it('lists the lesson example sentences with one toggle beside the title for every meaning', function () {
     $lesson = publishedLesson(['example_sentences' => [
         ['sentence' => 'I eat an apple every day.', 'translation' => 'Tôi ăn một quả táo mỗi ngày.', 'audio' => 'lessons/sentence-audio/apple.mp3'],
         ['sentence' => 'Water is cold.', 'translation' => null, 'audio' => null],
@@ -87,7 +87,7 @@ it('lists the lesson example sentences in their own card with a toggle for the m
     attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'A word example, not a lesson sentence.']]]));
 
     $response = $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'I eat an apple every day.', 'Hiện nghĩa', 'Water is cold.'])
+        ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'Hiện nghĩa', 'I eat an apple every day.', 'Water is cold.'])
         ->assertSee('Tôi ăn một quả táo mỗi ngày.')
         ->assertSee('lessons/sentence-audio/apple.mp3', false)
         ->assertDontSee('Bỏ qua');
@@ -95,6 +95,28 @@ it('lists the lesson example sentences in their own card with a toggle for the m
     expect(substr_count($response->getContent(), 'data-example '))->toBe(2)
         ->and(substr_count($response->getContent(), 'data-example-toggle="'))->toBe(1)
         ->and($response->getContent())->toMatch('/<p data-example-meaning class="invisible/');
+});
+
+it('leaves out the meaning toggle when no example sentence has a meaning', function () {
+    $lesson = publishedLesson(['example_sentences' => [['sentence' => 'Water is cold.', 'translation' => null]]]);
+
+    $this->get(lessonUrl($lesson))
+        ->assertSee('Water is cold.')
+        ->assertDontSee('data-example-toggle', false);
+});
+
+it('lays the audio button of an example sentence on its image, above the sentence', function () {
+    $lesson = publishedLesson(['example_sentences' => [
+        ['sentence' => 'I eat an apple.', 'image' => 'lessons/sentence-images/apple.png'],
+        ['sentence' => 'Water is cold.'],
+    ]]);
+
+    $content = $this->get(lessonUrl($lesson))
+        ->assertSeeInOrder(['data-example-image', 'lessons/sentence-images/apple.png', 'data-text="I eat an apple."', '</div>', 'I eat an apple.', 'Water is cold.', 'data-text="Water is cold."'], false)
+        ->getContent();
+
+    expect(substr_count($content, 'lessons/sentence-images/'))->toBe(1)
+        ->and(substr_count($content, 'data-example-image'))->toBe(1);
 });
 
 it('labels the words in backticks of an example sentence with a popover and leaves unknown ones as text', function () {

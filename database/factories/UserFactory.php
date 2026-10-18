@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Membership;
 use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -44,6 +45,17 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'role' => UserRole::Admin,
+        ]);
+    }
+
+    /**
+     * Indicate that the user is a member through the given last day, or for ever without one.
+     */
+    public function member(?string $expiresOn = null): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'membership' => Membership::Member,
+            'membership_expires_on' => $expiresOn,
         ]);
     }
 

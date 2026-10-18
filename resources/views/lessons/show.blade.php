@@ -50,23 +50,38 @@
             {{-- Example sentences of the lesson; a word in backticks that matches a stored word gets its popover --}}
             @if ($exampleSentences->isNotEmpty())
                 <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-                    <h2 class="type-h2 text-fg-strong">Câu mẫu</h2>
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="type-h2 text-fg-strong">Câu mẫu</h2>
 
-                    <ul class="flex flex-col divide-y divide-line-subtle">
+                        @if ($exampleSentences->contains(fn (array $example): bool => filled($example['translation'])))
+                            <x-icon-button icon="eye" label="Hiện nghĩa" size="sm" aria-pressed="false" data-example-toggle />
+                        @endif
+                    </div>
+
+                    <ul class="grid gap-8 sm:grid-cols-2">
                         @foreach ($exampleSentences as $example)
-                            <li data-example class="flex flex-wrap items-start gap-4 py-4 first:pt-0 last:pb-0">
-                                <x-audio-button size="sm" tone="secondary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" />
+                            <li data-example class="flex flex-col gap-4">
+                                @if ($example['imageUrl'])
+                                    {{-- Clicking anywhere on the picture plays the sentence, as its audio button does (see resources/js/app.js) --}}
+                                    <div data-example-image class="relative cursor-pointer overflow-hidden rounded-lg">
+                                        <img src="{{ $example['imageUrl'] }}" alt="" loading="lazy" class="aspect-video w-full object-cover">
+                                        <x-audio-button size="sm" tone="primary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" class="absolute top-3 right-3 shadow-raised" />
+                                    </div>
+                                @endif
 
-                                <div class="min-w-0 flex-1">
-                                    <p lang="en" class="type-body-lg text-fg-strong">
-                                        @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="'example-word-'.$loop->parent->index.'-'.$loop->index" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
-                                    </p>
-                                    @if ($example['translation'])
-                                        <div class="mt-2 grid">
-                                            <p data-example-meaning class="invisible col-start-1 row-start-1 type-body text-fg-muted">{{ $example['translation'] }}</p>
-                                            <x-button variant="ghost" size="sm" icon-left="eye" class="col-start-1 row-start-1 h-6! min-w-0! justify-self-start px-0! text-fg-muted! hover:bg-transparent! hover:text-fg-strong!" data-example-toggle>Hiện nghĩa</x-button>
-                                        </div>
-                                    @endif
+                                <div class="flex items-start gap-4">
+                                    <div class="min-w-0 flex-1">
+                                        <p lang="en" class="text-xl leading-snug text-fg-strong">
+                                            @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="'example-word-'.$loop->parent->index.'-'.$loop->index" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
+                                        </p>
+                                        @if ($example['translation'])
+                                            <p data-example-meaning class="invisible mt-2 type-body text-fg-muted">{{ $example['translation'] }}</p>
+                                        @endif
+                                    </div>
+
+                                    @unless ($example['imageUrl'])
+                                        <x-audio-button size="sm" tone="primary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" />
+                                    @endunless
                                 </div>
                             </li>
                         @endforeach

@@ -16,13 +16,34 @@ it('sends a guest to sign in', function () {
     $this->put(route('profile.update'), ['name' => 'An'])->assertRedirect(route('login'));
 });
 
-it('shows the avatar linking to the profile in the header of a signed-in visitor', function () {
-    $user = User::factory()->create(['name' => 'Nguyễn Minh An']);
+it('shows the avatar opening the account menu in the header of a signed-in visitor', function () {
+    $user = User::factory()->member()->create(['name' => 'Nguyễn Minh An', 'email' => 'an@example.com']);
 
     $this->actingAs($user)->get(route('courses.index'))
-        ->assertSee('href="'.route('profile.show').'"', false)
-        ->assertSee('Hồ sơ của Nguyễn Minh An');
+        ->assertSee('Tài khoản của Nguyễn Minh An')
+        ->assertSee('data-toggle="nav-account-menu"', false)
+        ->assertSeeInOrder(['id="nav-account-menu"', 'an@example.com', 'Thành viên', 'Thành tích học tập', 'Thông tin cá nhân', 'Khóa học đã mua', 'Đăng xuất'], false)
+        ->assertSee('href="'.route('profile.show', ['tab' => 'info']).'"', false)
+        ->assertSee('action="'.route('logout').'"', false);
 });
+
+it('shows the running membership under the name, with its last day or for ever', function (?string $expiresOn, string $until) {
+    $user = User::factory()->member($expiresOn)->create(['name' => 'Nguyễn Minh An']);
+
+    $this->actingAs($user)->get(route('profile.show'))->assertSeeInOrder(['Nguyễn Minh An', 'Thành viên', $until]);
+})->with([
+    'until a day' => ['2099-12-31', 'Đến 31/12/2099'],
+    'for ever' => [null, 'Vĩnh viễn'],
+]);
+
+it('shows no membership under the name of a learner who has none or whose membership expired', function (?string $expiresOn) {
+    $user = $expiresOn ? User::factory()->member($expiresOn)->create() : User::factory()->create();
+
+    $this->actingAs($user)->get(route('profile.show'))->assertDontSee('icon-crown', false);
+})->with([
+    'none' => [null],
+    'expired' => ['2020-01-01'],
+]);
 
 it('shows the achievements by default', function () {
     $user = User::factory()->create();

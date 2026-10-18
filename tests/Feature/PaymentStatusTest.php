@@ -63,7 +63,8 @@ it('puts the status URL and channel on the payment page', function () {
     $payment = Payment::sole();
 
     $response->assertSee('data-payment-status="'.route('payments.status', $payment).'"', false)
-        ->assertSee('data-payment-channel="payments.'.$payment->id.'"', false);
+        ->assertSee('data-payment-channel="payments.'.$payment->id.'"', false)
+        ->assertSee('data-payment-paid-dialog', false);
 });
 
 it('announces the payment once, on its own private channel, with where to go', function () {

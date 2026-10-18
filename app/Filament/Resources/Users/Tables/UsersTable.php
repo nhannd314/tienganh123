@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -26,6 +27,13 @@ class UsersTable
                     ->searchable(),
                 TextColumn::make('phone')
                     ->searchable(),
+                TextColumn::make('membership')
+                    ->badge()
+                    ->description(fn (User $record): ?string => $record->membership
+                        ? ($record->membership_expires_on ? 'Đến '.$record->membership_expires_on->format('d/m/Y') : 'Vĩnh viễn')
+                        : null)
+                    ->color(fn (User $record): string => $record->isMember() ? 'success' : 'gray')
+                    ->sortable(),
                 TextColumn::make('grade')
                     ->toggleable(),
                 TextColumn::make('school')

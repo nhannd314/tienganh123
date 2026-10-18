@@ -25,6 +25,12 @@
                 @endif
                 <div class="flex min-w-0 flex-col gap-1">
                     <b class="type-h3 truncate text-fg-strong">{{ $user->name }}</b>
+                    @if ($membership = $user->activeMembership())
+                        <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <x-pill tone="success" icon="crown" size="sm" class="h-6! rounded-sm! px-2! text-xs!">{{ $membership->getLabel() }}</x-pill>
+                            <span class="type-body-sm text-fg-muted">{{ $user->membership_expires_on ? 'Đến '.$user->membership_expires_on->format('d/m/Y') : 'Vĩnh viễn' }}</span>
+                        </span>
+                    @endif
                 </div>
             </div>
 

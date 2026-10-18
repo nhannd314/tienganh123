@@ -82,6 +82,21 @@ it('opens everything to an admin', function () {
     $this->actingAs(User::factory()->admin()->create())->get(lessonPage(lessonOfCourse()))->assertOk();
 });
 
+it('opens every course to a member for ever, or through the last day of the membership', function (?string $expiresOn) {
+    $this->travelTo('2027-12-31 23:00');
+
+    $this->actingAs(User::factory()->member($expiresOn)->create())->get(lessonPage(lessonOfCourse()))->assertOk();
+})->with([
+    'for ever' => [null],
+    'last day' => ['2027-12-31'],
+]);
+
+it('locks the lessons again once the membership has expired', function () {
+    $this->travelTo('2028-01-01 00:00');
+
+    $this->actingAs(User::factory()->member('2027-12-31')->create())->get(lessonPage(lessonOfCourse()))->assertForbidden();
+});
+
 it('does not open a course through the subscription to another course, an expired or a cancelled one', function (string $case) {
     $lesson = lessonOfCourse();
     $user = User::factory()->create();
@@ -142,17 +157,15 @@ it('shows the same sidebar with the real progress to a signed-in user on the les
         ->assertDontSee('>NA<', false);
 })->with(['lesson', 'review']);
 
-it('opens the lesson of a free course from the course page for everyone, and shows a lock on a locked one', function () {
+it('opens the lesson of a free course from the course page for everyone, and sends a locked one to enroll', function () {
     $free = lessonOfCourse(0);
     $paid = lessonOfCourse();
 
     $this->get(route('courses.show', $free->unit->course))
         ->assertSee(route('lessons.show', [$free->unit->course, $free->unit, $free]), false)
-        ->assertDontSee('aria-label="Đã khóa"', false)
         ->assertDontSee('Học ngay');
 
     $this->get(route('courses.show', $paid->unit->course))
-        ->assertSee('aria-label="Đã khóa"', false)
         ->assertSee('href="'.route('courses.enroll', $paid->unit->course).'"', false)
         ->assertDontSee(lessonPage($paid), false);
 });
@@ -163,8 +176,8 @@ it('shows a subscriber the lessons of the paid course as open on the course page
     Subscription::factory()->for($user)->create(['subscribable_type' => $lesson->unit->course->getMorphClass(), 'subscribable_id' => $lesson->unit->course_id]);
 
     $this->actingAs($user)->get(route('courses.show', $lesson->unit->course))
-        ->assertDontSee('aria-label="Đã khóa"', false)
-        ->assertDontSee('Học thử');
+        ->assertSee(lessonPage($lesson), false)
+        ->assertDontSee('href="'.route('courses.enroll', $lesson->unit->course).'"', false);
 });
 
 it('works out the access of a user to a course from the subscriptions', function () {

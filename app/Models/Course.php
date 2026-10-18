@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'slug', 'description', 'thumbnail', 'monthly_price', 'regular_price', 'unit_count', 'lesson_count', 'level', 'sort_order', 'is_published'])]
+#[Fillable(['title', 'slug', 'description', 'thumbnail', 'monthly_price', 'regular_price', 'unit_count', 'lesson_count', 'level', 'age_groups', 'sort_order', 'is_published'])]
 class Course extends Model
 {
     /** @use HasFactory<CourseFactory> */
@@ -34,6 +34,7 @@ class Course extends Model
             'regular_price' => 'integer',
             'unit_count' => 'integer',
             'lesson_count' => 'integer',
+            'age_groups' => 'array',
             'sort_order' => 'integer',
             'is_published' => 'boolean',
         ];
@@ -155,6 +156,37 @@ class Course extends Model
         $discount = self::cycles()[$months] ?? 0;
 
         return (int) round($this->monthly_price * $months * (100 - $discount) / 100);
+    }
+
+    /**
+     * The price of one month before any sale: the regular price when the course is on sale, else the monthly price, in VND.
+     */
+    public function basePrice(): int
+    {
+        return $this->isOnSale() ? $this->regular_price : (int) $this->monthly_price;
+    }
+
+    /**
+     * The given number of months at the base price, with no sale or cycle discount taken off, in VND.
+     */
+    public function basePriceForMonths(int $months): int
+    {
+        return $this->basePrice() * $months;
+    }
+
+    /**
+     * The percentage the price of the given number of months saves off the same months at the base price (sale and
+     * cycle discount together), rounded, 0 when nothing is saved.
+     */
+    public function discountPercentForMonths(int $months): int
+    {
+        $basePrice = $this->basePriceForMonths($months);
+
+        if ($basePrice <= 0) {
+            return 0;
+        }
+
+        return max(0, (int) round(($basePrice - $this->priceForMonths($months)) * 100 / $basePrice));
     }
 
     /**

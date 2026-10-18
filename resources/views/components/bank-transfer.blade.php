@@ -22,8 +22,8 @@
 @else
     <div class="flex flex-wrap items-start gap-8">
         @if ($qrUrl)
-            <div class="flex flex-[0_1_288px] flex-col items-center gap-3">
-                <img src="{{ $qrUrl }}" alt="Mã QR chuyển khoản {{ $payment->provider_reference }}" width="288" height="288" class="size-72 max-w-full rounded-md border border-line-default bg-white object-contain">
+            <div class="flex flex-[0_1_336px] flex-col items-center gap-3">
+                <img src="{{ $qrUrl }}" alt="Mã QR chuyển khoản {{ $payment->provider_reference }}" width="336" height="336" class="size-84 max-w-full rounded-md border border-line-default bg-white object-contain">
                 <p class="text-center type-body-sm text-fg-muted">Quét mã bằng ứng dụng ngân hàng, số tiền và nội dung đã được điền sẵn.</p>
             </div>
         @endif
@@ -52,5 +52,21 @@
         <x-alert tone="success" title="Thanh toán thành công" data-payment-paid hidden>
             {{ $paidMessage }}
         </x-alert>
+
+        <dialog
+            data-payment-paid-dialog
+            aria-labelledby="payment-paid-title"
+            class="m-auto w-[min(100%-2rem,28rem)] rounded-lg bg-surface-card p-8 text-center shadow-raised backdrop:bg-black/50"
+        >
+            <div class="flex flex-col items-center gap-4">
+                <span class="flex size-16 items-center justify-center rounded-full bg-success-bg text-success-text">
+                    <x-icon name="circle-check" size="xl" />
+                </span>
+                <h2 id="payment-paid-title" class="type-h2 text-fg-strong">Thanh toán thành công!</h2>
+                <p class="type-body text-pretty text-fg-body">{{ $paidMessage }}</p>
+                <p class="type-body-sm text-fg-muted">Tự chuyển trang sau <b data-payment-countdown></b> giây</p>
+                <x-button href="#" icon-right="arrow-right" full-width data-payment-go>Đi ngay</x-button>
+            </div>
+        </dialog>
     </div>
 @endif

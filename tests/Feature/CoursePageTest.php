@@ -24,12 +24,18 @@ it('shows a published course with its description and breadcrumbs', function () 
         ->assertSee('Top 10 khóa học này');
 });
 
-it('does not show the course thumbnail on the detail page', function () {
+it('shows the course thumbnail as the cover of the hero', function () {
     $course = Course::factory()->published()->create(['thumbnail' => 'courses/lop-3.png']);
 
     $this->get(route('courses.show', $course))
-        ->assertDontSee($course->thumbnail_url, false)
-        ->assertDontSee('teacher-kids.png');
+        ->assertSee('src="'.$course->thumbnail_url.'"', false);
+});
+
+it('shows the level and the age groups of the course as tags above its title', function () {
+    $course = Course::factory()->published()->create(['title' => 'Lớp 3', 'level' => 'Cơ bản', 'age_groups' => ['Tiểu học', 'THCS']]);
+
+    $this->get(route('courses.show', $course))
+        ->assertSeeInOrder(['Cơ bản', 'Tiểu học', 'THCS', '<h1', 'Lớp 3'], false);
 });
 
 it('returns not found for an unpublished course', function () {
@@ -50,7 +56,7 @@ it('numbers lessons continuously across units and skips unpublished ones', funct
     $this->get(route('courses.show', $course))
         ->assertSeeInOrder(['Hello!', 'Lesson A', 'My family', 'Lesson B'])
         ->assertDontSee('Hidden Lesson')
-        ->assertSee('2 bài học')
+        ->assertSee('2 bài')
         ->assertSee('2 unit');
 });
 
@@ -61,9 +67,9 @@ it('shows the unit count, lesson count and level typed in for the course instead
 
     $this->get(route('courses.show', $course))
         ->assertSee('12 unit')
-        ->assertSee('60 bài học')
-        ->assertSee('Trình độ: Trung cấp')
-        ->assertDontSee('1 bài học');
+        ->assertSee('60 bài')
+        ->assertSeeInOrder(['Trình độ', 'Trung cấp'])
+        ->assertDontSee('1 unit');
 });
 
 it('counts the published units and lessons when the course has no typed counts, and hides an empty level', function () {
@@ -73,7 +79,7 @@ it('counts the published units and lessons when the course has no typed counts, 
 
     $this->get(route('courses.show', $course))
         ->assertSee('1 unit')
-        ->assertSee('3 bài học')
+        ->assertSee('3 bài')
         ->assertDontSee('Trình độ');
 });
 
@@ -102,32 +108,28 @@ it('shows a guest a free course without asking to register', function () {
         ->assertDontSee('Đăng ký khóa học');
 });
 
-it('shows the price of a paid course above the enroll button', function () {
-    $course = Course::factory()->published()->priced(50000)->create();
+it('shows the enroll button of a paid course without its price', function () {
+    $course = Course::factory()->published()->priced(100000)->onSale(200000)->create();
 
     $this->get(route('courses.show', $course))
-        ->assertSeeInOrder(['50.000₫', 'Đăng ký khóa học', 'Chỉ với', '50.000₫/tháng', 'Hoàn tiền 100%']);
+        ->assertSeeInOrder(['Đăng ký khóa học', '<h3', 'Học tiếng Anh vui mà nhớ lâu</h3>', 'Hoàn tiền 100%'], false)
+        ->assertDontSee('100.000₫')
+        ->assertDontSee('200.000₫')
+        ->assertDontSee('Chỉ với');
 });
 
-it('shows the price as a sale off a struck-through regular price', function (int $regular, string $original, int $percent) {
-    $course = Course::factory()->published()->priced(100000)->onSale($regular)->create();
+it('lists the age groups of the course under its level in the course info', function () {
+    $course = Course::factory()->published()->create(['level' => 'Sơ cấp', 'age_groups' => ['Mầm non', 'Tiểu học']]);
 
     $this->get(route('courses.show', $course))
-        ->assertSeeInOrder(["<del class=\"type-body-lg text-fg-muted\">{$original}</del>", "-{$percent}%", '100.000₫', 'Đăng ký khóa học'], false);
-})->with([
-    'half off' => [200000, '200.000₫', 50],
-    'rounded percent' => [143000, '143.000₫', 30],
-]);
+        ->assertSeeInOrder(['Thông tin khóa học', 'Trình độ', 'Sơ cấp', 'Độ tuổi', 'Mầm non, Tiểu học']);
+});
 
-it('shows the price alone when there is no regular price above it', function (?int $regular) {
-    $course = Course::factory()->published()->priced(100000)->create(['regular_price' => $regular]);
+it('leaves the age groups out of the course info when the course has none', function () {
+    $course = Course::factory()->published()->create(['age_groups' => null]);
 
-    $this->get(route('courses.show', $course))->assertSee('100.000₫')->assertDontSee('<del', false);
-})->with([
-    'none' => [null],
-    'equal to the price' => [100000],
-    'below the price' => [80000],
-]);
+    $this->get(route('courses.show', $course))->assertDontSee('Độ tuổi');
+});
 
 it('promises no refund on a free course', function () {
     $course = Course::factory()->published()->create(['monthly_price' => 0]);
@@ -137,16 +139,16 @@ it('promises no refund on a free course', function () {
         ->assertDontSee('Hoàn tiền 100%');
 });
 
-it('offers a trial only on free lessons of a paid course and locks the rest', function () {
+it('opens only the free lessons of a paid course and sends the rest to enroll', function () {
     $course = Course::factory()->priced()->published()->create();
     $unit = Unit::factory()->published()->for($course)->create();
-    Lesson::factory()->published()->free()->for($unit)->create(['sort_order' => 1]);
-    Lesson::factory()->published()->for($unit)->create(['sort_order' => 2]);
+    $free = Lesson::factory()->published()->free()->for($unit)->create(['sort_order' => 1]);
+    $locked = Lesson::factory()->published()->for($unit)->create(['sort_order' => 2]);
 
-    $response = $this->get(route('courses.show', $course))->assertSee('Học thử');
-
-    expect(substr_count($response->getContent(), 'Học thử'))->toBe(1)
-        ->and(substr_count($response->getContent(), 'aria-label="Đã khóa"'))->toBe(1);
+    $this->get(route('courses.show', $course))
+        ->assertSee(route('lessons.show', [$course, $unit, $free]), false)
+        ->assertDontSee(route('lessons.show', [$course, $unit, $locked]), false)
+        ->assertSee('href="'.route('courses.enroll', $course).'"', false);
 });
 
 it('counts the new words of each lesson', function () {
@@ -157,7 +159,23 @@ it('counts the new words of each lesson', function () {
     $words = Word::factory()->count(3)->create();
     attachWords($lesson, $words->pluck('id'));
 
-    $this->get(route('courses.show', $course))->assertSee('3 từ mới');
+    $this->get(route('courses.show', $course))
+        ->assertSee('3 từ mới')
+        ->assertSeeInOrder(['3', 'Từ vựng']);
+});
+
+it('marks a finished lesson as done and a locked lesson with a lock', function () {
+    $course = Course::factory()->priced()->published()->create();
+    $unit = Unit::factory()->published()->for($course)->create();
+    $finished = Lesson::factory()->published()->free()->for($unit)->create(['title' => 'Finished lesson', 'sort_order' => 1]);
+    Lesson::factory()->published()->for($unit)->create(['title' => 'Locked lesson', 'sort_order' => 2]);
+    $user = User::factory()->create();
+    LessonReview::factory()->for($finished)->for($user)->count(Lesson::REVIEW_PARTS)->sequence(fn ($sequence) => ['step' => $sequence->index + 1])->create(['total' => 10, 'correct' => 10]);
+
+    expect($finished->reviewProgress($user)['percent'])->toBe(100);
+
+    $this->actingAs($user)->get(route('courses.show', $course))
+        ->assertSeeInOrder(['Finished lesson', 'Hoàn thành', 'icon-check', 'Locked lesson', 'Chưa học', 'icon-lock'], false);
 });
 
 it('links each course on the home page to its detail page', function () {
@@ -166,7 +184,7 @@ it('links each course on the home page to its detail page', function () {
     $this->get(route('home'))->assertSee(route('courses.show', $course), false);
 });
 
-it('shows on each lesson the share of parts passed from 80%, as the lesson sidebar does, and 0% to a guest', function () {
+it('shows the share of parts passed from 80%, as the lesson sidebar does, only on lessons already studied', function () {
     $course = Course::factory()->published()->create(['monthly_price' => 0]);
     $unit = Unit::factory()->published()->for($course)->create();
     $reviewed = Lesson::factory()->published()->for($unit)->create(['title' => 'Reviewed lesson', 'sort_order' => 1]);
@@ -183,14 +201,16 @@ it('shows on each lesson the share of parts passed from 80%, as the lesson sideb
 
     expect($reviewed->reviewProgress($user)['percent'])->toBe(50);
 
-    $this->actingAs($user)->get(route('courses.show', $course))
-        ->assertSeeInOrder(['Reviewed lesson', '50%', 'New lesson', '0%']);
+    $response = $this->actingAs($user)->get(route('courses.show', $course))
+        ->assertSeeInOrder(['Reviewed lesson', 'Đang học', 'aria-valuenow="50"', 'New lesson', 'Chưa học'], false);
+
+    expect(substr_count($response->getContent(), 'role="progressbar"'))->toBe(1);
 
     auth()->logout();
 
     $this->get(route('courses.show', $course))
-        ->assertSeeInOrder(['Reviewed lesson', '0%', 'New lesson', '0%'])
-        ->assertDontSee('50%');
+        ->assertSee('Reviewed lesson')
+        ->assertDontSee('role="progressbar"', false);
 });
 
 it('ranks the learners of a course by the total score of its lessons', function () {

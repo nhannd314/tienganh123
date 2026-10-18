@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
+use App\Enums\Membership;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -43,6 +45,13 @@ class UserForm
                 TextInput::make('parent_phone')
                     ->tel()
                     ->maxLength(20),
+                Select::make('membership')
+                    ->options(Membership::class)
+                    ->placeholder('Không')
+                    ->helperText('A member can learn every lesson of every course.'),
+                DatePicker::make('membership_expires_on')
+                    ->displayFormat('d/m/Y')
+                    ->helperText('Last day of the membership. Leave empty for a membership that never expires.'),
                 FileUpload::make('avatar')
                     ->image()
                     ->avatar()

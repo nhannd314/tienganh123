@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Models\Vocabulary;
 use Filament\Actions\AttachAction;
 use Filament\Actions\Testing\TestAction;
+use Filament\Forms\Components\Repeater;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;
@@ -47,29 +48,34 @@ it('generates the slug from the title and saves the passage and the rich content
         ->content->toBe('<p>Say hello.</p>');
 });
 
-it('saves the example sentences and queues the Azure audio of those that have none', function () {
+it('saves the example sentences with their meaning and image and queues the Azure audio of those that have none', function () {
     Queue::fake();
+    Storage::fake('public');
     config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    $undoRepeaterFake = Repeater::fake();
 
     Livewire::test(CreateLesson::class)
         ->fillForm([
             'unit_id' => Unit::factory()->create()->id,
             'title' => 'Fruit',
-            'example_sentences' => 'I eat an `apple`. = Tôi ăn một quả táo.
-
-Hello there.
-',
+            'example_sentences' => [
+                ['sentence' => 'I eat an `apple`.', 'translation' => 'Tôi ăn một quả táo.', 'image' => [UploadedFile::fake()->image('apple.png')]],
+                ['sentence' => 'Hello there.', 'translation' => null],
+            ],
         ])
         ->call('create')
         ->assertHasNoFormErrors()
         ->assertNotified('The sentence audio is being generated');
 
+    $undoRepeaterFake();
     $lesson = Lesson::firstWhere('title', 'Fruit');
 
     expect($lesson->example_sentences)->toHaveCount(2)
         ->and($lesson->example_sentences[0])->toMatchArray(['sentence' => 'I eat an `apple`.', 'translation' => 'Tôi ăn một quả táo.', 'audio' => null])
-        ->and($lesson->example_sentences[1])->toMatchArray(['sentence' => 'Hello there.', 'translation' => null]);
+        ->and($lesson->example_sentences[0]['image'])->toStartWith('lessons/sentence-images/')
+        ->and($lesson->example_sentences[1])->toMatchArray(['sentence' => 'Hello there.', 'translation' => null, 'image' => null]);
 
+    Storage::disk('public')->assertExists($lesson->example_sentences[0]['image']);
     Queue::assertPushed(GenerateLessonSentenceAudio::class, fn (GenerateLessonSentenceAudio $job) => $job->lesson->is($lesson));
 });
 
@@ -91,30 +97,74 @@ it('does not queue the sentence audio when every sentence has audio or Azure is 
     Queue::assertNothingPushed();
 });
 
-it('shows the example sentences one per line and keeps the audio of a sentence whose text is unchanged', function () {
+it('keeps the audio of an example sentence whose text is unchanged', function () {
     Queue::fake();
     $lesson = Lesson::factory()->create(['example_sentences' => [
         ['sentence' => 'Old text.', 'translation' => 'Cũ', 'audio' => 'lessons/sentence-audio/old.mp3'],
         ['sentence' => 'Same text.', 'translation' => null, 'audio' => 'lessons/sentence-audio/same.mp3'],
     ]]);
+    $undoRepeaterFake = Repeater::fake();
 
     Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
-        ->assertSchemaStateSet(['example_sentences' => 'Old text. = Cũ
-Same text.'])
-        ->fillForm(['example_sentences' => 'New text. = Mới
-Same text. = Giống
-Added.'])
+        ->assertSchemaStateSet(['example_sentences' => [
+            ['sentence' => 'Old text.', 'translation' => 'Cũ', 'audio' => 'lessons/sentence-audio/old.mp3', 'image' => []],
+            ['sentence' => 'Same text.', 'translation' => null, 'audio' => 'lessons/sentence-audio/same.mp3', 'image' => []],
+        ]])
+        ->fillForm(['example_sentences' => [
+            ['sentence' => 'New text.', 'translation' => 'Mới'],
+            ['sentence' => 'Same text.', 'translation' => 'Giống'],
+            ['sentence' => 'Added.', 'translation' => null],
+        ]])
         ->call('save')
         ->assertHasNoFormErrors();
+
+    $undoRepeaterFake();
 
     expect(array_column($lesson->fresh()->example_sentences, 'audio'))->toBe([null, 'lessons/sentence-audio/same.mp3', null]);
 });
 
+it('deletes the image of an example sentence that is removed or whose image is replaced', function () {
+    Queue::fake();
+    $disk = Storage::fake('public');
+    foreach (['removed', 'replaced', 'kept'] as $name) {
+        $disk->put("lessons/sentence-images/{$name}.png", 'PNG');
+    }
+    $lesson = Lesson::factory()->create(['example_sentences' => [
+        ['sentence' => 'Removed.', 'image' => 'lessons/sentence-images/removed.png'],
+        ['sentence' => 'Replaced.', 'image' => 'lessons/sentence-images/replaced.png'],
+        ['sentence' => 'Kept.', 'image' => 'lessons/sentence-images/kept.png'],
+    ]]);
+    $undoRepeaterFake = Repeater::fake();
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->fillForm(['example_sentences' => [
+            ['sentence' => 'Replaced.', 'image' => [UploadedFile::fake()->image('new.png')]],
+            ['sentence' => 'Kept.', 'image' => ['lessons/sentence-images/kept.png']],
+        ]])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $undoRepeaterFake();
+    $images = array_column($lesson->fresh()->example_sentences, 'image');
+
+    expect($images[1])->toBe('lessons/sentence-images/kept.png')
+        ->and($images[0])->not->toBe('lessons/sentence-images/replaced.png');
+
+    $disk->assertMissing(['lessons/sentence-images/removed.png', 'lessons/sentence-images/replaced.png']);
+    $disk->assertExists(['lessons/sentence-images/kept.png', $images[0]]);
+});
+
 it('rejects an example sentence or meaning longer than 500 characters', function () {
+    $undoRepeaterFake = Repeater::fake();
+
     Livewire::test(CreateLesson::class)
-        ->fillForm(['unit_id' => Unit::factory()->create()->id, 'title' => 'Long', 'example_sentences' => 'Short. = '.str_repeat('a', 501)])
+        ->fillForm(['unit_id' => Unit::factory()->create()->id, 'title' => 'Long', 'example_sentences' => [
+            ['sentence' => 'Short.', 'translation' => str_repeat('a', 501)],
+        ]])
         ->call('create')
-        ->assertHasFormErrors(['example_sentences']);
+        ->assertHasFormErrors(['example_sentences.0.translation' => 'max']);
+
+    $undoRepeaterFake();
 });
 
 it('rejects a slug already used within the same unit', function () {

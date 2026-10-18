@@ -52,7 +52,7 @@ class LessonController extends Controller
      * The example sentences of the lesson, each cut into segments: a word marked with backticks that matches a stored
      * word carries it, to be shown as a popover label; any other segment is plain text.
      *
-     * @return Collection<int, array{sentence: string, translation: ?string, audioUrl: ?string, segments: list<array{text: string, word: ?Word}>}>
+     * @return Collection<int, array{sentence: string, translation: ?string, audioUrl: ?string, imageUrl: ?string, segments: list<array{text: string, word: ?Word}>}>
      */
     private function exampleSentences(Lesson $lesson): Collection
     {
@@ -75,6 +75,7 @@ class LessonController extends Controller
             'sentence' => Lesson::spokenSentence($example['sentence']),
             'translation' => $example['translation'] ?? null,
             'audioUrl' => filled($example['audio'] ?? null) ? Storage::disk('public')->url($example['audio']) : null,
+            'imageUrl' => filled($example['image'] ?? null) ? Storage::disk('public')->url($example['image']) : null,
             'segments' => array_map(fn (array $segment): array => [
                 'text' => $segment['text'],
                 'word' => $segment['isMarked'] ? $words->get(mb_strtolower(trim($segment['text']))) : null,

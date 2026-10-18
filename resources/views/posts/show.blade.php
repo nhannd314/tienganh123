@@ -56,7 +56,14 @@
                                 aria-label="{{ $share['label'] }}"
                                 title="{{ $share['label'] }}"
                                 class="inline-flex size-9 items-center justify-center rounded-full sm:size-10 text-on-primary no-underline transition-interactive hover:text-on-primary hover:no-underline {{ $share['class'] }}"
-                            ><x-icon :name="$share['icon']" /></a>
+                            >
+                                @if ($share['icon'] === 'facebook')
+                                    {{-- Lucide 1.x dropped its brand icons; this is the old Lucide `facebook` glyph. --}}
+                                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" /></svg>
+                                @else
+                                    <x-icon :name="$share['icon']" />
+                                @endif
+                            </a>
                         @endforeach
                     </div>
 
@@ -108,18 +115,7 @@
 
             <div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-6">
                 @foreach ($courses as $course)
-                    <x-lesson-card
-                        :title="$course->title"
-                        :description="$course->description"
-                        :thumbnail="$course->thumbnail_url"
-                        :href="route('courses.show', $course)"
-                        :price="$course->priceLabel()"
-                        :price-tone="$course->isFree() ? 'success' : 'danger'"
-                        :price-icon="$course->isFree() ? 'gift' : 'tag'"
-                        :original-price="$course->originalPriceLabel()"
-                        :discount="$course->displayDiscountPercent()"
-                        :tone="$courseTones[$loop->index % count($courseTones)]"
-                    />
+                    <x-course-card :course="$course" :tone="$courseTones[$loop->index % count($courseTones)]" />
                 @endforeach
             </div>
         </section>

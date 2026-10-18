@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Courses\Schemas;
 
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -70,10 +71,23 @@ class CourseForm
                     ->minValue(0)
                     ->maxValue(65535)
                     ->helperText('Shown on the course page. Leave empty to count the published lessons.'),
-                TextInput::make('level')
-                    ->maxLength(50)
-                    ->placeholder('Cơ bản')
-                    ->helperText('Shown on the course page, e.g. Cơ bản, Trung cấp, Nâng cao.'),
+                Select::make('level')
+                    ->options([
+                        'Cơ bản' => 'Cơ bản',
+                        'Sơ cấp' => 'Sơ cấp',
+                        'Trung cấp' => 'Trung cấp',
+                        'Nâng cao' => 'Nâng cao',
+                    ])
+                    ->helperText('Shown on the course page.'),
+                Select::make('age_groups')
+                    ->multiple()
+                    ->options([
+                        'Mầm non' => 'Mầm non',
+                        'Tiểu học' => 'Tiểu học',
+                        'THCS' => 'THCS',
+                        'THPT' => 'THPT',
+                        'Người lớn' => 'Người lớn',
+                    ]),
                 TextInput::make('sort_order')
                     ->required()
                     ->numeric()

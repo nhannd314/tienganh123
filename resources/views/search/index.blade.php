@@ -53,18 +53,7 @@
                 <h2 class="type-h2 text-fg-strong">Khóa học</h2>
                 <div class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-6">
                     @foreach ($courses as $course)
-                        <x-lesson-card
-                            :title="$course->title"
-                            :description="$course->description"
-                            :thumbnail="$course->thumbnail_url"
-                            :href="route('courses.show', $course)"
-                            :price="$course->priceLabel()"
-                            :price-tone="$course->isFree() ? 'success' : 'danger'"
-                            :price-icon="$course->isFree() ? 'gift' : 'tag'"
-                            :original-price="$course->originalPriceLabel()"
-                            :discount="$course->displayDiscountPercent()"
-                            :tone="$courseTones[$loop->index % count($courseTones)]"
-                        />
+                        <x-course-card :course="$course" :tone="$courseTones[$loop->index % count($courseTones)]" />
                     @endforeach
                 </div>
 

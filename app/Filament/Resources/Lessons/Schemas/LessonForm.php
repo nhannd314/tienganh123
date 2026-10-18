@@ -9,6 +9,8 @@ use App\Models\Unit;
 use App\Services\AzureTextToSpeech;
 use Closure;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -20,6 +22,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 
@@ -117,24 +120,34 @@ class LessonForm
                     ->maxSize(10240)
                     ->downloadable()
                     ->columnSpanFull(),
-                Textarea::make('example_sentences')
+                Repeater::make('example_sentences')
                     ->label('Example sentences')
-                    ->rows(8)
-                    ->placeholder('I have an `apple` = Tôi có 1 quả táo.')
-                    ->helperText('One sentence per line: the English sentence, then = and its meaning. Wrap a word in backticks to show its IPA, audio and meaning in a popover when the word exists. Azure reads every sentence when the lesson is saved.')
-                    ->formatStateUsing(fn (mixed $state): string => is_array($state) ? self::sentencesToText($state) : (string) $state)
-                    ->dehydrateStateUsing(fn (?string $state): array => self::textToSentences($state))
-                    ->rules([
-                        fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
-                            foreach (self::textToSentences(is_string($value) ? $value : null) as $example) {
-                                if (mb_strlen($example['sentence']) > 500 || mb_strlen($example['translation'] ?? '') > 500) {
-                                    $fail('Each sentence and its meaning may not be longer than 500 characters.');
-
-                                    return;
-                                }
-                            }
-                        },
+                    ->schema([
+                        TextInput::make('sentence')
+                            ->required()
+                            ->maxLength(500)
+                            ->placeholder('I have an `apple`.')
+                            ->helperText('Wrap a word in backticks to show its IPA, audio and meaning in a popover when the word exists.'),
+                        TextInput::make('translation')
+                            ->label('Meaning')
+                            ->maxLength(500)
+                            ->placeholder('Tôi có 1 quả táo.'),
+                        FileUpload::make('image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('lessons/sentence-images')
+                            ->visibility('public')
+                            ->maxSize(2048)
+                            ->columnSpanFull(),
+                        Hidden::make('audio'),
                     ])
+                    ->columns(2)
+                    ->defaultItems(0)
+                    ->addActionLabel('Add sentence')
+                    ->reorderable()
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => $state['sentence'] ?? null)
+                    ->helperText('Azure reads every new or edited sentence when the lesson is saved.')
                     ->columnSpanFull(),
                 self::richContentEditor('content'),
                 FileUpload::make('attachments')
@@ -185,39 +198,6 @@ class LessonForm
     }
 
     /**
-     * The example sentences as the lines of the textarea: "sentence = meaning", or just "sentence" without a meaning.
-     *
-     * @param  array<int, mixed>  $exampleSentences
-     */
-    public static function sentencesToText(array $exampleSentences): string
-    {
-        return collect($exampleSentences)
-            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['sentence'] ?? null))
-            ->map(fn (array $example): string => filled($example['translation'] ?? null) ? $example['sentence'].' = '.$example['translation'] : $example['sentence'])
-            ->implode('
-');
-    }
-
-    /**
-     * The example sentences of the lines of the textarea; blank lines are skipped and the meaning is what follows the first "=".
-     *
-     * @return list<array{sentence: string, translation: ?string, audio: null}>
-     */
-    public static function textToSentences(?string $text): array
-    {
-        return collect(preg_split('/\R/u', $text ?? '') ?: [])
-            ->map(fn (string $line): array => array_map('trim', explode('=', $line, 2)))
-            ->filter(fn (array $parts): bool => $parts[0] !== '')
-            ->map(fn (array $parts): array => [
-                'sentence' => $parts[0],
-                'translation' => filled($parts[1] ?? null) ? $parts[1] : null,
-                'audio' => null,
-            ])
-            ->values()
-            ->all();
-    }
-
-    /**
      * Give back the Azure audio of a sentence whose text is unchanged; a new or edited sentence has none, so Azure reads it again.
      *
      * @param  array<string, mixed>  $data
@@ -234,6 +214,25 @@ class LessonForm
             ->all();
 
         return $data;
+    }
+
+    /**
+     * Delete from the public disk the images of the example sentences that the save removed or replaced.
+     *
+     * @param  array<int, mixed>  $previousExampleSentences
+     */
+    public static function deleteDroppedSentenceImages(array $previousExampleSentences, Lesson $lesson): void
+    {
+        $images = fn (?array $exampleSentences): array => collect($exampleSentences ?? [])
+            ->map(fn (mixed $example): mixed => is_array($example) ? ($example['image'] ?? null) : null)
+            ->filter(fn (mixed $image): bool => is_string($image) && filled($image))
+            ->all();
+
+        $droppedImages = array_diff($images($previousExampleSentences), $images($lesson->example_sentences));
+
+        if ($droppedImages !== []) {
+            Storage::disk('public')->delete(array_values($droppedImages));
+        }
     }
 
     /**
