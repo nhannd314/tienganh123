@@ -35,7 +35,10 @@
     ];
 @endphp
 
-<x-layouts.app>
+<x-layouts.app
+    page-title="TiếngAnhPro — Học tiếng Anh vui cho bé qua video, flashcard và bài tập"
+    description="Học tiếng Anh vui mỗi ngày cùng TiếngAnhPro: bài học video sinh động, từ vựng có hình minh họa, flashcard và bài tập đa dạng giúp bé nhớ lâu, học giỏi."
+>
     <x-slot:header>
         <x-site-header active="home" />
     </x-slot:header>

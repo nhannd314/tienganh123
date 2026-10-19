@@ -72,7 +72,7 @@ it('highlights the active nav bar item', function () {
     $this->blade('<x-nav-bar :items="$items" active="courses" />', ['items' => $items])
         ->assertSeeInOrder(['Trang chủ', 'aria-current="page"', 'Khóa học'], false)
         ->assertDontSee('Thông báo')
-        ->assertSee('Tiếng Anh Pro — Trang chủ')
+        ->assertSee('TiếngAnhPro — Trang chủ')
         ->assertSee('<svg viewBox="0 -6 94 94"', false);
 });
 
