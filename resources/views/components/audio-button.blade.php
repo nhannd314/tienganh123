@@ -1,6 +1,6 @@
 {{--
     Round "listen" button that speaks `text` with the browser's speech synthesis (see resources/js/app.js).
-    Sizes: lg (64px) · sm (40px). Optional `tone` fills it with a role colour. `label` replaces the default
+    Sizes: lg (64px) · sm (40px). Optional `tone` fills it with a role colour (`success-soft` is the pale green one). `label` replaces the default
     "Nghe phát âm {text}", e.g. when the word must stay hidden. `src` plays a recorded audio file instead of speaking the text.
 --}}
 @props([
@@ -23,6 +23,7 @@
         'success' => 'bg-success text-white not-disabled:hover:brightness-92',
         'danger' => 'bg-danger text-white not-disabled:hover:brightness-92',
         'info' => 'bg-info text-white not-disabled:hover:brightness-92',
+        'success-soft' => 'bg-success-bg-hover text-success not-disabled:hover:bg-success-border',
     ][$tone] ?? 'bg-primary-bg-hover text-primary not-disabled:hover:bg-primary-border';
 @endphp
 

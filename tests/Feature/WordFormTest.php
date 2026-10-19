@@ -82,3 +82,21 @@ it('stores the uploaded image on the public disk', function () {
     expect($word->image)->toStartWith('words/');
     Storage::disk('public')->assertExists($word->image);
 });
+
+it('abbreviates the part of speech of a meaning, leaving an unknown one as it is', function () {
+    expect(Word::abbreviatePartOfSpeech('noun'))->toBe('n')
+        ->and(Word::abbreviatePartOfSpeech('verb'))->toBe('v')
+        ->and(Word::abbreviatePartOfSpeech('adjective'))->toBe('a')
+        ->and(Word::abbreviatePartOfSpeech('Adverb'))->toBe('adv')
+        ->and(Word::abbreviatePartOfSpeech('phrasal verb'))->toBe('phrasal verb')
+        ->and(Word::abbreviatePartOfSpeech(null))->toBe('');
+
+    $word = new Word(['meanings' => [
+        ['pos' => 'noun', 'meaning' => 'quả táo'],
+        ['pos' => 'verb', 'meaning' => 'ăn táo'],
+        ['pos' => '', 'meaning' => 'táo tàu'],
+    ]]);
+
+    expect($word->meaningLabels())->toBe(['(n) quả táo', '(v) ăn táo', 'táo tàu'])
+        ->and($word->allMeaningsLabel())->toBe("(n) quả táo\n(v) ăn táo\ntáo tàu");
+});

@@ -3,6 +3,7 @@
 use App\Filament\Resources\Vocabularies\Actions\BulkAddWordsAction;
 use App\Filament\Resources\Vocabularies\Pages\EditVocabulary;
 use App\Filament\Resources\Vocabularies\RelationManagers\WordsRelationManager;
+use App\Models\SentenceSet;
 use App\Models\User;
 use App\Models\Vocabulary;
 use App\Models\Word;
@@ -115,7 +116,9 @@ it('loads a word that is already stored, with its meanings but not its examples,
     ]);
 
     expect(BulkAddWordsAction::loadKnownWords("apple\nbanana\nwork [noun] công việc"))
-        ->toBe("Apple [noun] quả táo, táo [verb] ăn táo\nbanana\nwork [noun] công việc")
+        ->toBe('Apple [n] quả táo, táo [v] ăn táo
+banana
+work [noun] công việc')
         ->and(BulkAddWordsAction::loadKnownWords('banana'))->toBe('banana');
 });
 
@@ -126,7 +129,7 @@ it('fills the box with the stored word when the box is left after typing only th
     Livewire::test(WordsRelationManager::class, ['ownerRecord' => $vocabulary, 'pageClass' => EditVocabulary::class])
         ->mountAction(TestAction::make('bulkAddWords')->table())
         ->fillForm(['words' => 'apple'])
-        ->assertSchemaStateSet(['words' => 'apple [noun] quả táo']);
+        ->assertSchemaStateSet(['words' => 'apple [n] quả táo']);
 });
 
 it('lists and reorders the words of the vocabulary', function () {
@@ -139,4 +142,47 @@ it('lists and reorders the words of the vocabulary', function () {
         ->call('reorderTable', [$second->id, $first->id]);
 
     expect($vocabulary->words()->pluck('words.id')->all())->toBe([$second->id, $first->id]);
+});
+
+it('links a vocabulary to a sentence set', function () {
+    $vocabulary = Vocabulary::factory()->create();
+    $sentenceSet = SentenceSet::factory()->create();
+
+    Livewire::test(EditVocabulary::class, ['record' => $vocabulary->getRouteKey()])
+        ->fillForm(['sentence_set_id' => $sentenceSet->id])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($vocabulary->refresh()->sentenceSet->is($sentenceSet))->toBeTrue();
+});
+
+it('stores an abbreviated part of speech in full, and keeps a full or unknown one as typed', function () {
+    expect(Word::expandPartOfSpeech('n'))->toBe('noun')
+        ->and(Word::expandPartOfSpeech('V'))->toBe('verb')
+        ->and(Word::expandPartOfSpeech('a'))->toBe('adjective')
+        ->and(Word::expandPartOfSpeech('adj'))->toBe('adjective')
+        ->and(Word::expandPartOfSpeech('adv'))->toBe('adverb')
+        ->and(Word::expandPartOfSpeech('Noun'))->toBe('noun')
+        ->and(Word::expandPartOfSpeech('phrasal verb'))->toBe('phrasal verb');
+
+    $entries = BulkAddWordsAction::parse("apple [n] quả táo, táo [v] ăn táo\nslow [a] chậm [adv] một cách chậm chạp\nwork [noun] công việc [N] việc làm");
+
+    expect($entries[0]['meanings'])->toBe([['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']])
+        ->and(array_column($entries[1]['meanings'], 'pos'))->toBe(['adjective', 'adverb'])
+        ->and(array_column($entries[2]['meanings'], 'pos'))->toBe(['noun', 'noun']);
+
+    $vocabulary = Vocabulary::factory()->create();
+    BulkAddWordsAction::apply($vocabulary, $entries);
+
+    expect(Word::firstWhere('word', 'apple')->meanings)->toBe([['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']]);
+});
+
+it('does not add a second meaning when the same one is typed again with the abbreviated part of speech', function () {
+    $vocabulary = Vocabulary::factory()->create();
+    $word = Word::factory()->create(['word' => 'apple', 'meanings' => [['pos' => 'noun', 'meaning' => 'quả táo']], 'examples' => []]);
+
+    $result = BulkAddWordsAction::apply($vocabulary, BulkAddWordsAction::parse('apple [n] quả táo'));
+
+    expect($result['updated'])->toBe(0)
+        ->and($word->fresh()->meanings)->toHaveCount(1);
 });

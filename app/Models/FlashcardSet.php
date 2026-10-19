@@ -8,9 +8,10 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['title', 'slug', 'description', 'sort_order'])]
+#[Fillable(['sentence_set_id', 'title', 'slug', 'description', 'sort_order'])]
 class FlashcardSet extends Model
 {
     /** @use HasFactory<FlashcardSetFactory> */
@@ -77,5 +78,13 @@ class FlashcardSet extends Model
         return $this->belongsToMany(Lesson::class)
             ->withPivot('sort_order')
             ->withTimestamps();
+    }
+
+    /**
+     * @return BelongsTo<SentenceSet, $this>
+     */
+    public function sentenceSet(): BelongsTo
+    {
+        return $this->belongsTo(SentenceSet::class);
     }
 }

@@ -7,9 +7,10 @@ use Database\Factories\VocabularyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['title', 'slug', 'description', 'sort_order'])]
+#[Fillable(['sentence_set_id', 'title', 'slug', 'description', 'sort_order'])]
 class Vocabulary extends Model
 {
     /** @use HasFactory<VocabularyFactory> */
@@ -54,5 +55,13 @@ class Vocabulary extends Model
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class)->withTimestamps();
+    }
+
+    /**
+     * @return BelongsTo<SentenceSet, $this>
+     */
+    public function sentenceSet(): BelongsTo
+    {
+        return $this->belongsTo(SentenceSet::class);
     }
 }

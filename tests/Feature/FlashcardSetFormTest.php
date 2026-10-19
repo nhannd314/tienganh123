@@ -4,6 +4,7 @@ use App\Filament\Resources\FlashcardSets\Pages\EditFlashcardSet;
 use App\Filament\Resources\FlashcardSets\RelationManagers\FlashcardsRelationManager;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
+use App\Models\SentenceSet;
 use App\Models\User;
 use Filament\Actions\AttachAction;
 use Filament\Actions\Testing\TestAction;
@@ -49,4 +50,16 @@ it('creates a flashcard straight into the set', function () {
         ->assertHasNoFormErrors();
 
     expect($set->flashcards()->pluck('title')->all())->toBe(['Apple']);
+});
+
+it('links a flashcard set to a sentence set', function () {
+    $set = FlashcardSet::factory()->create();
+    $sentenceSet = SentenceSet::factory()->create();
+
+    Livewire::test(EditFlashcardSet::class, ['record' => $set->getRouteKey()])
+        ->fillForm(['sentence_set_id' => $sentenceSet->id])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($set->refresh()->sentenceSet->is($sentenceSet))->toBeTrue();
 });

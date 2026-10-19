@@ -334,12 +334,12 @@ document.addEventListener('click', (event) => {
 
 syncZoomButtons(1);
 
-// Example sentence picture (lesson page): a click on the picture plays the sentence through the audio button laid on it.
+// Example sentence picture (lesson page): a click on the picture plays the sentence through the audio button beside the sentence.
 document.addEventListener('click', (event) => {
     const picture = event.target.closest('[data-example-image]');
 
     if (picture && !event.target.closest('[data-audio-button]')) {
-        picture.querySelector('[data-audio-button]')?.click();
+        picture.closest('[data-example]')?.querySelector('[data-audio-button]')?.click();
     }
 });
 
@@ -508,5 +508,186 @@ document.addEventListener('change', async (event) => {
         }
     } catch {
         // The browser cannot process the photo; the original is uploaded and the server resizes it.
+    }
+});
+
+/*
+ * x-chant: `[data-chant-open]` opens its `[data-chant-dialog]` full screen on the first slide and starts at once: a song of
+ * `data-tracks` plays (the next one when it ends) and the picture of a flashcard moves. The slides do not change by themselves: the
+ * wide side zones (`data-chant-next|prev`) and the arrow keys go through them and round again. A click in the middle of the screen
+ * or space pauses and resumes the song and the motion; `data-chant-close` or Escape closes the popup.
+ */
+const chants = new WeakMap();
+
+const showChantSlide = (dialog, index) => {
+    const chant = chants.get(dialog);
+
+    chant.index = (index + chant.slides.length) % chant.slides.length;
+
+    const slide = chant.slides[chant.index];
+    const image = dialog.querySelector('[data-chant-image]');
+
+    image.hidden = !slide.image;
+    image.src = slide.image ?? '';
+
+    // A flashcard picture (`data-chant-animate`) pops in and floats again on every slide.
+    image.classList.remove('chant-image');
+    void image.offsetWidth;
+
+    if (image.hasAttribute('data-chant-animate')) {
+        image.classList.add('chant-image');
+    }
+
+    Object.entries({ title: slide.title, ipa: slide.ipa, meaning: slide.meaning }).forEach(([name, text]) => {
+        const element = dialog.querySelector(`[data-chant-${name}]`);
+
+        element.textContent = text ?? '';
+        element.hidden = !text;
+    });
+
+    dialog.querySelector('[data-chant-counter]').textContent = `${chant.index + 1} / ${chant.slides.length}`;
+
+    const stage = dialog.querySelector('[data-chant-stage]');
+
+    stage.classList.remove('chant-in');
+    void stage.offsetWidth;
+    stage.classList.add('chant-in');
+
+    const upcoming = chant.slides[(chant.index + 1) % chant.slides.length];
+
+    if (upcoming.image) {
+        new Image().src = upcoming.image;
+    }
+};
+
+const playChantTrack = (dialog) => {
+    const chant = chants.get(dialog);
+
+    if (!chant?.tracks.length) {
+        return;
+    }
+
+    chant.audio = new Audio(chant.tracks[chant.track % chant.tracks.length]);
+    chant.audio.onended = () => {
+        chant.track++;
+        playChantTrack(dialog);
+    };
+
+    if (!chant.paused) {
+        chant.audio.play().catch(() => {});
+    }
+};
+
+const setChantPaused = (dialog, paused) => {
+    const chant = chants.get(dialog);
+    chant.paused = paused;
+    dialog.toggleAttribute('data-paused', paused);
+
+    if (paused) {
+        chant.audio?.pause();
+    } else {
+        chant.audio?.play().catch(() => {});
+    }
+};
+
+const stopChant = (dialog) => {
+    const chant = chants.get(dialog);
+
+    if (!chant) {
+        return;
+    }
+
+    chant.audio?.pause();
+    chants.delete(dialog);
+
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+};
+
+document.addEventListener('click', (event) => {
+    const open = event.target.closest('[data-chant-open]');
+
+    if (open) {
+        const dialog = open.closest('[data-chant]').querySelector('[data-chant-dialog]');
+        const tracks = JSON.parse(dialog.dataset.tracks);
+
+        window.speechSynthesis?.cancel();
+        window.playingAudio?.pause();
+
+        chants.set(dialog, {
+            slides: JSON.parse(dialog.dataset.slides),
+            tracks,
+            track: Math.floor(Math.random() * Math.max(tracks.length, 1)),
+            index: 0,
+            paused: false,
+            audio: null,
+        });
+
+        dialog.showModal();
+        dialog.requestFullscreen?.().catch(() => {});
+        setChantPaused(dialog, false);
+        showChantSlide(dialog, 0);
+        playChantTrack(dialog);
+
+        return;
+    }
+
+    const dialog = event.target.closest('[data-chant-dialog]');
+    const control = event.target.closest('[data-chant-close], [data-chant-prev], [data-chant-next]');
+
+    if (!dialog || !chants.has(dialog)) {
+        return;
+    }
+
+    const chant = chants.get(dialog);
+
+    // A click on the screen itself, not on a button, pauses or resumes the chant.
+    const isScreen = !control && !event.target.closest('button');
+
+    if (isScreen) {
+        setChantPaused(dialog, !chant.paused);
+    } else if (!control) {
+        return;
+    } else if (control.hasAttribute('data-chant-close')) {
+        dialog.close();
+    } else if (control.hasAttribute('data-chant-prev')) {
+        showChantSlide(dialog, chant.index - 1);
+    } else if (control.hasAttribute('data-chant-next')) {
+        showChantSlide(dialog, chant.index + 1);
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    const dialog = document.querySelector('[data-chant-dialog][open]');
+
+    if (!dialog || !chants.has(dialog)) {
+        return;
+    }
+
+    const chant = chants.get(dialog);
+
+    if (event.key === 'ArrowRight') {
+        showChantSlide(dialog, chant.index + 1);
+    } else if (event.key === 'ArrowLeft') {
+        showChantSlide(dialog, chant.index - 1);
+    } else if (event.key === ' ' && !event.target.closest('button')) {
+        event.preventDefault();
+
+        setChantPaused(dialog, !chant.paused);
+    }
+});
+
+// `close` does not bubble: stop the song when the dialog is closed (Escape, the close button).
+document.addEventListener('close', (event) => {
+    if (event.target.matches?.('[data-chant-dialog]')) {
+        stopChant(event.target);
+    }
+}, true);
+
+// Leaving full screen (Escape) closes the popup.
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        document.querySelectorAll('[data-chant-dialog][open]').forEach((dialog) => dialog.close());
     }
 });

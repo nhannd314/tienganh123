@@ -33,7 +33,7 @@
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             {{-- Passage --}}
             @if (filled($passageHtml) || $lesson->passage_audio_url)
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
+                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
                     @if ($lesson->passage_audio_url)
                         <audio data-passage-audio controls preload="none" src="{{ $lesson->passage_audio_url }}" class="w-full"></audio>
                     @endif
@@ -47,57 +47,16 @@
             {{-- Vocabulary --}}
             <x-vocabulary-table :words="$words" empty-message="Bài học này chưa có từ vựng." />
 
-            {{-- Example sentences of the lesson; a word in backticks that matches a stored word gets its popover --}}
-            @if ($exampleSentences->isNotEmpty())
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-                    <div class="flex items-center justify-between gap-4">
-                        <h2 class="type-h2 text-fg-strong">Câu mẫu</h2>
-
-                        @if ($exampleSentences->contains(fn (array $example): bool => filled($example['translation'])))
-                            <x-icon-button icon="eye" label="Hiện nghĩa" size="sm" aria-pressed="false" data-example-toggle />
-                        @endif
-                    </div>
-
-                    <ul class="grid gap-8 sm:grid-cols-2">
-                        @foreach ($exampleSentences as $example)
-                            <li data-example class="flex flex-col gap-4">
-                                @if ($example['imageUrl'])
-                                    {{-- Clicking anywhere on the picture plays the sentence, as its audio button does (see resources/js/app.js) --}}
-                                    <div data-example-image class="relative cursor-pointer overflow-hidden rounded-lg">
-                                        <img src="{{ $example['imageUrl'] }}" alt="" loading="lazy" class="aspect-video w-full object-cover">
-                                        <x-audio-button size="sm" tone="primary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" class="absolute top-3 right-3 shadow-raised" />
-                                    </div>
-                                @endif
-
-                                <div class="flex items-start gap-4">
-                                    <div class="min-w-0 flex-1">
-                                        <p lang="en" class="text-xl leading-snug text-fg-strong">
-                                            @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="'example-word-'.$loop->parent->index.'-'.$loop->index" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
-                                        </p>
-                                        @if ($example['translation'])
-                                            <p data-example-meaning class="invisible mt-2 type-body text-fg-muted">{{ $example['translation'] }}</p>
-                                        @endif
-                                    </div>
-
-                                    @unless ($example['imageUrl'])
-                                        <x-audio-button size="sm" tone="primary" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" />
-                                    @endunless
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
-                </section>
-            @endif
-
             {{-- Flashcards --}}
             @foreach ($flashcardSets as $flashcardSet)
             @php($cards = $flashcardSet->flashcards->filter(fn ($card): bool => filled($card->display_title)))
             @if ($cards->isNotEmpty())
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
+                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
                     <div class="flex items-center justify-between gap-4">
                         <h2 class="type-h2 text-fg-strong">{{ $flashcardSet->title }}</h2>
 
                         <div class="flex items-center gap-2">
+                            <x-chant :slides="$cards->map(fn ($card): array => ['image' => $card->image_url ?? $card->word?->image_url, 'title' => $card->display_title, 'ipa' => $card->word?->ipa_us, 'meaning' => $card->word?->firstPlainMeaning()])->all()" />
                             <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-flashcard-toggle />
                             <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
                             <x-icon-button icon="panel-right-close" label="Ẩn thanh bên" size="sm" aria-pressed="false" data-sidebar-toggle />
@@ -121,19 +80,51 @@
             @endif
             @endforeach
 
-            {{-- Video --}}
-            @if ($lesson->video_file_url || $lesson->video_embed_url)
-                <div class="aspect-video w-full overflow-hidden rounded-md bg-black">
-                    @if ($lesson->video_file_url)
-                        <video controls preload="metadata" src="{{ $lesson->video_file_url }}" class="size-full"></video>
-                    @else
-                        <iframe src="{{ $lesson->video_embed_url }}" title="{{ $lesson->title }}" class="size-full" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                    @endif
-                </div>
+            {{-- Example sentences of the lesson; a word in backticks that matches a stored word gets its popover --}}
+            @if ($exampleSentences->isNotEmpty())
+                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="type-h2 text-fg-strong">Câu mẫu</h2>
+
+                        <div class="flex items-center gap-2">
+                            <x-chant kind="sentence" :slides="$exampleSentences->map(fn (array $example): array => ['image' => $example['imageUrl'], 'title' => $example['sentence'], 'meaning' => $example['translation']])->all()" />
+
+                            @if ($exampleSentences->contains(fn (array $example): bool => filled($example['translation'])))
+                                <x-icon-button icon="eye" label="Hiện nghĩa" size="sm" aria-pressed="false" data-example-toggle />
+                            @endif
+                        </div>
+                    </div>
+
+                    <ul class="grid gap-8 sm:grid-cols-2">
+                        @foreach ($exampleSentences as $example)
+                            <li data-example class="flex flex-col gap-4">
+                                @if ($example['imageUrl'])
+                                    {{-- Clicking anywhere on the picture plays the sentence, as the audio button beside it does (see resources/js/app.js) --}}
+                                    <div data-example-image class="relative cursor-pointer overflow-hidden rounded-lg">
+                                        <img src="{{ $example['imageUrl'] }}" alt="" loading="lazy" class="aspect-video w-full object-cover">
+                                    </div>
+                                @endif
+
+                                <div class="flex items-start gap-4">
+                                    <x-audio-button size="sm" tone="success-soft" :text="$example['sentence']" :src="$example['audioUrl']" lang="en-US" />
+
+                                    <div class="min-w-0 flex-1">
+                                        <p lang="en" class="text-2xl leading-snug font-semibold text-fg-strong">
+                                            @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="'example-word-'.$loop->parent->index.'-'.$loop->index" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
+                                        </p>
+                                        @if ($example['translation'])
+                                            <p data-example-meaning class="invisible mt-1 type-body text-fg-muted">{{ $example['translation'] }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
             @endif
 
             {{-- Content --}}
-            <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
+            <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
                 <h2 class="type-h2 text-fg-strong">Nội dung bài học</h2>
 
                 @if (filled($contentHtml))
@@ -145,7 +136,7 @@
 
             {{-- Attachments --}}
             @if (count($attachments) > 0)
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
+                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
                     <h2 class="type-h2 text-fg-strong">Tài liệu đính kèm</h2>
 
                     <ul class="flex flex-col gap-3">

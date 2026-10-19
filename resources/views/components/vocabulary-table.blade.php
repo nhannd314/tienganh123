@@ -8,17 +8,17 @@
 ])
 
 @php
-    $headerCell = 'bg-surface-hover px-2 py-3 md:px-4 text-left text-[length:calc(var(--text-base)*var(--vs,1))] font-medium whitespace-nowrap text-fg-muted';
-    $bodyCell = 'border-t border-line-subtle px-2 py-3 md:px-4 align-middle';
+    $headerCell = 'border-l border-line-default bg-surface-hover px-2 py-3 first:border-l-0 md:px-4 text-left text-[length:calc(var(--text-lg)*var(--vs,1))] font-medium whitespace-nowrap text-fg-body';
+    $bodyCell = 'border-t border-l border-line-default px-2 py-3 first:border-l-0 md:px-4 align-middle';
 
     $copyText = $words
         ->map(fn ($word) => $word->word.' '.collect($word->meanings)
-            ->map(fn (array $meaning): string => '('.($meaning['pos'] ?? '').') '.($meaning['meaning'] ?? ''))
+            ->map(fn (array $meaning): string => '('.\App\Models\Word::abbreviatePartOfSpeech($meaning['pos'] ?? '').') '.($meaning['meaning'] ?? ''))
             ->implode(' '))
         ->implode("\n");
 @endphp
 
-<section {{ $attributes->class(['flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card']) }}>
+<section {{ $attributes->class(['flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card']) }}>
     <div class="flex flex-wrap items-center justify-between gap-4">
         <h2 class="type-h2 text-fg-strong">Từ vựng</h2>
 
@@ -44,7 +44,7 @@
         <div
             data-vocab-table
             data-copy-text="{{ $copyText }}"
-            class="group/vocab overflow-x-auto rounded-md border border-line-default"
+            class="group/vocab overflow-x-auto rounded-sm border border-line-default"
         >
             <table class="w-full border-collapse max-md:group-data-[expanded]/vocab:min-w-190 md:min-w-190">
                 <thead>
@@ -58,28 +58,28 @@
                 <tbody>
                     @foreach ($words as $word)
                         <tr>
-                            <td lang="en" class="{{ $bodyCell }} text-[length:calc(var(--text-lg)*var(--vs,1))] font-medium text-primary-text">{{ $word->word }}</td>
+                            <td lang="en" class="{{ $bodyCell }} text-[length:calc(var(--text-xl)*var(--vs,1))] font-medium text-primary-text">{{ $word->word }}</td>
                             <td class="{{ $bodyCell }}">
                                 <div class="flex items-center gap-2 md:gap-3">
                                     <x-audio-button size="sm" :text="$word->word" lang="en-GB" />
-                                    <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_uk }}</span>
+                                    <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-lg)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_uk }}</span>
                                 </div>
                             </td>
                             <td class="{{ $bodyCell }}">
                                 <div class="flex items-center gap-2 md:gap-3">
                                     <x-audio-button size="sm" tone="secondary" :text="$word->word" lang="en-US" />
-                                    <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-base)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_us }}</span>
+                                    <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-lg)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_us }}</span>
                                 </div>
                             </td>
-                            <td class="{{ $bodyCell }} text-[length:calc(var(--text-lg)*var(--vs,1))] text-fg-strong">
+                            <td class="{{ $bodyCell }} text-[length:calc(var(--text-xl)*var(--vs,1))] text-fg-strong">
                                 @foreach ($word->meanings as $meaning)
-                                    <div class="font-semibold"><span class="font-normal text-fg-muted">({{ $meaning['pos'] ?? '' }})</span> {{ $meaning['meaning'] ?? '' }}</div>
+                                    <div class="font-semibold"><span class="font-normal text-fg-muted">({{ \App\Models\Word::abbreviatePartOfSpeech($meaning['pos'] ?? '') }})</span> {{ $meaning['meaning'] ?? '' }}</div>
                                 @endforeach
 
                                 @if (filled($word->examples))
                                     <div class="max-md:group-not-data-[expanded]/vocab:hidden mt-3 flex flex-col gap-1.5">
                                         @foreach ($word->examples as $example)
-                                            <div class="text-[length:calc(var(--text-base)*var(--vs,1))]">
+                                            <div class="text-[length:calc(var(--text-lg)*var(--vs,1))]">
                                                 <p lang="en" class="text-fg-strong"><span class="text-fg-muted italic">e.g.</span> {{ $example['sentence'] ?? '' }}</p>
                                                 @if (filled($example['translation'] ?? null))
                                                     <p class="text-fg-muted">{{ $example['translation'] }}</p>

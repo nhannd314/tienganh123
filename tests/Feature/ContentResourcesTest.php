@@ -3,6 +3,7 @@
 use App\Filament\Resources\Categories\Pages\CreateCategory;
 use App\Filament\Resources\Pages\Pages\CreatePage;
 use App\Filament\Resources\Posts\Pages\CreatePost;
+use App\Filament\Resources\Tags\Pages\CreateTag;
 use App\Models\Category;
 use App\Models\Page;
 use App\Models\Post;
@@ -82,3 +83,16 @@ it('keeps the posts when their category is deleted', function () {
 
     expect($post->fresh()->category_id)->toBeNull();
 });
+
+it('fills in the slug as soon as the title is typed, only while the slug is empty', function (string $page, string $field) {
+    Livewire::test($page)
+        ->set("data.{$field}", 'Mẹo học tiếng Anh')
+        ->assertSet('data.slug', 'meo-hoc-tieng-anh')
+        ->set("data.{$field}", 'Tên khác')
+        ->assertSet('data.slug', 'meo-hoc-tieng-anh');
+})->with([
+    'category' => [CreateCategory::class, 'name'],
+    'post' => [CreatePost::class, 'title'],
+    'page' => [CreatePage::class, 'title'],
+    'tag' => [CreateTag::class, 'name'],
+]);

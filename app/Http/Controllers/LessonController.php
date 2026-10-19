@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\AudioBlock;
+use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\VideoBlock;
 use App\Filament\Forms\Components\RichEditor\RichContentCustomBlocks\YoutubeVideoBlock;
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\Sentence;
 use App\Models\Unit;
 use App\Models\Word;
 use DOMDocument;
@@ -26,7 +29,7 @@ class LessonController extends Controller
     {
         abort_unless($course->is_published && $unit->is_published && $lesson->is_published, 404);
 
-        $lesson->load(['flashcardSets.flashcards.word']);
+        $lesson->load(['flashcardSets.flashcards.word', 'sentenceSet.sentences']);
 
         $words = $lesson->words;
         $exampleSentences = $this->exampleSentences($lesson);
@@ -49,16 +52,22 @@ class LessonController extends Controller
     }
 
     /**
-     * The example sentences of the lesson, each cut into segments: a word marked with backticks that matches a stored
+     * The sentences of the sentence set of the lesson, each cut into segments: a word marked with backticks that matches a stored
      * word carries it, to be shown as a popover label; any other segment is plain text.
      *
      * @return Collection<int, array{sentence: string, translation: ?string, audioUrl: ?string, imageUrl: ?string, segments: list<array{text: string, word: ?Word}>}>
      */
     private function exampleSentences(Lesson $lesson): Collection
     {
-        $examples = collect($lesson->example_sentences ?? [])
-            ->filter(fn (mixed $example): bool => is_array($example) && filled(trim(Lesson::spokenSentence($example['sentence'] ?? ''))))
-            ->map(fn (array $example): array => [...$example, 'segments' => Lesson::sentenceSegments($example['sentence'])])
+        $examples = ($lesson->sentenceSet?->sentences ?? collect())
+            ->filter(fn (Sentence $sentence): bool => filled(trim(Lesson::spokenSentence($sentence->sentence))))
+            ->map(fn (Sentence $sentence): array => [
+                'sentence' => $sentence->sentence,
+                'translation' => $sentence->translation,
+                'audio' => $sentence->audio,
+                'image' => $sentence->image,
+                'segments' => Lesson::sentenceSegments($sentence->sentence),
+            ])
             ->values();
 
         $markedWords = $examples->flatMap(fn (array $example): array => $example['segments'])
@@ -96,7 +105,7 @@ class LessonController extends Controller
         }
 
         $html = RichContentRenderer::make($content)
-            ->customBlocks([YoutubeVideoBlock::class])
+            ->customBlocks([YoutubeVideoBlock::class, VideoBlock::class, AudioBlock::class])
             ->fileAttachmentsDisk('public')
             ->fileAttachmentsVisibility('public')
             ->toHtml();

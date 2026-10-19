@@ -4,6 +4,8 @@ use App\Models\Course;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
 use App\Models\Lesson;
+use App\Models\Sentence;
+use App\Models\SentenceSet;
 use App\Models\Unit;
 use App\Models\Word;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +19,22 @@ function publishedLesson(array $lessonAttributes = []): Lesson
     $unit = Unit::factory()->published()->for($course)->create();
 
     return Lesson::factory()->published()->for($unit)->create($lessonAttributes);
+}
+
+/**
+ * A sentence set holding the given sentences, in order.
+ *
+ * @param  list<array<string, mixed>>  $sentences
+ */
+function sentenceSetWith(array $sentences): SentenceSet
+{
+    $set = SentenceSet::factory()->create();
+
+    foreach ($sentences as $index => $sentence) {
+        Sentence::factory()->hasAttached($set, ['sort_order' => $index + 1], 'sentenceSets')->create(['translation' => null, ...$sentence]);
+    }
+
+    return $set;
 }
 
 function lessonUrl(Lesson $lesson): string
@@ -65,7 +83,7 @@ it('lists the new words of the lesson with their meanings', function () {
     attachWords($lesson, [$hello->id, $friend->id]);
 
     $response = $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['hello', '/həˈləʊ/', '/həˈloʊ/', '(interjection)', 'xin chào', 'friend', '(noun)', 'người bạn'], false);
+        ->assertSeeInOrder(['hello', '/həˈləʊ/', '/həˈloʊ/', '(interj)', 'xin chào', 'friend', '(n)', 'người bạn'], false);
 
     expect(substr_count($response->getContent(), '<article'))->toBe(0);
 });
@@ -79,11 +97,11 @@ it('shows the examples of the word itself in the vocabulary table', function () 
 });
 
 it('lists the lesson example sentences with one toggle beside the title for every meaning', function () {
-    $lesson = publishedLesson(['example_sentences' => [
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
         ['sentence' => 'I eat an apple every day.', 'translation' => 'Tôi ăn một quả táo mỗi ngày.', 'audio' => 'lessons/sentence-audio/apple.mp3'],
         ['sentence' => 'Water is cold.', 'translation' => null, 'audio' => null],
         ['sentence' => '', 'translation' => 'Bỏ qua', 'audio' => null],
-    ]]);
+    ])->id]);
     attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'A word example, not a lesson sentence.']]]));
 
     $response = $this->get(lessonUrl($lesson))
@@ -98,34 +116,35 @@ it('lists the lesson example sentences with one toggle beside the title for ever
 });
 
 it('leaves out the meaning toggle when no example sentence has a meaning', function () {
-    $lesson = publishedLesson(['example_sentences' => [['sentence' => 'Water is cold.', 'translation' => null]]]);
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([['sentence' => 'Water is cold.', 'translation' => null]])->id]);
 
     $this->get(lessonUrl($lesson))
         ->assertSee('Water is cold.')
         ->assertDontSee('data-example-toggle', false);
 });
 
-it('lays the audio button of an example sentence on its image, above the sentence', function () {
-    $lesson = publishedLesson(['example_sentences' => [
+it('puts the audio button of an example sentence to the left of its sentence, below the image', function () {
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
         ['sentence' => 'I eat an apple.', 'image' => 'lessons/sentence-images/apple.png'],
         ['sentence' => 'Water is cold.'],
-    ]]);
+    ])->id]);
 
     $content = $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['data-example-image', 'lessons/sentence-images/apple.png', 'data-text="I eat an apple."', '</div>', 'I eat an apple.', 'Water is cold.', 'data-text="Water is cold."'], false)
+        ->assertSeeInOrder(['data-example-image', 'lessons/sentence-images/apple.png', '</div>', 'data-text="I eat an apple."', 'text-2xl', 'I eat an apple.', 'data-text="Water is cold."', 'Water is cold.'], false)
         ->getContent();
 
     expect(substr_count($content, 'lessons/sentence-images/'))->toBe(1)
-        ->and(substr_count($content, 'data-example-image'))->toBe(1);
+        ->and(substr_count($content, 'data-example-image'))->toBe(1)
+        ->and(substr_count($content, 'data-audio-button'))->toBe(2);
 });
 
 it('labels the words in backticks of an example sentence with a popover and leaves unknown ones as text', function () {
     Word::factory()->create(['word' => 'apple', 'ipa_us' => '/ˈæp.əl/', 'meanings' => [['pos' => 'n', 'meaning' => 'quả táo']]]);
     Word::factory()->create(['word' => 'pear', 'meanings' => [['pos' => 'n', 'meaning' => 'quả lê']]]);
-    $lesson = publishedLesson(['example_sentences' => [
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
         ['sentence' => 'I have an `Apple` and a `pear`.'],
         ['sentence' => 'A `pineapple` is not a word here.'],
-    ]]);
+    ])->id]);
 
     $content = $this->get(lessonUrl($lesson))
         ->assertSee('popovertarget="example-word-0-1"', false)
@@ -142,7 +161,7 @@ it('labels the words in backticks of an example sentence with a popover and leav
 });
 
 it('hides the example sentence card when the lesson has no example sentence', function () {
-    $lesson = publishedLesson(['example_sentences' => null]);
+    $lesson = publishedLesson();
     attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'Water is cold.']]]));
 
     $this->get(lessonUrl($lesson))->assertDontSee('data-example ', false);
@@ -153,7 +172,7 @@ it('puts the part of speech next to each meaning and offers a full view on mobil
     attachWords($lesson, Word::factory()->create(['meanings' => [['pos' => 'verb', 'meaning' => 'làm việc'], ['pos' => 'noun', 'meaning' => 'công việc']]]));
 
     $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['(verb)', 'làm việc', '(noun)', 'công việc'])
+        ->assertSeeInOrder(['(v)', 'làm việc', '(n)', 'công việc'])
         ->assertDontSee('Từ loại')
         ->assertDontSee('Phiên âm UK')
         ->assertDontSee('Ẩn phiên âm')
@@ -169,7 +188,7 @@ it('offers a copy of the words with their meanings, one word per line', function
 
     $this->get(lessonUrl($lesson))
         ->assertSee('data-vocab-action="copy"', false)
-        ->assertSee("data-copy-text=\"apple (noun) quả táo\nwork (verb) làm việc (noun) công việc\"", false);
+        ->assertSee("data-copy-text=\"apple (n) quả táo\nwork (v) làm việc (n) công việc\"", false);
 });
 
 it('shows an empty state when the lesson has no new words', function () {
@@ -255,6 +274,22 @@ it('renders images attached in the rich content from the public disk', function 
     $this->get(lessonUrl($lesson))->assertSee('/storage/lessons/content/apple.png', false);
 });
 
+it('plays a video file uploaded in the rich content through a video block', function () {
+    Storage::fake('public');
+    $lesson = publishedLesson(['content' => '<p>Xem:</p><div data-type="customBlock" data-id="video" data-config="{&quot;file&quot;:&quot;lessons/content-video/clip.mp4&quot;}"></div>']);
+
+    $this->get(lessonUrl($lesson))->assertSee('<video controls', false)->assertSee('/storage/lessons/content-video/clip.mp4', false);
+});
+
+it('plays an audio file uploaded in the rich content through an audio block', function () {
+    Storage::fake('public');
+    $lesson = publishedLesson(['content' => '<p>Nghe:</p><div data-type="customBlock" data-id="audio" data-config="{&quot;file&quot;:&quot;lessons/content-audio/hello.mp3&quot;}"></div>']);
+
+    $response = $this->get(lessonUrl($lesson))->assertSee('<audio controls', false)->assertSee('/storage/lessons/content-audio/hello.mp3', false);
+
+    expect(substr_count($response->getContent(), '<audio'))->toBe(1);
+});
+
 it('lists attachments and plays audio files inline', function () {
     $lesson = publishedLesson(['attachments' => ['lessons/attachments/hello.mp3', 'lessons/attachments/worksheet.pdf']]);
 
@@ -312,10 +347,10 @@ it('shows a flashcard with the title or the linked word, its first meaning, and 
 });
 
 it('plays the example audio file from the listen button, which speaks the sentence when there is no file', function () {
-    $lesson = publishedLesson(['example_sentences' => [
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
         ['sentence' => 'I eat an apple.', 'audio' => 'lessons/sentence-audio/apple.mp3'],
         ['sentence' => 'Water is cold.'],
-    ]]);
+    ])->id]);
 
     $content = $this->get(lessonUrl($lesson))->assertDontSee('<audio', false)->getContent();
 
@@ -330,4 +365,80 @@ it('shows the image placeholder on a flashcard without an image', function () {
     Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Plain', 'image' => null]);
 
     $this->get(lessonUrl($lesson))->assertSee('Plain')->assertSee('icon-image', false)->assertDontSee('border-dashed', false);
+});
+
+it('puts the example sentence card below the flashcards and above the content', function () {
+    $lesson = publishedLesson([
+        'sentence_set_id' => sentenceSetWith([['sentence' => 'Water is cold.']])->id,
+    ]);
+    $flashcardSet = FlashcardSet::factory()->create(['title' => 'Bộ thẻ nước']);
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Water']);
+
+    $this->get(lessonUrl($lesson))->assertSeeInOrder(['Từ vựng', 'Bộ thẻ nước', 'Câu mẫu', 'Water is cold.', 'Nội dung bài học']);
+});
+
+it('offers a Chant popup for the flashcards and for the example sentences, with a slide for each card and the songs of public/chant', function () {
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
+        ['sentence' => 'I `eat` an apple.', 'translation' => 'Tôi ăn táo.', 'image' => 'lessons/sentence-images/apple.png'],
+        ['sentence' => 'Water is cold.', 'translation' => null],
+    ])->id]);
+    $flashcardSet = FlashcardSet::factory()->create();
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    $word = Word::factory()->create(['word' => 'water', 'ipa_us' => '/ˈwɑː.t̬ɚ/', 'meanings' => [['pos' => 'noun', 'meaning' => 'nước']]]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => '', 'word_id' => $word->id, 'image' => 'flashcards/images/water.png']);
+
+    $response = $this->get(lessonUrl($lesson))->assertSee('data-chant-open', false)->assertSee('data-chant-next', false)->assertDontSee('data-chant-start', false)->assertDontSee('data-chant-toggle', false)->assertDontSee('chant-seconds', false);
+    $content = $response->getContent();
+
+    preg_match_all('/<dialog\s+data-chant-dialog\s+data-slides="([^"]*)"\s+data-tracks="([^"]*)"/s', $content, $matches, PREG_SET_ORDER);
+    $decode = fn (string $attribute): array => json_decode(html_entity_decode($attribute), true);
+
+    expect($matches)->toHaveCount(2)
+        ->and($decode($matches[0][1]))->toBe([[
+            'image' => Storage::disk('public')->url('flashcards/images/water.png'),
+            'title' => 'water',
+            'ipa' => '/ˈwɑː.t̬ɚ/',
+            'meaning' => 'nước',
+        ]])
+        ->and($decode($matches[1][1]))->toBe([
+            ['image' => Storage::disk('public')->url('lessons/sentence-images/apple.png'), 'title' => 'I eat an apple.', 'meaning' => 'Tôi ăn táo.'],
+            ['image' => null, 'title' => 'Water is cold.', 'meaning' => null],
+        ])
+        ->and($decode($matches[0][2]))->toContain(asset('chant/beat.mp3'));
+});
+
+it('has no Chant popup on a lesson without flashcards and example sentences', function () {
+    $this->get(lessonUrl(publishedLesson()))->assertDontSee('data-chant-dialog', false);
+});
+
+it('draws the sentence slides of the Chant popup lighter and with a smaller meaning than the flashcard slides', function () {
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([['sentence' => 'Water is cold.', 'translation' => 'Nước lạnh.']])->id]);
+    $flashcardSet = FlashcardSet::factory()->create();
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Water']);
+
+    $content = $this->get(lessonUrl($lesson))->getContent();
+
+    preg_match_all('/<p data-chant-title[^>]*class="([^"]*)"/', $content, $titles);
+    preg_match_all('/<p data-chant-meaning class="([^"]*)"/', $content, $meanings);
+
+    expect($titles[1])->toHaveCount(2)
+        ->and($titles[1][0])->toContain('font-bold')
+        ->and($titles[1][1])->toContain('font-medium')->not->toContain('font-bold')
+        ->and($meanings[1][0])->toContain('text-2xl', 'md:text-4xl')
+        ->and($meanings[1][1])->toContain('text-xl', 'md:text-2xl')->not->toContain('md:text-4xl');
+});
+
+it('animates only the picture of the flashcard slides of the Chant popup', function () {
+    $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([['sentence' => 'Water is cold.']])->id]);
+    $flashcardSet = FlashcardSet::factory()->create();
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Water']);
+
+    preg_match_all('/<img data-chant-image([^>]*)>/', $this->get(lessonUrl($lesson))->getContent(), $images);
+
+    expect($images[1])->toHaveCount(2)
+        ->and($images[1][0])->toContain('data-chant-animate')
+        ->and($images[1][1])->not->toContain('data-chant-animate');
 });

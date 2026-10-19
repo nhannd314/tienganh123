@@ -22,6 +22,23 @@ class Word extends Model
     use HasFactory, HasSlug;
 
     /**
+     * The abbreviation shown for each part of speech, by the name it is stored under.
+     *
+     * @var array<string, string>
+     */
+    public const PART_OF_SPEECH_ABBREVIATIONS = [
+        'noun' => 'n',
+        'verb' => 'v',
+        'adjective' => 'a',
+        'adverb' => 'adv',
+        'pronoun' => 'pron',
+        'preposition' => 'prep',
+        'conjunction' => 'conj',
+        'interjection' => 'interj',
+        'determiner' => 'det',
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -53,7 +70,36 @@ class Word extends Model
     }
 
     /**
-     * Every meaning as the label shown in a quiz option, e.g. "(noun) quả táo".
+     * Another abbreviation that is accepted when meanings are typed, by the name it stands for.
+     *
+     * @var array<string, string>
+     */
+    public const PART_OF_SPEECH_ALIASES = [
+        'adj' => 'adjective',
+    ];
+
+    /**
+     * A part of speech as it is stored, in full ("n" becomes "noun"); one that is already in full or is unknown is only lowercased.
+     */
+    public static function expandPartOfSpeech(?string $partOfSpeech): string
+    {
+        $partOfSpeech = mb_strtolower(trim((string) $partOfSpeech));
+
+        return array_search($partOfSpeech, self::PART_OF_SPEECH_ABBREVIATIONS, true) ?: (self::PART_OF_SPEECH_ALIASES[$partOfSpeech] ?? $partOfSpeech);
+    }
+
+    /**
+     * A part of speech as it is shown, abbreviated ("noun" becomes "n"); one with no known abbreviation is shown as it is.
+     */
+    public static function abbreviatePartOfSpeech(?string $partOfSpeech): string
+    {
+        $partOfSpeech = trim((string) $partOfSpeech);
+
+        return self::PART_OF_SPEECH_ABBREVIATIONS[mb_strtolower($partOfSpeech)] ?? $partOfSpeech;
+    }
+
+    /**
+     * Every meaning as the label shown in a quiz option, e.g. "(n) quả táo".
      *
      * @return list<string>
      */
@@ -61,13 +107,13 @@ class Word extends Model
     {
         return collect($this->meanings ?? [])
             ->filter(fn (array $meaning): bool => filled($meaning['meaning'] ?? null))
-            ->map(fn (array $meaning): string => trim(filled($meaning['pos'] ?? null) ? '('.$meaning['pos'].') '.$meaning['meaning'] : $meaning['meaning']))
+            ->map(fn (array $meaning): string => trim(filled($meaning['pos'] ?? null) ? '('.self::abbreviatePartOfSpeech($meaning['pos']).') '.$meaning['meaning'] : $meaning['meaning']))
             ->values()
             ->all();
     }
 
     /**
-     * Every meaning, one per line, as a review shows the word's meaning, e.g. "(noun) quả táo\n(verb) ăn táo".
+     * Every meaning, one per line, as a review shows the word's meaning, e.g. "(n) quả táo\n(v) ăn táo".
      * Shown with `white-space: pre-line`.
      */
     public function allMeaningsLabel(): string

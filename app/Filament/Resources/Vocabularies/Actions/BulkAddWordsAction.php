@@ -32,7 +32,7 @@ class BulkAddWordsAction extends Action
                     ->required()
                     ->rows(12)
                     ->placeholder("apple [noun] quả táo, táo | I have an apple = Tôi có một quả táo\nwork [noun] công việc [verb] làm việc")
-                    ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác [từ loại] nghĩa | câu ví dụ = bản dịch | câu ví dụ khác. Gõ một từ đã có rồi bấm Tab hoặc click ra ngoài ô để tự nạp nghĩa của từ đó. Từ mới sẽ được tạo; từ đã có chỉ được thêm các nghĩa và ví dụ còn thiếu.')
+                    ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác [từ loại] nghĩa | câu ví dụ = bản dịch | câu ví dụ khác. Từ loại có thể viết tắt (n, v, a, adv, pron, prep, conj, interj, det) và được lưu thành dạng đầy đủ. Gõ một từ đã có rồi bấm Tab hoặc click ra ngoài ô để tự nạp nghĩa của từ đó. Từ mới sẽ được tạo; từ đã có chỉ được thêm các nghĩa và ví dụ còn thiếu.')
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (Set $set, ?string $state) => $set('words', self::loadKnownWords((string) $state))),
             ])
@@ -49,6 +49,7 @@ class BulkAddWordsAction extends Action
 
     /**
      * Parse one word per line: `word [pos] meaning, meaning [pos] meaning | example = translation | example = translation`.
+     * The part of speech may be abbreviated (`[n]`); it is stored in full (`noun`).
      * An example is a sentence and its translation, e.g. "I have an apple = Tôi có một quả táo". A comma inside round brackets, a
      * note on a meaning, does not split it.
      *
@@ -75,7 +76,7 @@ class BulkAddWordsAction extends Action
                 foreach ($matches as [, $pos, $meaningList]) {
                     foreach (preg_split('/,(?![^()]*\))/u', $meaningList) as $meaning) {
                         $meaning = trim($meaning);
-                        $pos = mb_strtolower(trim($pos));
+                        $pos = Word::expandPartOfSpeech($pos);
 
                         if ($meaning !== '' && $pos !== '') {
                             $meanings[mb_strtolower($pos.'|'.$meaning)] ??= ['pos' => $pos, 'meaning' => $meaning];
@@ -108,7 +109,7 @@ class BulkAddWordsAction extends Action
     {
         $meanings = collect($word->meanings ?? [])
             ->filter(fn (array $meaning): bool => filled($meaning['meaning'] ?? null))
-            ->groupBy(fn (array $meaning): string => (string) ($meaning['pos'] ?? ''))
+            ->groupBy(fn (array $meaning): string => Word::abbreviatePartOfSpeech($meaning['pos'] ?? ''))
             ->map(fn ($group, string $pos): string => trim(($pos !== '' ? "[{$pos}] " : '').$group->pluck('meaning')->implode(', ')))
             ->implode(' ');
 

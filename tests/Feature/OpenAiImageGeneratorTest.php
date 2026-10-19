@@ -39,6 +39,7 @@ it('asks OpenAI for a transparent cartoon PNG of the word and returns it resized
         && $request['model'] === 'gpt-image-1.5'
         && $request['background'] === 'transparent'
         && $request['output_format'] === 'png'
+        && $request['quality'] === 'medium'
         && str_contains($request['prompt'], '"apple"'));
 });
 
@@ -70,4 +71,17 @@ it('returns null and logs the reason when OpenAI answers with an error or no ima
         ->and(app(OpenAiImageGenerator::class)->generate('apple'))->toBeNull();
 
     Log::shouldHaveReceived('warning')->twice();
+});
+
+it('asks OpenAI for a landscape scene of the sentence with its background and returns it resized', function () {
+    Http::fake(['api.openai.com/*' => Http::response(openAiPngResponse(64))]);
+
+    $image = imagecreatefromstring(app(OpenAiImageGenerator::class)->generateForSentence('I eat an apple.', 60, 40));
+
+    expect(imagesx($image))->toBe(60)->and(imagesy($image))->toBe(40);
+
+    Http::assertSent(fn ($request) => $request['size'] === '1536x1024'
+        && $request['quality'] === 'medium'
+        && ! isset($request['background'])
+        && str_contains($request['prompt'], '"I eat an apple."'));
 });

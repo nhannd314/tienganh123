@@ -20,16 +20,16 @@
 @endphp
 
 <article {{ $attributes->class([
-    'group/card relative grid min-h-36 grid-cols-[104px_minmax(0,1fr)] items-center gap-4 rounded-lg border p-5',
+    'group/card relative grid min-h-36 grid-cols-[128px_minmax(0,1fr)] items-center gap-3 rounded-lg border p-3',
     'data-[word-hidden]:grid-cols-1',
     $toneConfig['box'],
 ]) }}>
     <div class="flex justify-center">
         @if ($image)
-            <img data-flashcard-image src="{{ $image }}" alt="" class="size-26 object-contain group-data-[word-hidden]/card:mx-auto group-data-[word-hidden]/card:h-52 group-data-[word-hidden]/card:w-full">
+            <img data-flashcard-image src="{{ $image }}" alt="" class="size-32 object-contain group-data-[word-hidden]/card:mx-auto group-data-[word-hidden]/card:h-52 group-data-[word-hidden]/card:w-full">
         @else
             {{-- Same placeholder as a course card without a thumbnail: a plain tile with the image icon --}}
-            <span data-flashcard-image aria-hidden="true" class="flex size-26 items-center justify-center rounded-md bg-surface-card text-fg-disabled group-data-[word-hidden]/card:h-52 group-data-[word-hidden]/card:w-full">
+            <span data-flashcard-image aria-hidden="true" class="flex size-32 items-center justify-center rounded-md bg-surface-card text-fg-disabled group-data-[word-hidden]/card:h-52 group-data-[word-hidden]/card:w-full">
                 <x-icon name="image" size="xl" />
             </span>
         @endif

@@ -32,6 +32,12 @@ class FlashcardSetForm
                     ->helperText('Leave empty to generate it from the title.'),
                 Textarea::make('description')
                     ->columnSpanFull(),
+                Select::make('sentence_set_id')
+                    ->label('Sentence set')
+                    ->relationship('sentenceSet', 'title')
+                    ->searchable()
+                    ->preload()
+                    ->columnSpanFull(),
                 Select::make('tags')
                     ->relationship('tags', 'name')
                     ->multiple()

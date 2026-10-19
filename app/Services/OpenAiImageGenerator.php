@@ -16,7 +16,38 @@ class OpenAiImageGenerator
      * Returns the raw PNG file content, or null when the API key is missing
      * or the request fails (the failure is logged).
      */
-    public function generate(string $word, int $width = 200, int $height = 200): ?string
+    public function generate(string $word, int $width = 512, int $height = 512): ?string
+    {
+        $prompt = "A cute cartoon-style illustration representing the word \"{$word}\", ".
+            'for a vocabulary flashcard. Centered composition. No borders, no texts';
+
+        $image = $this->request($prompt, $word, ['size' => '1024x1024', 'background' => 'transparent']);
+
+        return $image === null ? null : $this->resize($image, $width, $height);
+    }
+
+    /**
+     * Generate a cute cartoon-style PNG illustration of the scene of the given sentence, with its background, in landscape,
+     * resized to the requested dimensions.
+     *
+     * Returns the raw PNG file content, or null when the API key is missing or the request fails (the failure is logged).
+     */
+    public function generateForSentence(string $sentence, int $width = 600, int $height = 400): ?string
+    {
+        $prompt = "A cute cartoon-style illustration of the scene \"{$sentence}\", ".
+            'for a children\'s English lesson. Full scene with a background. No borders, no texts, no letters';
+
+        $image = $this->request($prompt, $sentence, ['size' => '1536x1024']);
+
+        return $image === null ? null : $this->resize($image, $width, $height);
+    }
+
+    /**
+     * Ask OpenAI for one PNG and return its decoded content, or null when the API key is missing or the request fails.
+     *
+     * @param  array<string, string>  $options
+     */
+    private function request(string $prompt, string $subject, array $options): ?string
     {
         $key = config('services.openai.key');
 
@@ -24,23 +55,19 @@ class OpenAiImageGenerator
             return null;
         }
 
-        $prompt = "A cute cartoon-style illustration representing the word \"{$word}\", ".
-            'for a children\'s vocabulary flashcard. Centered composition. No borders, no texts';
-
         $response = Http::withToken($key)
             ->timeout(90)
             ->post('https://api.openai.com/v1/images/generations', [
                 'model' => config('services.openai.image_model'),
                 'prompt' => $prompt,
-                'size' => '1024x1024',
-                'quality' => 'low',
-                'background' => 'transparent',
                 'output_format' => 'png',
                 'n' => 1,
+                'quality' => 'medium',
+                ...$options,
             ]);
 
         if ($response->failed()) {
-            Log::warning('OpenAI image generation failed.', ['word' => $word, 'status' => $response->status(), 'error' => data_get($response->json(), 'error.message')]);
+            Log::warning('OpenAI image generation failed.', ['word' => $subject, 'status' => $response->status(), 'error' => data_get($response->json(), 'error.message')]);
 
             return null;
         }
@@ -48,12 +75,12 @@ class OpenAiImageGenerator
         $image = base64_decode((string) data_get($response->json(), 'data.0.b64_json'), true);
 
         if (! $image) {
-            Log::warning('OpenAI image generation returned no image.', ['word' => $word]);
+            Log::warning('OpenAI image generation returned no image.', ['word' => $subject]);
 
             return null;
         }
 
-        return $this->resize($image, $width, $height);
+        return $image;
     }
 
     protected function resize(string $image, int $width, int $height): string

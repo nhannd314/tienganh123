@@ -195,7 +195,7 @@ it('shows every meaning of a word in parts 1, 2 and 3 and grades all of them as 
     $word->update(['meanings' => [['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']]]);
 
     $question = collect(reviewQuestions($this->get(reviewUrl($lesson, $step))->getContent()))->firstWhere('id', $word->id);
-    $allMeanings = "(noun) quả táo\n(verb) ăn táo";
+    $allMeanings = "(n) quả táo\n(v) ăn táo";
 
     if ($step === 2) {
         expect($question['prompt'])->toBe($allMeanings);
@@ -204,7 +204,7 @@ it('shows every meaning of a word in parts 1, 2 and 3 and grades all of them as 
     }
 
     expect($question['options'][$question['answer']])->toBe($allMeanings)
-        ->and($question['options'])->not->toContain('(noun) quả táo');
+        ->and($question['options'])->not->toContain('(n) quả táo');
 
     $answers = $lesson->words->map(fn (Word $other): array => ['word_id' => $other->id, 'selected' => $other->is($word) ? $allMeanings : 'x'])->all();
 
@@ -331,7 +331,7 @@ it('saves the finished part and grades the answers on the server', function () {
 
     $answers = $words->map(fn (Word $word, int $index): array => [
         'word_id' => $word->id,
-        'selected' => $index === 0 ? '(noun) sai rồi' : $word->meaningLabels()[0],
+        'selected' => $index === 0 ? '(n) sai rồi' : $word->meaningLabels()[0],
     ])->all();
 
     $this->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), ['duration' => 95, 'answers' => $answers])
@@ -360,7 +360,7 @@ it('accepts any meaning of a word as correct and records the signed-in user', fu
     $this->actingAs($user)
         ->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), [
             'duration' => 10,
-            'answers' => [['word_id' => $word->id, 'selected' => '(verb) ăn táo']],
+            'answers' => [['word_id' => $word->id, 'selected' => '(v) ăn táo']],
         ])
         ->assertCreated()
         ->assertJson(['correct' => 1]);
@@ -445,7 +445,7 @@ it('returns the progress over all parts when a part is saved, completing a part 
     $lesson = reviewLesson(5);
     $answers = fn (int $right) => $lesson->words->values()->map(fn (Word $word, int $index): array => [
         'word_id' => $word->id,
-        'selected' => $index < $right ? $word->meaningLabels()[0] : '(noun) sai rồi',
+        'selected' => $index < $right ? $word->meaningLabels()[0] : '(n) sai rồi',
     ])->all();
 
     $this->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), ['duration' => 100, 'answers' => $answers(3)])

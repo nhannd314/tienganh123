@@ -40,7 +40,7 @@
         @if (! empty($word->meanings))
             <span class="flex flex-col gap-1 border-t border-line-subtle pt-3 type-body text-fg-strong">
                 @foreach ($word->meanings as $meaning)
-                    <span><span class="text-fg-muted">({{ $meaning['pos'] ?? '' }})</span> {{ $meaning['meaning'] ?? '' }}</span>
+                    <span><span class="text-fg-muted">({{ \App\Models\Word::abbreviatePartOfSpeech($meaning['pos'] ?? '') }})</span> {{ $meaning['meaning'] ?? '' }}</span>
                 @endforeach
             </span>
         @endif

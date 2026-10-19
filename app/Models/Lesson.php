@@ -19,15 +19,14 @@ use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'unit_id',
+    'sentence_set_id',
     'title',
     'slug',
     'description',
     'passage',
     'passage_audio',
-    'example_sentences',
     'content',
     'attachments',
-    'video',
     'sort_order',
     'is_free',
     'is_published',
@@ -69,7 +68,6 @@ class Lesson extends Model
     protected function casts(): array
     {
         return [
-            'example_sentences' => 'array',
             'attachments' => 'array',
             'sort_order' => 'integer',
             'is_free' => 'boolean',
@@ -83,6 +81,14 @@ class Lesson extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    /**
+     * @return BelongsTo<SentenceSet, $this>
+     */
+    public function sentenceSet(): BelongsTo
+    {
+        return $this->belongsTo(SentenceSet::class);
     }
 
     /**
@@ -166,22 +172,6 @@ class Lesson extends Model
                 : ['text' => str_replace('`', '', $piece), 'isMarked' => false],
             $pieces,
         );
-    }
-
-    /**
-     * The text of the example sentences that have no audio yet, without repeats.
-     *
-     * @param  array<int, mixed>|null  $exampleSentences
-     * @return list<string>
-     */
-    public static function sentencesWithoutAudio(?array $exampleSentences): array
-    {
-        return collect($exampleSentences ?? [])
-            ->filter(fn (mixed $example): bool => is_array($example) && filled($example['sentence'] ?? null) && blank($example['audio'] ?? null))
-            ->map(fn (array $example): string => $example['sentence'])
-            ->unique()
-            ->values()
-            ->all();
     }
 
     /**
@@ -320,34 +310,6 @@ class Lesson extends Model
         $pattern = '~^https?://(?:www\.|m\.)?(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|embed/|shorts/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})(?:[?&#/].*)?$~i';
 
         return preg_match($pattern, trim($url ?? ''), $match) ? 'https://www.youtube-nocookie.com/embed/'.$match[1] : null;
-    }
-
-    /**
-     * Embed URL of the lesson video, or null when it has none.
-     *
-     * @return Attribute<string|null, never>
-     */
-    protected function videoEmbedUrl(): Attribute
-    {
-        return Attribute::get(fn (): ?string => self::youtubeEmbedUrl($this->video));
-    }
-
-    /**
-     * Whether the video is an uploaded file (a path on the public disk) rather than a link.
-     */
-    public function hasUploadedVideo(): bool
-    {
-        return filled($this->video) && ! preg_match('~^https?://~i', $this->video);
-    }
-
-    /**
-     * Public URL of the uploaded lesson video stored on the public disk, or null when it is a link or absent.
-     *
-     * @return Attribute<string|null, never>
-     */
-    protected function videoFileUrl(): Attribute
-    {
-        return Attribute::get(fn (): ?string => $this->hasUploadedVideo() ? Storage::disk('public')->url($this->video) : null);
     }
 
     /**
