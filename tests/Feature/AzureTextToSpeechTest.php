@@ -76,6 +76,7 @@ it('stores the audio of a flashcard that has none, and leaves one that has audio
     (new GenerateFlashcardAudio($flashcard))->handle(app(AzureTextToSpeech::class));
 
     Http::assertSentCount(1);
+    Http::assertSent(fn ($request) => str_contains($request->body(), '<voice name="'.app(AzureTextToSpeech::class)->flashcardVoice($flashcard->id).'">'));
 });
 
 it('stores the audio of a sentence that has none, read without its backticks, and leaves one that has audio alone', function () {
@@ -95,7 +96,7 @@ it('stores the audio of a sentence that has none, read without its backticks, an
 
     Http::assertSentCount(1);
     Http::assertSent(fn ($request) => str_contains($request->body(), '>I eat an apple.</prosody>')
-        && preg_match('/<voice name="en-US-(Jenny|Guy)Neural">/', $request->body()) === 1);
+        && str_contains($request->body(), '<voice name="'.app(AzureTextToSpeech::class)->sentenceVoice($sentence->id).'">'));
 });
 
 it('retries the sentence job when Azure gives no audio', function () {
@@ -110,4 +111,18 @@ it('retries the job when Azure gives no audio', function () {
 
     expect(fn () => (new GenerateFlashcardAudio(Flashcard::factory()->create(['title' => 'Apple'])))->handle(app(AzureTextToSpeech::class)))
         ->toThrow(RuntimeException::class);
+});
+
+it('changes the voice from one record to the next so the audio is not dull', function () {
+    $speech = app(AzureTextToSpeech::class);
+
+    expect(collect(range(0, 7))->map(fn (int $id): string => $speech->wordVoice('us', $id))->unique())->toHaveCount(8)
+        ->and($speech->wordVoice('us', 0))->toBe('en-US-JennyNeural')
+        ->and($speech->wordVoice('us', 1))->toBe('en-US-GuyNeural')
+        ->and($speech->wordVoice('uk', 1))->toBe('en-GB-RyanNeural')
+        ->and($speech->wordVoice('us', 8))->toBe($speech->wordVoice('us', 0))
+        ->and(collect(range(0, 3))->map(fn (int $id): string => $speech->flashcardVoice($id))->all())
+        ->toBe(['en-US-JennyNeural', 'en-US-AnaNeural', 'en-US-JennyNeural', 'en-US-AnaNeural'])
+        ->and(collect(range(0, 5))->map(fn (int $id): string => $speech->sentenceVoice($id))->all())
+        ->toBe(['en-US-JennyNeural', 'en-US-GuyNeural', 'en-US-AnaNeural', 'en-US-JennyNeural', 'en-US-GuyNeural', 'en-US-AnaNeural']);
 });

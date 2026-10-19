@@ -70,10 +70,10 @@ describe('job', function () {
             ->and($word->fresh())->ipa_us->toBe('/ˈæpəl/')->ipa_uk->toBe('/ˈæpl/');
 
         Http::assertSent(fn ($request) => str_contains($request->url(), 'tts.speech')
-            && preg_match('/<voice name="en-US-(Jenny|Guy)Neural">/', $request->body()) === 1
+            && preg_match('/<voice name="en-US-(Jenny|Guy|Aria|Davis|Jane|Jason|Sara|Tony)Neural">/', $request->body()) === 1
             && str_contains($request->body(), 'xml:lang="en-US"'));
         Http::assertSent(fn ($request) => str_contains($request->url(), 'tts.speech')
-            && preg_match('/<voice name="en-GB-(Sonia|Ryan)Neural">/', $request->body()) === 1
+            && preg_match('/<voice name="en-GB-(Sonia|Ryan|Libby|Thomas)Neural">/', $request->body()) === 1
             && str_contains($request->body(), 'xml:lang="en-GB"'));
     });
 

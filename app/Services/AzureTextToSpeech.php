@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Log;
  * The default voice is en-US-AnaNeural, a child's voice. A cheerful adult one is en-US-JennyNeural with the
  * `cheerful` style (AZURE_SPEECH_VOICE and AZURE_SPEECH_VOICE_STYLE).
  *
- * A word is read in an accent with one of two adult voices, a woman's or a man's, picked at random (see wordVoice()).
+ * To keep the audio from getting dull, the voice changes from one record to the next, by its id: the words go through women's and
+ * men's voices in turn (wordVoice()), the flashcards through a woman's voice and a child's (flashcardVoice()) and the sentences
+ * through a woman's, a man's and a child's (sentenceVoice()).
  */
 class AzureTextToSpeech
 {
@@ -22,14 +24,18 @@ class AzureTextToSpeech
     private const OUTPUT_FORMAT = 'audio-24khz-48kbitrate-mono-mp3';
 
     /**
-     * The adult voices (a woman's and a man's) that read a word, keyed by accent.
+     * The adult voices that read a word, keyed by accent, a woman's and a man's in turn.
      *
      * @var array<string, list<string>>
      */
     private const WORD_VOICES = [
-        'us' => ['en-US-JennyNeural', 'en-US-GuyNeural'],
-        'uk' => ['en-GB-SoniaNeural', 'en-GB-RyanNeural'],
+        'us' => ['en-US-JennyNeural', 'en-US-GuyNeural', 'en-US-AriaNeural', 'en-US-DavisNeural', 'en-US-JaneNeural', 'en-US-JasonNeural', 'en-US-SaraNeural', 'en-US-TonyNeural'],
+        'uk' => ['en-GB-SoniaNeural', 'en-GB-RyanNeural', 'en-GB-LibbyNeural', 'en-GB-ThomasNeural'],
     ];
+
+    private const WOMAN_VOICE = 'en-US-JennyNeural';
+
+    private const MAN_VOICE = 'en-US-GuyNeural';
 
     /**
      * Whether a Speech key and a region are set.
@@ -40,11 +46,30 @@ class AzureTextToSpeech
     }
 
     /**
-     * One of the two voices of the accent ("us" or "uk"), picked at random.
+     * A voice of the accent ("us" or "uk"): the one the seed (the id of the word) falls on, so that consecutive words are read by a
+     * woman and a man in turn; a random one without a seed.
      */
-    public function wordVoice(string $accent): string
+    public function wordVoice(string $accent, ?int $seed = null): string
     {
-        return Arr::random(self::WORD_VOICES[$accent]);
+        $voices = self::WORD_VOICES[$accent];
+
+        return $seed === null ? Arr::random($voices) : $voices[$seed % count($voices)];
+    }
+
+    /**
+     * A woman's voice and a child's (the configured voice) in turn, by the seed (the id of the flashcard).
+     */
+    public function flashcardVoice(int $seed): string
+    {
+        return [self::WOMAN_VOICE, config('services.azure_speech.voice')][$seed % 2];
+    }
+
+    /**
+     * A woman's voice, a man's and a child's (the configured voice) in turn, by the seed (the id of the sentence).
+     */
+    public function sentenceVoice(int $seed): string
+    {
+        return [self::WOMAN_VOICE, self::MAN_VOICE, config('services.azure_speech.voice')][$seed % 3];
     }
 
     /**

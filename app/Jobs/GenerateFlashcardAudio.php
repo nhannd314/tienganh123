@@ -29,7 +29,7 @@ class GenerateFlashcardAudio implements ShouldQueue
     }
 
     /**
-     * Read the card's text aloud with Azure and store the MP3 on the public disk.
+     * Read the card's text aloud with Azure, in a woman's voice or a child's by turns, and store the MP3 on the public disk.
      * Does nothing when the card already has audio, has nothing to read, or Azure is not configured; an answer Azure
      * fails to give is retried.
      */
@@ -41,7 +41,7 @@ class GenerateFlashcardAudio implements ShouldQueue
             return;
         }
 
-        $mp3 = $speech->synthesize($flashcard->display_title);
+        $mp3 = $speech->synthesize($flashcard->display_title, $speech->flashcardVoice($flashcard->id));
 
         if ($mp3 === null) {
             throw new RuntimeException("Azure did not return audio for flashcard {$flashcard->id}.");

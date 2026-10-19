@@ -79,7 +79,7 @@ class FetchWordPronunciation implements ShouldQueue
                 continue;
             }
 
-            $mp3 = $speech->synthesize($this->word->word, $speech->wordVoice($accent));
+            $mp3 = $speech->synthesize($this->word->word, $speech->wordVoice($accent, $this->word->id));
 
             if ($mp3 === null) {
                 $failed = true;

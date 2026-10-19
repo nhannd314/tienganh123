@@ -30,7 +30,7 @@ class GenerateSentenceAudio implements ShouldQueue
     }
 
     /**
-     * Read the sentence aloud with Azure, in a random adult US voice like the words, and store the MP3 on the public disk.
+     * Read the sentence aloud with Azure, in a woman's, a man's or a child's voice by turns, and store the MP3 on the public disk.
      * Does nothing when the sentence already has audio, has nothing to read, or Azure is not configured; an answer Azure
      * fails to give is retried.
      */
@@ -42,7 +42,7 @@ class GenerateSentenceAudio implements ShouldQueue
             return;
         }
 
-        $mp3 = $speech->synthesize(Lesson::spokenSentence($sentence->sentence), $speech->wordVoice('us'));
+        $mp3 = $speech->synthesize(Lesson::spokenSentence($sentence->sentence), $speech->sentenceVoice($sentence->id));
 
         if ($mp3 === null) {
             throw new RuntimeException("Azure did not return audio for sentence {$sentence->id}.");
