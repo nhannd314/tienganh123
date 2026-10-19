@@ -159,3 +159,28 @@ it('saves a regular price above the monthly price and rejects one that is not', 
         ->call('save')
         ->assertHasFormErrors(['regular_price']);
 });
+
+it('creates a unit for each line of the unit list and orders them', function () {
+    Livewire::test(CreateCourse::class)
+        ->fillForm(['title' => 'Có unit', 'unit_titles' => "Unit 1\n\n  Unit 2  \nUnit 1\r\nUnit 3"])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Course::firstWhere('title', 'Có unit')->units->pluck('title', 'sort_order')->all())
+        ->toBe([1 => 'Unit 1', 2 => 'Unit 2', 3 => 'Unit 3']);
+});
+
+it('offers the unit list only while the course has no units', function () {
+    $course = Course::factory()->create();
+
+    Livewire::test(EditCourse::class, ['record' => $course->getRouteKey()])
+        ->assertFormFieldVisible('unit_titles')
+        ->fillForm(['unit_titles' => "Unit 1\nUnit 2"])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($course->units()->pluck('title')->all())->toBe(['Unit 1', 'Unit 2']);
+
+    Livewire::test(EditCourse::class, ['record' => $course->getRouteKey()])
+        ->assertFormFieldHidden('unit_titles');
+});

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Courses\Schemas;
 
+use App\Models\Course;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -59,6 +60,25 @@ class CourseForm
                     ->suffix('₫')
                     ->gt('monthly_price')
                     ->helperText('Regular price of one month, shown struck through. The sale percentage is worked out from it and the monthly price. Leave empty for no sale.'),
+                Textarea::make('unit_titles')
+                    ->label('Units')
+                    ->rows(8)
+                    ->columnSpanFull()
+                    ->helperText('One unit per line, in order. Shown only while the course has no units.')
+                    ->visible(fn (?Course $record): bool => ! $record?->units()->exists())
+                    ->saveRelationshipsUsing(function (Course $record, ?string $state): void {
+                        $titles = collect(preg_split('/\R/', (string) $state))
+                            ->map(fn (string $title): string => trim($title))
+                            ->filter()
+                            ->unique()
+                            ->values();
+
+                        foreach ($titles as $index => $title) {
+                            $record->units()->create(['title' => $title, 'sort_order' => $index + 1]);
+                        }
+
+                    })
+                    ->dehydrated(false),
                 TextInput::make('unit_count')
                     ->numeric()
                     ->integer()
