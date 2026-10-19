@@ -5,7 +5,6 @@ namespace App\Filament\Resources\Units\Schemas;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
@@ -50,8 +49,6 @@ class UnitForm
                     ->integer()
                     ->minValue(0)
                     ->default(0),
-                Toggle::make('is_published')
-                    ->default(false),
             ]);
     }
 }

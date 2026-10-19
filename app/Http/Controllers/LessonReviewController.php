@@ -235,7 +235,7 @@ class LessonReviewController extends Controller
 
     private function ensurePublished(Course $course, Unit $unit, Lesson $lesson): void
     {
-        abort_unless($course->is_published && $unit->is_published && $lesson->is_published, 404);
+        abort_unless($course->is_published && $lesson->is_published, 404);
     }
 
     /**

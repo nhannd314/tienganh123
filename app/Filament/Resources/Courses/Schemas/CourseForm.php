@@ -84,7 +84,7 @@ class CourseForm
                     ->integer()
                     ->minValue(0)
                     ->maxValue(65535)
-                    ->helperText('Shown on the course page. Leave empty to count the published units.'),
+                    ->helperText('Shown on the course page. Leave empty to count the units.'),
                 TextInput::make('lesson_count')
                     ->numeric()
                     ->integer()

@@ -4,6 +4,8 @@ use App\Models\Course;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
 use App\Models\Lesson;
+use App\Models\Sentence;
+use App\Models\SentenceSet;
 use App\Models\Tag;
 use App\Models\Unit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -75,11 +77,21 @@ it('shows the other sets that share a tag with the set in the sidebar', function
 
 it('lists the published courses that use the set in the sidebar', function () {
     $flashcardSet = FlashcardSet::factory()->create();
-    $lesson = Lesson::factory()->published()->for(Unit::factory()->published()->for(Course::factory()->published()->create(['title' => 'Used course'])))->create();
+    $lesson = Lesson::factory()->published()->for(Unit::factory()->for(Course::factory()->published()->create(['title' => 'Used course'])))->create();
     $lesson->flashcardSets()->attach($flashcardSet);
-    Lesson::factory()->published()->for(Unit::factory()->published()->for(Course::factory()->published()->create(['title' => 'Other course'])))->create();
+    Lesson::factory()->published()->for(Unit::factory()->for(Course::factory()->published()->create(['title' => 'Other course'])))->create();
 
     $this->get(route('flashcards.show', $flashcardSet))
         ->assertSeeInOrder(['Khóa học liên quan', 'Used course'])
         ->assertDontSee('Other course');
+});
+
+it('shows the example sentences of the sentence set of the flashcard set, and nothing when it has none', function () {
+    $set = SentenceSet::factory()->create();
+    Sentence::factory()->hasAttached($set, ['sort_order' => 1], 'sentenceSets')->create(['sentence' => 'I eat an apple.', 'translation' => 'Tôi ăn táo.']);
+    $with = FlashcardSet::factory()->create(['sentence_set_id' => $set->id]);
+    $without = FlashcardSet::factory()->create();
+
+    $this->get(route('flashcards.show', $with))->assertSeeInOrder(['data-example-toggle', 'I eat an apple.', 'Tôi ăn táo.'], false);
+    $this->get(route('flashcards.show', $without))->assertDontSee('data-example', false);
 });

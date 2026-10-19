@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\FlashcardSet;
 use App\Models\Unit;
+use App\Services\ExampleSentences;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,18 +15,20 @@ class FlashcardSetController extends Controller
     private const SIDEBAR_LIMIT = 6;
 
     /**
-     * Show a flashcard set with all of its cards, the sets that share a tag with it and those used in the same courses.
+     * Show a flashcard set with all of its cards and example sentences, the sets that share a tag with it and those used in the same courses.
      */
-    public function __invoke(FlashcardSet $flashcardSet): View
+    public function __invoke(FlashcardSet $flashcardSet, ExampleSentences $exampleSentences): View
     {
         $flashcardSet->load([
             'flashcards.word',
+            'sentenceSet.sentences',
             'tags' => fn ($query) => $query->orderBy('name'),
         ]);
 
         return view('flashcards.show', [
             'flashcardSet' => $flashcardSet,
             'flashcards' => $flashcardSet->flashcards,
+            'exampleSentences' => $exampleSentences->for($flashcardSet->sentenceSet?->sentences ?? new Collection),
             'courses' => $this->courses($flashcardSet),
             'sameTopic' => $this->sameTopic($flashcardSet),
             'sameCourse' => $this->sameCourse($flashcardSet),
@@ -33,7 +36,7 @@ class FlashcardSetController extends Controller
     }
 
     /**
-     * Published courses with a published unit and lesson that use the flashcardSet.
+     * Published courses with a published lesson that use the flashcardSet.
      *
      * @return Collection<int, Course>
      */
@@ -41,7 +44,7 @@ class FlashcardSetController extends Controller
     {
         return Course::query()
             ->published()
-            ->whereHas('units', fn ($unit) => $unit->published()->whereHas('lessons', fn ($lesson) => $lesson->published()->whereRelation('flashcardSets', 'flashcard_sets.id', $flashcardSet->getKey())))
+            ->whereHas('units', fn ($unit) => $unit->whereHas('lessons', fn ($lesson) => $lesson->published()->whereRelation('flashcardSets', 'flashcard_sets.id', $flashcardSet->getKey())))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -71,7 +74,6 @@ class FlashcardSetController extends Controller
     private function sameCourse(FlashcardSet $flashcardSet): Collection
     {
         $courseIds = Unit::query()
-            ->published()
             ->whereHas('course', fn ($query) => $query->published())
             ->whereHas('lessons', fn ($query) => $query->published()->whereRelation('flashcardSets', 'flashcard_sets.id', $flashcardSet->id))
             ->pluck('course_id')
@@ -82,7 +84,7 @@ class FlashcardSetController extends Controller
         }
 
         return $this->sidebarQuery($flashcardSet)
-            ->whereHas('lessons', fn ($query) => $query->published()->whereHas('unit', fn ($unit) => $unit->published()->whereIn('course_id', $courseIds)))
+            ->whereHas('lessons', fn ($query) => $query->published()->whereHas('unit', fn ($unit) => $unit->whereIn('course_id', $courseIds)))
             ->get();
     }
 

@@ -1,6 +1,6 @@
 {{--
     Brand logo "Bong bóng hội thoại" (public/design/logo): the speech bubble with "Aa" and the yellow dot, drawn as inline SVG,
-    then the wordmark "HọcTiếngAnh" and, with `domain`, the domain line, set in Lexend like the rest of the site.
+    then the wordmark "TiếngAnh Pro" and, with `domain`, the domain line, set in Lexend like the rest of the site.
     `size` is the height in px of the mark; the wordmark scales with it (40px for a mark of 88px). Reference proportions
     live in public/design/logo/README.md. The dot is dropped on `dark` backgrounds, where the wordmark turns white.
 --}}
@@ -25,7 +25,7 @@
 
     <span class="flex flex-col" style="gap: calc(var(--u) * 4)">
         <span class="font-bold whitespace-nowrap" style="font-size: calc(var(--u) * 40); line-height: 1; letter-spacing: calc(var(--u) * -1)">
-            <span @class(['text-white' => $dark, 'text-ink-900' => ! $dark])>Học</span><span @class(['text-blue-200' => $dark, 'text-primary' => ! $dark])>TiếngAnh</span>
+            <span @class(['text-white' => $dark, 'text-ink-900' => ! $dark])>TiếngAnh </span><span @class(['text-blue-200' => $dark, 'text-primary' => ! $dark])>Pro</span>
         </span>
         @if ($domain)
             <span class="font-medium text-fg-muted" style="font-size: calc(var(--u) * 16); line-height: 1; letter-spacing: calc(var(--u) * 0.5)">hoctienganh.pro.vn</span>

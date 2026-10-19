@@ -1,6 +1,6 @@
 {{--
-    "Chant" icon button and its full screen slideshow: the slides (picture, text, IPA and meaning) are gone through by hand (wide side zones) while a song
-    from public/chant plays, and the picture of a flashcard moves. The player is wired by resources/js/app.js.
+    "Chant" icon button and its full screen slideshow: the slides (picture, text, IPA and meaning) are gone through by hand (wide side zones) or, after 12 seconds, by themselves while a song
+    from public/chant plays. The player is wired by resources/js/app.js.
     `slides` is a list of {image, title, ipa, meaning}, each part optional but the title. `kind` is "flashcard" (word, IPA, meaning) or
     "sentence" (a lighter sentence with a smaller meaning).
 --}}
@@ -33,6 +33,11 @@
             class="m-0 size-full max-h-none max-w-none overflow-hidden bg-fg-strong p-0 text-white backdrop:bg-black open:flex"
         >
             <div class="relative flex size-full flex-col">
+                {{-- Time left on the slide: filled by resources/js/app.js while the chant plays --}}
+                <div class="relative z-20 h-1.5 w-full flex-none bg-white/20">
+                    <div data-chant-progress class="h-full bg-secondary" style="width: 0"></div>
+                </div>
+
                 <div class="relative z-20 flex flex-none items-center justify-between gap-4 px-4 py-3 md:px-8">
                     <span data-chant-counter class="type-body tabular-nums text-white/70"></span>
 
@@ -46,7 +51,10 @@
                 </div>
 
                 <div data-chant-stage class="flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center gap-6 px-6 pb-10 text-center md:gap-8">
-                    <img data-chant-image @if (! $isSentence) data-chant-animate @endif alt="" class="max-h-[55dvh] w-auto max-w-[min(100%,64rem)] rounded-lg object-contain" hidden>
+                    {{-- A flashcard picture is a transparent PNG: it sits on a light rounded panel so that it stands out from the dark screen --}}
+                    <div data-chant-picture @class(['rounded-xl bg-white p-6 md:p-8' => ! $isSentence]) hidden>
+                        <img data-chant-image alt="" class="max-h-[50dvh] w-auto max-w-[min(100%,64rem)] rounded-lg object-contain">
+                    </div>
 
                     <div class="flex max-w-5xl flex-col items-center gap-3">
                         <p data-chant-title lang="en" @class(['text-4xl leading-tight text-balance md:text-6xl', 'font-bold' => ! $isSentence, 'font-medium' => $isSentence])></p>

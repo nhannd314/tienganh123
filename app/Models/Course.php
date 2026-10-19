@@ -65,7 +65,7 @@ class Course extends Model
      */
     public function topLearners(int $limit = 10): Collection
     {
-        $lessonIds = $this->lessons()->where('units.is_published', true)->where('lessons.is_published', true)->pluck('lessons.id');
+        $lessonIds = $this->lessons()->where('lessons.is_published', true)->pluck('lessons.id');
 
         if ($lessonIds->isEmpty()) {
             return collect();

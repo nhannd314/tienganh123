@@ -23,8 +23,7 @@ it('generates the slug from the title when the slug is left empty', function () 
         ->assertHasNoFormErrors();
 
     expect(Unit::firstWhere('title', 'My family'))
-        ->slug->toBe('my-family')
-        ->is_published->toBeFalse();
+        ->slug->toBe('my-family');
 });
 
 it('rejects a slug already used within the same course', function () {

@@ -377,7 +377,7 @@
     animation: shake 0.5s ease-in-out;
 }
 
-/* Chant popup: each slide fades in; the picture of a flashcard pops in, then floats until the chant is paused. */
+/* Chant popup: each slide fades in. */
 @keyframes chant-in {
     from { opacity: 0; transform: scale(0.96); }
     to { opacity: 1; transform: none; }
@@ -385,25 +385,4 @@
 
 .chant-in {
     animation: chant-in 0.5s ease-out;
-}
-
-@keyframes chant-pop {
-    0% { opacity: 0; transform: scale(0.5) rotate(-8deg); }
-    60% { opacity: 1; transform: scale(1.08) rotate(3deg); }
-    100% { opacity: 1; transform: scale(1) rotate(0deg); }
-}
-
-@keyframes chant-float {
-    from { transform: translateY(0) rotate(-1.5deg); }
-    to { transform: translateY(-14px) rotate(1.5deg); }
-}
-
-.chant-image {
-    animation:
-        chant-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
-        chant-float 2.4s ease-in-out 0.7s infinite alternate;
-}
-
-[data-chant-dialog][data-paused] .chant-image {
-    animation-play-state: paused;
 }

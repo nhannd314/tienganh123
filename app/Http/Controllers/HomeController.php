@@ -63,7 +63,7 @@ class HomeController extends Controller
     {
         $lessonIds = Lesson::query()
             ->published()
-            ->whereHas('unit', fn (Builder $unit) => $unit->published()->whereHas('course', fn (Builder $course) => $course->published()))
+            ->whereHas('unit', fn (Builder $unit) => $unit->whereHas('course', fn (Builder $course) => $course->published()))
             ->select('lessons.id');
 
         return LessonScore::query()

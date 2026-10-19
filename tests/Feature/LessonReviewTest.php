@@ -22,7 +22,7 @@ beforeEach(fn () => Queue::fake([FetchWordPronunciation::class]));
 function reviewLesson(int $wordCount = 5): Lesson
 {
     $course = Course::factory()->published()->create(['title' => 'Tiếng Anh lớp 3']);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $lesson = Lesson::factory()->published()->for($unit)->create(['title' => 'Chào hỏi bạn mới']);
 
     attachWords($lesson, Word::factory()->count($wordCount)->create());

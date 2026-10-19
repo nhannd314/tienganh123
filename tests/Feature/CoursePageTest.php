@@ -46,8 +46,8 @@ it('returns not found for an unpublished course', function () {
 
 it('numbers lessons continuously across units and skips unpublished ones', function () {
     $course = Course::factory()->published()->create();
-    $firstUnit = Unit::factory()->published()->for($course)->create(['title' => 'Hello!', 'sort_order' => 1]);
-    $secondUnit = Unit::factory()->published()->for($course)->create(['title' => 'My family', 'sort_order' => 2]);
+    $firstUnit = Unit::factory()->for($course)->create(['title' => 'Hello!', 'sort_order' => 1]);
+    $secondUnit = Unit::factory()->for($course)->create(['title' => 'My family', 'sort_order' => 2]);
 
     Lesson::factory()->published()->for($firstUnit)->create(['title' => 'Lesson A', 'sort_order' => 1]);
     Lesson::factory()->for($firstUnit)->create(['title' => 'Hidden Lesson', 'sort_order' => 2]);
@@ -62,7 +62,7 @@ it('numbers lessons continuously across units and skips unpublished ones', funct
 
 it('shows the unit count, lesson count and level typed in for the course instead of the counted ones', function () {
     $course = Course::factory()->published()->create(['unit_count' => 12, 'lesson_count' => 60, 'level' => 'Trung cấp']);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     Lesson::factory()->published()->for($unit)->create();
 
     $this->get(route('courses.show', $course))
@@ -74,7 +74,7 @@ it('shows the unit count, lesson count and level typed in for the course instead
 
 it('counts the published units and lessons when the course has no typed counts, and hides an empty level', function () {
     $course = Course::factory()->published()->create(['unit_count' => null, 'lesson_count' => null, 'level' => null]);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     Lesson::factory()->published()->count(3)->for($unit)->create();
 
     $this->get(route('courses.show', $course))
@@ -97,7 +97,7 @@ it('shows an empty state when the course has no lessons', function () {
 
 it('shows a guest a free course without asking to register', function () {
     $course = Course::factory()->published()->create(['monthly_price' => 0, 'title' => 'Lớp 1']);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $lesson = Lesson::factory()->published()->for($unit)->create();
 
     $response = $this->get(route('courses.show', $course));
@@ -141,7 +141,7 @@ it('promises no refund on a free course', function () {
 
 it('opens only the free lessons of a paid course and sends the rest to enroll', function () {
     $course = Course::factory()->priced()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $free = Lesson::factory()->published()->free()->for($unit)->create(['sort_order' => 1]);
     $locked = Lesson::factory()->published()->for($unit)->create(['sort_order' => 2]);
 
@@ -153,7 +153,7 @@ it('opens only the free lessons of a paid course and sends the rest to enroll', 
 
 it('counts the new words of each lesson', function () {
     $course = Course::factory()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $lesson = Lesson::factory()->published()->for($unit)->create();
 
     $words = Word::factory()->count(3)->create();
@@ -166,7 +166,7 @@ it('counts the new words of each lesson', function () {
 
 it('marks a finished lesson as done and a locked lesson with a lock', function () {
     $course = Course::factory()->priced()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $finished = Lesson::factory()->published()->free()->for($unit)->create(['title' => 'Finished lesson', 'sort_order' => 1]);
     Lesson::factory()->published()->for($unit)->create(['title' => 'Locked lesson', 'sort_order' => 2]);
     $user = User::factory()->create();
@@ -186,7 +186,7 @@ it('links each course on the home page to its detail page', function () {
 
 it('shows the share of parts passed from 80%, as the lesson sidebar does, only on lessons already studied', function () {
     $course = Course::factory()->published()->create(['monthly_price' => 0]);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $reviewed = Lesson::factory()->published()->for($unit)->create(['title' => 'Reviewed lesson', 'sort_order' => 1]);
     Lesson::factory()->published()->for($unit)->create(['title' => 'New lesson', 'sort_order' => 2]);
     $user = User::factory()->create();
@@ -215,7 +215,7 @@ it('shows the share of parts passed from 80%, as the lesson sidebar does, only o
 
 it('ranks the learners of a course by the total score of its lessons', function () {
     $course = Course::factory()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     [$first, $second] = Lesson::factory()->published()->for($unit)->count(2)->create()->all();
     $other = Lesson::factory()->published()->create();
 
@@ -237,7 +237,7 @@ it('ranks the learners of a course by the total score of its lessons', function 
 
 it('shows the description of a unit under its title', function () {
     $course = Course::factory()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create(['title' => 'Hello!', 'description' => 'Greet new friends']);
+    $unit = Unit::factory()->for($course)->create(['title' => 'Hello!', 'description' => 'Greet new friends']);
     Lesson::factory()->published()->for($unit)->create(['title' => 'Lesson A']);
 
     $this->get(route('courses.show', $course))

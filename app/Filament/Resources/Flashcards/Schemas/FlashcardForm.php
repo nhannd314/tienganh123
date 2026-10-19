@@ -23,6 +23,7 @@ class FlashcardForm
             ->components([
                 TextInput::make('title')
                     ->maxLength(255)
+                    ->unique(ignoreRecord: true)
                     ->helperText('Linked to the word with the same spelling when no word is chosen.')
                     ->live(onBlur: true)
                     ->afterStateUpdated(function (Get $get, Set $set, ?string $state): void {

@@ -31,7 +31,7 @@ class EnsureLessonAccess
         /** @var Lesson $lesson */
         $lesson = $request->route('lesson');
 
-        abort_unless($course->is_published && $unit->is_published && $lesson->is_published, 404);
+        abort_unless($course->is_published && $lesson->is_published, 404);
 
         if (Gate::allows('learn', $lesson)) {
             return $next($request);

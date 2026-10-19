@@ -16,7 +16,7 @@ uses(RefreshDatabase::class);
 function publishedLesson(array $lessonAttributes = []): Lesson
 {
     $course = Course::factory()->published()->create(['title' => 'Tiếng Anh lớp 3']);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
 
     return Lesson::factory()->published()->for($unit)->create($lessonAttributes);
 }
@@ -53,7 +53,7 @@ it('shows a published lesson with breadcrumbs back to its course', function () {
         ->assertSee(route('courses.show', $lesson->unit->course), false);
 });
 
-it('returns not found when the lesson, unit or course is unpublished', function () {
+it('returns not found when the lesson or course is unpublished', function () {
     $lesson = publishedLesson();
     $url = lessonUrl($lesson);
 
@@ -61,17 +61,13 @@ it('returns not found when the lesson, unit or course is unpublished', function 
     $this->get($url)->assertNotFound();
 
     $lesson->update(['is_published' => true]);
-    $lesson->unit->update(['is_published' => false]);
-    $this->get($url)->assertNotFound();
-
-    $lesson->unit->update(['is_published' => true]);
     $lesson->unit->course->update(['is_published' => false]);
     $this->get($url)->assertNotFound();
 });
 
 it('does not resolve a lesson through a unit of another course', function () {
     $lesson = publishedLesson();
-    $otherUnit = Unit::factory()->published()->for(Course::factory()->published())->create();
+    $otherUnit = Unit::factory()->for(Course::factory()->published())->create();
 
     $this->get(route('lessons.show', [$lesson->unit->course, $otherUnit, $lesson]))->assertNotFound();
 });
@@ -105,14 +101,15 @@ it('lists the lesson example sentences with one toggle beside the title for ever
     attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'A word example, not a lesson sentence.']]]));
 
     $response = $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'Hiện nghĩa', 'I eat an apple every day.', 'Water is cold.'])
+        ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'Ẩn nghĩa', 'I eat an apple every day.', 'Water is cold.'])
         ->assertSee('Tôi ăn một quả táo mỗi ngày.')
         ->assertSee('lessons/sentence-audio/apple.mp3', false)
         ->assertDontSee('Bỏ qua');
 
     expect(substr_count($response->getContent(), 'data-example '))->toBe(2)
         ->and(substr_count($response->getContent(), 'data-example-toggle="'))->toBe(1)
-        ->and($response->getContent())->toMatch('/<p data-example-meaning class="invisible/');
+        ->and($response->getContent())->toMatch('/<p data-example-meaning class="mt-1/')->not->toContain('invisible')
+        ->and($response->getContent())->toMatch('/aria-pressed="true"[^>]*data-example-toggle|data-example-toggle[^>]*aria-pressed="true"/');
 });
 
 it('leaves out the meaning toggle when no example sentence has a meaning', function () {
@@ -130,7 +127,7 @@ it('puts the audio button of an example sentence to the left of its sentence, be
     ])->id]);
 
     $content = $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['data-example-image', 'lessons/sentence-images/apple.png', '</div>', 'data-text="I eat an apple."', 'text-2xl', 'I eat an apple.', 'data-text="Water is cold."', 'Water is cold.'], false)
+        ->assertSeeInOrder(['data-example-image', 'lessons/sentence-images/apple.png', '</div>', 'data-text="I eat an apple."', 'text-xl', 'I eat an apple.', 'data-text="Water is cold."', 'Water is cold.'], false)
         ->getContent();
 
     expect(substr_count($content, 'lessons/sentence-images/'))->toBe(1)
@@ -307,7 +304,7 @@ it('hides the attachments section when the lesson has none', function () {
 
 it('links the open lessons from the course page and the locked ones to the registration', function () {
     $course = Course::factory()->priced()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $free = Lesson::factory()->published()->free()->for($unit)->create(['sort_order' => 1]);
     $locked = Lesson::factory()->published()->for($unit)->create(['sort_order' => 2]);
 
@@ -388,7 +385,7 @@ it('offers a Chant popup for the flashcards and for the example sentences, with 
     $word = Word::factory()->create(['word' => 'water', 'ipa_us' => '/ˈwɑː.t̬ɚ/', 'meanings' => [['pos' => 'noun', 'meaning' => 'nước']]]);
     Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => '', 'word_id' => $word->id, 'image' => 'flashcards/images/water.png']);
 
-    $response = $this->get(lessonUrl($lesson))->assertSee('data-chant-open', false)->assertSee('data-chant-next', false)->assertDontSee('data-chant-start', false)->assertDontSee('data-chant-toggle', false)->assertDontSee('chant-seconds', false);
+    $response = $this->get(lessonUrl($lesson))->assertSee('data-chant-open', false)->assertSee('data-chant-next', false)->assertSee('data-chant-progress', false)->assertDontSee('data-chant-start', false)->assertDontSee('data-chant-toggle', false)->assertDontSee('chant-seconds', false);
     $content = $response->getContent();
 
     preg_match_all('/<dialog\s+data-chant-dialog\s+data-slides="([^"]*)"\s+data-tracks="([^"]*)"/s', $content, $matches, PREG_SET_ORDER);
@@ -430,15 +427,22 @@ it('draws the sentence slides of the Chant popup lighter and with a smaller mean
         ->and($meanings[1][1])->toContain('text-xl', 'md:text-2xl')->not->toContain('md:text-4xl');
 });
 
-it('animates only the picture of the flashcard slides of the Chant popup', function () {
+it('keeps the Chant popup dark, puts the picture of a flashcard slide on a light rounded panel, and animates no picture', function () {
     $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([['sentence' => 'Water is cold.']])->id]);
     $flashcardSet = FlashcardSet::factory()->create();
     $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
     Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Water']);
 
-    preg_match_all('/<img data-chant-image([^>]*)>/', $this->get(lessonUrl($lesson))->getContent(), $images);
+    $content = $this->get(lessonUrl($lesson))->getContent();
 
-    expect($images[1])->toHaveCount(2)
-        ->and($images[1][0])->toContain('data-chant-animate')
+    preg_match_all('/<img data-chant-image([^>]*)>/', $content, $images);
+    preg_match_all('/<div data-chant-picture class="([^"]*)"/', $content, $pictures);
+
+    expect($pictures[1])->toHaveCount(2)
+        ->and($pictures[1][0])->toContain('bg-white', 'rounded-xl')
+        ->and($pictures[1][1])->not->toContain('bg-white')
+        ->and($content)->toContain('bg-fg-strong')
+        ->and($images[1])->toHaveCount(2)
+        ->and($images[1][0])->not->toContain('data-chant-animate')
         ->and($images[1][1])->not->toContain('data-chant-animate');
 });

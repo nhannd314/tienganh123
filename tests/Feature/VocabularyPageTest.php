@@ -2,6 +2,8 @@
 
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\Sentence;
+use App\Models\SentenceSet;
 use App\Models\Tag;
 use App\Models\Unit;
 use App\Models\Vocabulary;
@@ -12,7 +14,7 @@ uses(RefreshDatabase::class);
 
 function publishedLessonWithVocabularies(Course $course, Vocabulary ...$vocabularies): Lesson
 {
-    $lesson = Lesson::factory()->published()->for(Unit::factory()->published()->for($course))->create();
+    $lesson = Lesson::factory()->published()->for(Unit::factory()->for($course))->create();
     $lesson->vocabularies()->attach(collect($vocabularies)->pluck('id')->all());
 
     return $lesson;
@@ -78,4 +80,14 @@ it('lists the published courses that use the vocabulary in the sidebar', functio
     $this->get(route('vocabularies.show', $vocabulary))
         ->assertSeeInOrder(['Khóa học liên quan', 'Used course'])
         ->assertDontSee('Other course');
+});
+
+it('shows the example sentences of the sentence set of the vocabulary, and nothing when it has none', function () {
+    $set = SentenceSet::factory()->create();
+    Sentence::factory()->hasAttached($set, ['sort_order' => 1], 'sentenceSets')->create(['sentence' => 'I eat an apple.', 'translation' => 'Tôi ăn táo.']);
+    $with = Vocabulary::factory()->create(['sentence_set_id' => $set->id]);
+    $without = Vocabulary::factory()->create();
+
+    $this->get(route('vocabularies.show', $with))->assertSeeInOrder(['data-example-toggle', 'I eat an apple.', 'Tôi ăn táo.'], false);
+    $this->get(route('vocabularies.show', $without))->assertDontSee('data-example', false);
 });

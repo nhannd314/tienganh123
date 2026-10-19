@@ -5,14 +5,12 @@ namespace App\Models;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\UnitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Scope;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['course_id', 'title', 'slug', 'description', 'sort_order', 'is_published'])]
+#[Fillable(['course_id', 'title', 'slug', 'description', 'sort_order'])]
 class Unit extends Model
 {
     /** @use HasFactory<UnitFactory> */
@@ -37,7 +35,6 @@ class Unit extends Model
     {
         return [
             'sort_order' => 'integer',
-            'is_published' => 'boolean',
         ];
     }
 
@@ -55,14 +52,5 @@ class Unit extends Model
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class)->orderBy('sort_order');
-    }
-
-    /**
-     * Scope a query to only include published units.
-     */
-    #[Scope]
-    protected function published(Builder $query): Builder
-    {
-        return $query->where('is_published', true);
     }
 }

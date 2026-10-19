@@ -13,7 +13,7 @@
 <header {{ $attributes->class(['sticky top-0 z-20 border-b border-line-subtle bg-surface-header shadow-xs xl:static']) }}>
     {{-- Desktop --}}
     <div class="mx-auto hidden h-20 max-w-layout items-center gap-10 px-10 xl:flex">
-        <a href="{{ $homeHref }}" aria-label="Học Tiếng Anh — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline">
+        <a href="{{ $homeHref }}" aria-label="Tiếng Anh Pro — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline">
             <x-logo :size="48" />
         </a>
 
@@ -119,7 +119,7 @@
     {{-- Mobile / tablet --}}
     <div class="xl:hidden">
         <div class="flex h-16 items-center justify-between gap-3 px-4">
-            <a href="{{ $homeHref }}" aria-label="Học Tiếng Anh — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline"><x-logo :size="38" /></a>
+            <a href="{{ $homeHref }}" aria-label="Tiếng Anh Pro — Trang chủ" class="flex flex-none items-center no-underline hover:no-underline"><x-logo :size="38" /></a>
 
             <div class="flex items-center gap-2">
                 <x-icon-button

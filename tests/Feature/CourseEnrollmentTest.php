@@ -172,7 +172,7 @@ it('offers the registration button on a paid course and none on a free course', 
 
 it('shows the course heading instead of the registration button to an admin, a member and a subscriber', function (string $who) {
     $course = paidCourse();
-    $unit = Unit::factory()->published()->for($course)->create(['sort_order' => 1]);
+    $unit = Unit::factory()->for($course)->create(['sort_order' => 1]);
     Lesson::factory()->published()->for($unit)->create(['sort_order' => 1]);
 
     $user = match ($who) {

@@ -18,7 +18,7 @@ uses(RefreshDatabase::class);
 function lessonOfCourse(int $monthlyPrice = 50000, array $lessonAttributes = []): Lesson
 {
     $course = Course::factory()->published()->create(['monthly_price' => $monthlyPrice]);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $lesson = Lesson::factory()->published()->for($unit)->create($lessonAttributes);
     attachWords($lesson, Word::factory()->create());
 

@@ -27,7 +27,7 @@ class CourseSeeder extends Seeder
             ]);
 
             foreach ($courseData['units'] as $unitIndex => $unitTitle) {
-                $unit = Unit::factory()->published()->for($course)->create([
+                $unit = Unit::factory()->for($course)->create([
                     'title' => $unitTitle,
                     'slug' => Str::slug($unitTitle),
                     'sort_order' => $unitIndex + 1,

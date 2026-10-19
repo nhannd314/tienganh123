@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\Lessons\Tables;
 
+use App\Models\Course;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class LessonsTable
 {
@@ -45,8 +48,16 @@ class LessonsTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                SelectFilter::make('course')
+                    ->label('Course')
+                    ->options(fn (): array => Course::query()->orderBy('title')->pluck('title', 'id')->all())
+                    ->searchable()
+                    ->query(fn (Builder $query, array $data): Builder => $query->when(
+                        $data['value'] ?? null,
+                        fn (Builder $query, string $courseId): Builder => $query->whereHas('unit', fn (Builder $unit): Builder => $unit->where('course_id', $courseId)),
+                    )),
             ])
             ->recordActions([
                 EditAction::make(),

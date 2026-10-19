@@ -60,10 +60,10 @@ it('renders the hero, features and footer', function () {
 
 it('ranks the learners in the leaderboard by their total score over all the published lessons', function () {
     $course = Course::factory()->published()->create();
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $lessons = Lesson::factory()->published()->for($unit)->count(2)->create();
     $otherCourse = Course::factory()->published()->create();
-    $otherLesson = Lesson::factory()->published()->for(Unit::factory()->published()->for($otherCourse))->create();
+    $otherLesson = Lesson::factory()->published()->for(Unit::factory()->for($otherCourse))->create();
     $draftLesson = Lesson::factory()->for($unit)->create();
 
     $top = User::factory()->create(['name' => 'Học Sinh Giỏi']);

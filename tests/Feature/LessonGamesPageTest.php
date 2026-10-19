@@ -17,7 +17,7 @@ uses(RefreshDatabase::class);
 function gamesLesson(int $monthlyPrice = 0): Lesson
 {
     $course = Course::factory()->published()->create(['title' => 'Tiếng Anh lớp 3', 'monthly_price' => $monthlyPrice]);
-    $unit = Unit::factory()->published()->for($course)->create();
+    $unit = Unit::factory()->for($course)->create();
     $lesson = Lesson::factory()->published()->for($unit)->create(['title' => 'Chào hỏi bạn mới']);
     attachWords($lesson, Word::factory()->create());
 

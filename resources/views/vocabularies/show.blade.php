@@ -28,6 +28,10 @@
     <div class="flex flex-wrap items-start gap-10">
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             <x-vocabulary-table :words="$words" empty-message="Bộ từ vựng này chưa có từ nào." />
+
+            @if ($exampleSentences->isNotEmpty())
+                <x-example-sentences :examples="$exampleSentences" />
+            @endif
         </div>
 
         <aside class="flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6">

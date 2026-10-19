@@ -27,17 +27,6 @@ class UnitFactory extends Factory
             'slug' => Str::slug($title),
             'description' => fake()->sentence(),
             'sort_order' => 0,
-            'is_published' => false,
         ];
-    }
-
-    /**
-     * Indicate that the unit is published.
-     */
-    public function published(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'is_published' => true,
-        ]);
     }
 }

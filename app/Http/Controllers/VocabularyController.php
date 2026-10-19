@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Unit;
 use App\Models\Vocabulary;
+use App\Services\ExampleSentences;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,15 +15,16 @@ class VocabularyController extends Controller
     private const SIDEBAR_LIMIT = 6;
 
     /**
-     * Show a vocabulary with its word table, the vocabularies that share a tag with it and those used in the same courses.
+     * Show a vocabulary with its word table and example sentences, the vocabularies that share a tag with it and those used in the same courses.
      */
-    public function __invoke(Vocabulary $vocabulary): View
+    public function __invoke(Vocabulary $vocabulary, ExampleSentences $exampleSentences): View
     {
-        $vocabulary->load(['words', 'tags' => fn ($query) => $query->orderBy('name')]);
+        $vocabulary->load(['words', 'sentenceSet.sentences', 'tags' => fn ($query) => $query->orderBy('name')]);
 
         return view('vocabularies.show', [
             'vocabulary' => $vocabulary,
             'words' => $vocabulary->words,
+            'exampleSentences' => $exampleSentences->for($vocabulary->sentenceSet?->sentences ?? new Collection),
             'courses' => $this->courses($vocabulary),
             'sameTopic' => $this->sameTopic($vocabulary),
             'sameCourse' => $this->sameCourse($vocabulary),
@@ -30,7 +32,7 @@ class VocabularyController extends Controller
     }
 
     /**
-     * Published courses with a published unit and lesson that use the vocabulary.
+     * Published courses with a published lesson that use the vocabulary.
      *
      * @return Collection<int, Course>
      */
@@ -38,7 +40,7 @@ class VocabularyController extends Controller
     {
         return Course::query()
             ->published()
-            ->whereHas('units', fn ($unit) => $unit->published()->whereHas('lessons', fn ($lesson) => $lesson->published()->whereRelation('vocabularies', 'vocabularies.id', $vocabulary->getKey())))
+            ->whereHas('units', fn ($unit) => $unit->whereHas('lessons', fn ($lesson) => $lesson->published()->whereRelation('vocabularies', 'vocabularies.id', $vocabulary->getKey())))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -68,7 +70,6 @@ class VocabularyController extends Controller
     private function sameCourse(Vocabulary $vocabulary): Collection
     {
         $courseIds = Unit::query()
-            ->published()
             ->whereHas('course', fn ($query) => $query->published())
             ->whereHas('lessons', fn ($query) => $query->published()->whereRelation('vocabularies', 'vocabularies.id', $vocabulary->id))
             ->pluck('course_id')
@@ -79,7 +80,7 @@ class VocabularyController extends Controller
         }
 
         return $this->sidebarQuery($vocabulary)
-            ->whereHas('lessons', fn ($query) => $query->published()->whereHas('unit', fn ($unit) => $unit->published()->whereIn('course_id', $courseIds)))
+            ->whereHas('lessons', fn ($query) => $query->published()->whereHas('unit', fn ($unit) => $unit->whereIn('course_id', $courseIds)))
             ->get();
     }
 

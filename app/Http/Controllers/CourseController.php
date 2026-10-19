@@ -23,7 +23,6 @@ class CourseController extends Controller
         $hasCourseAccess = $course->isFree() || $hasPaidAccess;
 
         $units = $course->units()
-            ->published()
             ->with(['lessons' => fn ($query) => $query->published()])
             ->get();
 

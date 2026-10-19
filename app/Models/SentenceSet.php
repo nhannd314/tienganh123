@@ -29,6 +29,14 @@ class SentenceSet extends Model
     }
 
     /**
+     * @return BelongsToMany<Tag, $this>
+     */
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class)->withTimestamps();
+    }
+
+    /**
      * @return BelongsToMany<Sentence, $this>
      */
     public function sentences(): BelongsToMany

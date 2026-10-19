@@ -11,6 +11,7 @@ use App\Jobs\GenerateSentenceAudio;
 use App\Jobs\GenerateSentenceImage;
 use App\Models\Sentence;
 use App\Models\SentenceSet;
+use App\Models\Tag;
 use App\Models\User;
 use App\Services\OpenAiImageGenerator;
 use Filament\Actions\Testing\TestAction;
@@ -292,4 +293,39 @@ it('draws the image from the edit modal of the sentences of a set', function () 
         ->callAction([TestAction::make('edit')->table($sentence), 'generateImage']);
 
     Queue::assertPushed(GenerateSentenceImage::class, fn (GenerateSentenceImage $job) => $job->sentence->is($sentence) && $job->replace);
+});
+
+it('files a sentence set under any number of tags, and lets go of a tag that is deleted', function () {
+    $tag = Tag::factory()->create();
+    $otherTag = Tag::factory()->create();
+
+    Livewire::test(CreateSentenceSet::class)
+        ->fillForm(['title' => 'Có tag', 'sort_order' => 1, 'tags' => [$tag->id, $otherTag->id]])
+        ->call('create')
+        ->assertHasNoFormErrors();
+    Livewire::test(CreateSentenceSet::class)
+        ->fillForm(['title' => 'Không tag', 'sort_order' => 2])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $tagged = SentenceSet::firstWhere('title', 'Có tag');
+
+    expect($tagged->tags->modelKeys())->toEqualCanonicalizing([$tag->id, $otherTag->id])
+        ->and(SentenceSet::firstWhere('title', 'Không tag')->tags)->toBeEmpty()
+        ->and($tag->sentenceSets->modelKeys())->toBe([$tagged->id]);
+
+    $tag->delete();
+
+    expect($tagged->fresh()->tags->modelKeys())->toBe([$otherTag->id]);
+});
+
+it('orders the sentences of a set by a qualified created_at, as the pivot table has the same column', function () {
+    $set = SentenceSet::factory()->create();
+    $first = Sentence::factory()->hasAttached($set, ['sort_order' => 1], 'sentenceSets')->create();
+    $second = Sentence::factory()->hasAttached($set, ['sort_order' => 2], 'sentenceSets')->create();
+
+    $manager = Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class]);
+
+    expect($manager->instance()->getTable()->getDefaultSortColumn())->toBe('sentences.created_at');
+    $manager->assertCanSeeTableRecords([$first, $second], inOrder: true);
 });

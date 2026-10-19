@@ -2,6 +2,7 @@
 
 use App\Filament\Resources\Lessons\Pages\CreateLesson;
 use App\Filament\Resources\Lessons\Pages\EditLesson;
+use App\Filament\Resources\Lessons\Pages\ListLessons;
 use App\Filament\Resources\Lessons\RelationManagers\FlashcardSetsRelationManager;
 use App\Filament\Resources\Lessons\RelationManagers\VocabulariesRelationManager;
 use App\Models\Course;
@@ -165,4 +166,19 @@ it('links the lesson to a sentence set, which is optional', function () {
 
     expect(Lesson::firstWhere('title', 'With sentences')->sentenceSet->is($set))->toBeTrue()
         ->and(Lesson::firstWhere('title', 'Without sentences')->sentence_set_id)->toBeNull();
+});
+
+it('lists lessons from the newest to the oldest and filters them by course', function () {
+    $this->actingAs(User::factory()->create());
+    $course = Course::factory()->create();
+    $otherCourse = Course::factory()->create();
+    $old = Lesson::factory()->for(Unit::factory()->for($course))->create(['created_at' => now()->subDay()]);
+    $new = Lesson::factory()->for(Unit::factory()->for($course))->create(['created_at' => now()]);
+    $elsewhere = Lesson::factory()->for(Unit::factory()->for($otherCourse))->create(['created_at' => now()->subWeek()]);
+
+    Livewire::test(ListLessons::class)
+        ->assertCanSeeTableRecords([$new, $old, $elsewhere], inOrder: true)
+        ->filterTable('course', $course->id)
+        ->assertCanSeeTableRecords([$new, $old], inOrder: true)
+        ->assertCanNotSeeTableRecords([$elsewhere]);
 });

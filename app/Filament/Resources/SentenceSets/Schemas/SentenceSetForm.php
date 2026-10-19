@@ -9,6 +9,7 @@ use App\Models\SentenceSet;
 use App\Services\AzureTextToSpeech;
 use Closure;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -39,6 +40,13 @@ class SentenceSetForm
                     ->alphaDash()
                     ->unique(ignoreRecord: true)
                     ->helperText('Leave empty to generate it from the title.'),
+                Select::make('tags')
+                    ->relationship('tags', 'name')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->helperText('The tags the set is filed under on the sentences page.')
+                    ->columnSpanFull(),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 TextInput::make('sort_order')
@@ -115,9 +123,13 @@ class SentenceSetForm
         $added = collect();
 
         foreach ($lines as $line) {
-            $sentence = Sentence::create($line);
+            // A sentence is stored once: one already written in another set is reused, and only a new one gets its audio and image.
+            $sentence = Sentence::firstOrCreate(['sentence' => $line['sentence']], $line);
             $set->sentences()->attach($sentence, ['sort_order' => ++$sortOrder]);
-            $added->push($sentence);
+
+            if ($sentence->wasRecentlyCreated) {
+                $added->push($sentence);
+            }
         }
 
         if ($added->isNotEmpty()) {

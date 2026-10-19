@@ -33,6 +33,7 @@ class SentenceForm
                 TextInput::make('sentence')
                     ->required()
                     ->maxLength(500)
+                    ->unique(ignoreRecord: true)
                     ->placeholder('I have an `apple`.')
                     ->helperText('Wrap a word in backticks to show its IPA, audio and meaning in a popover when the word exists.'),
                 TextInput::make('translation')

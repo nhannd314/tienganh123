@@ -17,6 +17,7 @@ class TagForm
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255)
+                    ->unique(ignoreRecord: true)
                     ->live(onBlur: true)
                     ->afterStateUpdated(function (Get $get, Set $set, ?string $state, string $operation): void {
                         if ($operation === 'create' && blank($get('slug'))) {

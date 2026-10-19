@@ -6,6 +6,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class SentenceSetsTable
@@ -18,6 +19,9 @@ class SentenceSetsTable
                     ->searchable(),
                 TextColumn::make('slug')
                     ->searchable(),
+                TextColumn::make('tags.name')
+                    ->badge()
+                    ->toggleable(),
                 TextColumn::make('sentences_count')
                     ->label('Sentences')
                     ->counts('sentences')
@@ -34,8 +38,12 @@ class SentenceSetsTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                SelectFilter::make('tags')
+                    ->relationship('tags', 'name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->recordActions([
                 EditAction::make(),

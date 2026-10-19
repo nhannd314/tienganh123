@@ -343,7 +343,7 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Example sentences (lesson page): the button beside the title shows or hides the Vietnamese meaning of every sentence.
+// Example sentences (lesson page): the button beside the title hides or shows again the Vietnamese meaning of every sentence (shown at first).
 document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-example-toggle]');
 
@@ -357,7 +357,7 @@ document.addEventListener('click', (event) => {
         meaning.classList.toggle('invisible', !shown);
     });
 
-    const label = shown ? 'Ẩn nghĩa' : 'Hiện nghĩa';
+    const label = shown ? 'Ẩn nghĩa' : 'Hiển thị nghĩa';
 
     button.setAttribute('aria-pressed', String(shown));
     button.title = button.ariaLabel = label;
@@ -513,10 +513,14 @@ document.addEventListener('change', async (event) => {
 
 /*
  * x-chant: `[data-chant-open]` opens its `[data-chant-dialog]` full screen on the first slide and starts at once: a song of
- * `data-tracks` plays (the next one when it ends) and the picture of a flashcard moves. The slides do not change by themselves: the
- * wide side zones (`data-chant-next|prev`) and the arrow keys go through them and round again. A click in the middle of the screen
- * or space pauses and resumes the song and the motion; `data-chant-close` or Escape closes the popup.
+ * `data-tracks` plays (the next one when it ends). The next slide comes after CHANT_SLIDE_MS, and the slides round again, while the bar
+ * on top (`data-chant-progress`) fills; the wide side zones (`data-chant-next|prev`) and the arrow keys go through the slides by hand,
+ * which restarts the wait. A click in the middle of the screen or space pauses and resumes the song and the wait; `data-chant-close`
+ * or Escape closes the popup. The wait is counted in JS, not by a CSS animation, because the reduced-motion rule of the page speeds
+ * CSS animations up.
  */
+const CHANT_SLIDE_MS = 12000;
+
 const chants = new WeakMap();
 
 const showChantSlide = (dialog, index) => {
@@ -527,16 +531,8 @@ const showChantSlide = (dialog, index) => {
     const slide = chant.slides[chant.index];
     const image = dialog.querySelector('[data-chant-image]');
 
-    image.hidden = !slide.image;
+    image.closest('[data-chant-picture]').hidden = !slide.image;
     image.src = slide.image ?? '';
-
-    // A flashcard picture (`data-chant-animate`) pops in and floats again on every slide.
-    image.classList.remove('chant-image');
-    void image.offsetWidth;
-
-    if (image.hasAttribute('data-chant-animate')) {
-        image.classList.add('chant-image');
-    }
 
     Object.entries({ title: slide.title, ipa: slide.ipa, meaning: slide.meaning }).forEach(([name, text]) => {
         const element = dialog.querySelector(`[data-chant-${name}]`);
@@ -558,6 +554,39 @@ const showChantSlide = (dialog, index) => {
     if (upcoming.image) {
         new Image().src = upcoming.image;
     }
+
+    chant.elapsed = 0;
+    dialog.querySelector('[data-chant-progress]').style.width = '0';
+    armChantTimer(dialog);
+};
+
+// Count the time of the current slide frame by frame, unless the chant is paused, and go to the next slide when CHANT_SLIDE_MS is over.
+const armChantTimer = (dialog) => {
+    const chant = chants.get(dialog);
+
+    cancelAnimationFrame(chant.frame);
+    chant.last = null;
+
+    if (chant.paused) {
+        return;
+    }
+
+    const tick = (now) => {
+        // A hidden tab stops the frames: do not count the time it was away.
+        chant.elapsed += Math.min(now - (chant.last ?? now), 250);
+        chant.last = now;
+
+        if (chant.elapsed >= CHANT_SLIDE_MS) {
+            showChantSlide(dialog, chant.index + 1);
+
+            return;
+        }
+
+        dialog.querySelector('[data-chant-progress]').style.width = `${(chant.elapsed / CHANT_SLIDE_MS) * 100}%`;
+        chant.frame = requestAnimationFrame(tick);
+    };
+
+    chant.frame = requestAnimationFrame(tick);
 };
 
 const playChantTrack = (dialog) => {
@@ -582,6 +611,7 @@ const setChantPaused = (dialog, paused) => {
     const chant = chants.get(dialog);
     chant.paused = paused;
     dialog.toggleAttribute('data-paused', paused);
+    armChantTimer(dialog);
 
     if (paused) {
         chant.audio?.pause();
@@ -597,6 +627,7 @@ const stopChant = (dialog) => {
         return;
     }
 
+    cancelAnimationFrame(chant.frame);
     chant.audio?.pause();
     chants.delete(dialog);
 
@@ -620,6 +651,7 @@ document.addEventListener('click', (event) => {
             tracks,
             track: Math.floor(Math.random() * Math.max(tracks.length, 1)),
             index: 0,
+            elapsed: 0,
             paused: false,
             audio: null,
         });

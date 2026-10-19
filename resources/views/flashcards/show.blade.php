@@ -65,6 +65,10 @@
                     </div>
                 </section>
             @endif
+
+            @if ($exampleSentences->isNotEmpty())
+                <x-example-sentences :examples="$exampleSentences" />
+            @endif
         </div>
 
         <aside class="flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6 group-data-[sidebar-hidden]/layout:hidden">

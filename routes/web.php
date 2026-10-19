@@ -18,6 +18,8 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\PostIndexController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\SentenceSetController;
+use App\Http\Controllers\SentenceSetIndexController;
 use App\Http\Controllers\SepayWebhookController;
 use App\Http\Controllers\VocabularyController;
 use App\Http\Controllers\VocabularyIndexController;
@@ -35,6 +37,8 @@ Route::get('/tu-vung', VocabularyIndexController::class)->name('vocabularies.ind
 Route::get('/tu-vung/{vocabulary:slug}', VocabularyController::class)->name('vocabularies.show');
 Route::get('/flashcard', FlashcardSetIndexController::class)->name('flashcards.index');
 Route::get('/flashcard/{flashcardSet:slug}', FlashcardSetController::class)->name('flashcards.show');
+Route::get('/cau-mau', SentenceSetIndexController::class)->name('sentences.index');
+Route::get('/cau-mau/{sentenceSet:slug}', SentenceSetController::class)->name('sentences.show');
 Route::get('/blog-tieng-anh', PostIndexController::class)->name('posts.index');
 Route::get('/blog-tieng-anh/{post:slug}', PostController::class)->name('posts.show');
 Route::get('/trang/{page:slug}', PageController::class)->name('pages.show');

@@ -40,6 +40,7 @@ class SentencesTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('sentences.created_at', 'desc')
             ->filters([
                 SelectFilter::make('sentenceSets')
                     ->label('Sentence set')
