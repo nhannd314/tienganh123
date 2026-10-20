@@ -5,6 +5,10 @@ use App\Filament\Resources\Lessons\Pages\EditLesson;
 use App\Filament\Resources\Lessons\Pages\ListLessons;
 use App\Filament\Resources\Lessons\RelationManagers\FlashcardSetsRelationManager;
 use App\Filament\Resources\Lessons\RelationManagers\VocabulariesRelationManager;
+use App\Jobs\GenerateFlashcardAudio;
+use App\Jobs\GenerateFlashcardImage;
+use App\Jobs\GenerateSentenceAudio;
+use App\Jobs\GenerateSentenceImage;
 use App\Models\Course;
 use App\Models\FlashcardSet;
 use App\Models\Lesson;
@@ -12,9 +16,11 @@ use App\Models\SentenceSet;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Vocabulary;
+use App\Models\Word;
 use Filament\Actions\AttachAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
@@ -126,10 +132,76 @@ it('lays the form out in pairs: unit with title, slug with sort order, toggles t
 
     expect($names)->toBe([
         'unit_id', 'title', 'slug', 'sort_order', 'is_free', 'is_published', 'description',
-        'passage', 'passage_audio', 'sentence_set_id', 'content', 'attachments',
+        'passage', 'passage_audio', 'sentence_set_id',
+        'vocabulary_lines', 'flashcard_lines', 'sentence_lines', 'generate_sentence_images',
+        'content', 'attachments',
     ])
         ->and($schema->getComponent('passage_audio')->getColumnSpan('default'))->toBe('full')
         ->and($schema->getComponent('attachments')->getColumnSpan('default'))->toBe('full');
+});
+
+it('saves the typed words, flashcards and sentences of a new lesson as sets titled like the lesson', function () {
+    Queue::fake();
+    config(['services.openai.key' => 'test-key', 'services.azure_speech.key' => 'key', 'services.azure_speech.region' => 'region']);
+    $unit = Unit::factory()->create();
+    $apple = Word::factory()->create(['word' => 'apple']);
+
+    Livewire::test(CreateLesson::class)
+        ->fillForm([
+            'unit_id' => $unit->id,
+            'title' => 'Fruits',
+            'vocabulary_lines' => "apple [n] quả táo\nbanana [n] quả chuối",
+            'flashcard_lines' => "apple\nbanana\napple",
+            'sentence_lines' => "I have an `apple` | Tôi có 1 quả táo.\nI like bananas.",
+            'generate_sentence_images' => true,
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $lesson = Lesson::firstWhere('title', 'Fruits');
+
+    expect($lesson->vocabularies)->toHaveCount(1)
+        ->and($lesson->vocabularies->first()->title)->toBe('Fruits')
+        ->and($lesson->vocabularies->first()->words->pluck('word')->all())->toBe(['apple', 'banana'])
+        ->and($lesson->flashcardSets)->toHaveCount(1)
+        ->and($lesson->flashcardSets->first()->title)->toBe('Fruits')
+        ->and($lesson->flashcardSets->first()->flashcards->pluck('title')->all())->toBe(['apple', 'banana'])
+        ->and($lesson->flashcardSets->first()->flashcards->first()->word_id)->toBe($apple->id)
+        ->and($lesson->sentenceSet->title)->toBe('Fruits')
+        ->and($lesson->sentenceSet->sentences->pluck('sentence')->all())->toBe(['I have an `apple`', 'I like bananas.']);
+
+    Queue::assertPushed(GenerateFlashcardImage::class, 2);
+    Queue::assertPushed(GenerateFlashcardAudio::class, 2);
+    Queue::assertPushed(GenerateSentenceImage::class, 2);
+    Queue::assertPushed(GenerateSentenceAudio::class, 2);
+});
+
+it('creates no set when the lines are left empty, and keeps a chosen sentence set', function () {
+    $set = SentenceSet::factory()->create();
+
+    Livewire::test(CreateLesson::class)
+        ->fillForm(['unit_id' => Unit::factory()->create()->id, 'title' => 'Empty', 'sentence_set_id' => $set->id])
+        ->assertFormFieldHidden('sentence_lines')
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $lesson = Lesson::firstWhere('title', 'Empty');
+
+    expect($lesson->vocabularies)->toBeEmpty()
+        ->and($lesson->flashcardSets)->toBeEmpty()
+        ->and($lesson->sentence_set_id)->toBe($set->id)
+        ->and(Vocabulary::count())->toBe(0)
+        ->and(FlashcardSet::count())->toBe(0);
+});
+
+it('shows the lines fields only when creating a lesson', function () {
+    $lesson = Lesson::factory()->create();
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->assertFormFieldHidden('vocabulary_lines')
+        ->assertFormFieldHidden('flashcard_lines')
+        ->assertFormFieldHidden('sentence_lines')
+        ->assertFormFieldHidden('generate_sentence_images');
 });
 
 it('lists and reorders the attached vocabularies and flashcard sets of the lesson', function () {

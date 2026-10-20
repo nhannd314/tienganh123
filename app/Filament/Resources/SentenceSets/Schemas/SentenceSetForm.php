@@ -60,15 +60,16 @@ class SentenceSetForm
 
     /**
      * The fields of the modal that adds many sentences at once: one sentence per line and whether to draw their images.
+     * `$isRequired` false lets the sentences be left empty, as in the lesson form.
      *
      * @return list<Component>
      */
-    public static function sentenceLinesFields(): array
+    public static function sentenceLinesFields(bool $isRequired = true): array
     {
         return [
             Textarea::make('sentence_lines')
                 ->label('Sentences')
-                ->required()
+                ->required($isRequired)
                 ->rows(10)
                 ->placeholder('I have an `apple` | Tôi có 1 quả táo.')
                 ->helperText('One sentence per line, as "sentence | meaning" (the meaning is optional). Wrap a word in backticks to show its IPA, audio and meaning in a popover. A sentence the set already has is skipped.')
