@@ -1,15 +1,17 @@
 {{--
     Inline word label inside lesson content. `label` overrides the text of the label (e.g. an inflected form of the word). Clicking it opens a popover with the IPA, listen buttons and meanings.
+    Without a `word` (a marked word that is not stored), only the label is shown and clicking it does nothing; `label` is then required.
     Uses the native Popover API; resources/js/app.js positions it and points the arrow at the label.
     Spans only, so it stays valid inside a paragraph.
 --}}
 @props([
-    'word',
-    'popoverId',
+    'word' => null,
+    'popoverId' => null,
     'label' => null,
 ])
 
-<span class="inline">
+@if ($word === null)
+    <span {{ $attributes->class('inline rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text') }}>{{ $label }}</span>@else<span class="inline">
     <button
         type="button"
         popovertarget="{{ $popoverId }}"
@@ -45,4 +47,4 @@
             </span>
         @endif
     </span>
-</span>
+</span>@endif

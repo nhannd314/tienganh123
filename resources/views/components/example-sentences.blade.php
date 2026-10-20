@@ -1,6 +1,6 @@
 {{--
     Example sentences card: the title, the Chant and the show-meaning buttons, then every sentence with its picture, audio button
-    and Vietnamese meaning, shown unless the button hides it. A word in backticks that matches a stored word gets its popover. Shared by the lesson page and the
+    and Vietnamese meaning, shown unless the button hides it. A word in backticks is labelled, and opens its popover when it matches a stored word. Shared by the lesson page and the
     sentence sets page. `examples` is the list built by App\Services\ExampleSentences; `idPrefix` keeps the popover ids of two
     cards on one page apart.
 --}}
@@ -40,7 +40,7 @@
 
                     <div class="min-w-0 flex-1">
                         <p lang="en" class="text-xl leading-snug font-semibold text-fg-strong">
-                            @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="$idPrefix.$loop->parent->index.'-'.$loop->index" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
+                            @foreach ($example['segments'] as $segment)@if ($segment['word'])<x-word-popover :word="$segment['word']" :label="$segment['text']" :popover-id="$idPrefix.$loop->parent->index.'-'.$loop->index" />@elseif ($segment['isMarked'])<x-word-popover :label="$segment['text']" />@else{{ $segment['text'] }}@endif{{-- no space between segments --}}@endforeach
                         </p>
                         @if ($example['translation'])
                             <p data-example-meaning class="mt-1 type-body text-fg-muted">{{ $example['translation'] }}</p>

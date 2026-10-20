@@ -33,12 +33,12 @@
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             {{-- Passage --}}
             @if (filled($passageHtml) || $lesson->passage_audio_url)
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
+                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card sm:p-10">
                     @if ($lesson->passage_audio_url)
                         <audio data-passage-audio controls preload="none" src="{{ $lesson->passage_audio_url }}" class="w-full"></audio>
                     @endif
 
-                    <div data-passage class="flex flex-col gap-4 type-body-lg text-pretty text-fg-body [&_a]:underline [&_strong]:text-fg-strong">
+                    <div data-passage class="flex flex-col gap-4 type-body-lg text-pretty text-fg-body [&_a]:underline [&_li+li]:mt-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5">
                         {!! $passageHtml !!}
                     </div>
                 </section>
@@ -86,11 +86,11 @@
             @endif
 
             {{-- Content --}}
-            <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
+            <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card sm:p-10">
                 <h2 class="type-h2 text-fg-strong">Nội dung bài học</h2>
 
                 @if (filled($contentHtml))
-                    <div class="flex flex-col gap-4 type-body-lg text-pretty text-fg-body [&_a]:underline [&_h2]:type-h2 [&_h2]:text-fg-strong [&_h3]:type-h3 [&_h3]:text-fg-strong [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5">
+                    <div class="flex flex-col gap-4 type-body-lg text-pretty text-fg-body [&_a]:underline [&_h2]:type-h2 [&_h2]:text-fg-strong [&_h3]:type-h3 [&_h3]:text-fg-strong [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-md [&_li+li]:mt-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5">
                         {!! $contentHtml !!}
                     </div>
                 @endif

@@ -65,7 +65,7 @@ class LessonController extends Controller
     /**
      * Render the rich content, turning inline code that matches a stored word into a popover label.
      *
-     * Inline code that matches no word is shown as plain text. Each popover id is `$popoverIdPrefix` plus its position,
+     * Inline code that matches no word is shown as a label that opens nothing. Each popover id is `$popoverIdPrefix` plus its position,
      * so two rendered fields on one page never share an id.
      */
     private function richContentHtml(?string $content, string $popoverIdPrefix): string
@@ -109,7 +109,7 @@ class LessonController extends Controller
 
             $popovers[$token] = $word
                 ? Blade::render('<x-word-popover :word="$word" :popover-id="$popoverId" />', ['word' => $word, 'popoverId' => $popoverIdPrefix.$index])
-                : e($code->textContent);
+                : Blade::render('<x-word-popover :label="$label" />', ['label' => $code->textContent]);
 
             $code->parentNode->replaceChild($document->createTextNode($token), $code);
         }

@@ -12,12 +12,12 @@ use Illuminate\Support\Facades\Storage;
 class ExampleSentences
 {
     /**
-     * The sentences ready to show as example sentences, each cut into segments: a word marked with backticks that matches a
-     * stored word carries it, to be shown as a popover label; any other segment is plain text. A sentence with nothing to
-     * speak is left out.
+     * The sentences ready to show as example sentences, each cut into segments: a word marked with backticks is shown as a
+     * label, and carries the stored word that matches it, if any, to open its popover; any other segment is plain text.
+     * A sentence with nothing to speak is left out.
      *
      * @param  Collection<int, Sentence>  $sentences
-     * @return Collection<int, array{sentence: string, translation: ?string, audioUrl: ?string, imageUrl: ?string, segments: list<array{text: string, word: ?Word}>}>
+     * @return Collection<int, array{sentence: string, translation: ?string, audioUrl: ?string, imageUrl: ?string, segments: list<array{text: string, isMarked: bool, word: ?Word}>}>
      */
     public function for(Collection $sentences): Collection
     {
@@ -49,6 +49,7 @@ class ExampleSentences
             'imageUrl' => filled($example['image'] ?? null) ? Storage::disk('public')->url($example['image']) : null,
             'segments' => array_map(fn (array $segment): array => [
                 'text' => $segment['text'],
+                'isMarked' => $segment['isMarked'],
                 'word' => $segment['isMarked'] ? $words->get(mb_strtolower(trim($segment['text']))) : null,
             ], $example['segments']),
         ]);

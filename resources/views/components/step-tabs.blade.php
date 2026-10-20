@@ -1,6 +1,7 @@
 {{--
     Lesson stepper: a numbered circle per step with its label underneath, joined by a line (green once the previous step
-    is done). `steps` is a list of labels or ['label' => ..., 'href' => ...]; `active` is the current 0-based index; `start` is the number of the first step.
+    is done). `steps` is a list of labels or ['label' => ..., 'href' => ..., 'number' => ...]; `active` is the current 0-based index; `start` is the number of the first step,
+    the others following on, unless a step gives its own `number` (when some steps are left out).
     Steps before `active` count as done unless `completed` (list of indexes) is given.
 --}}
 @props([
@@ -14,6 +15,8 @@
 @php
     $isDone = fn (int $index): bool => $completed !== null ? in_array($index, $completed, true) : $index < $active;
     $total = count($steps);
+    $stepNumber = fn (int $index): int => is_array($steps[$index] ?? null) && isset($steps[$index]['number']) ? $steps[$index]['number'] : $start + $index;
+    $lastNumber = $total > 0 ? $stepNumber($total - 1) : $start;
 @endphp
 
 <nav aria-label="{{ $label }}" {{ $attributes->class(['[--r:1.5rem] max-sm:[--r:1.25rem]']) }}>
@@ -43,7 +46,7 @@
                 <{{ $tag }}
                     @if ($stepHref) href="{{ $stepHref }}" @else type="button" @endif
                     @if ($isCurrent) aria-current="step" @endif
-                    aria-label="Bước {{ $start + $index }} trên {{ $start + $total - 1 }}: {{ $stepLabel }}{{ $isStepDone ? ' (đã xong)' : '' }}"
+                    aria-label="Bước {{ $stepNumber($index) }} trên {{ $lastNumber }}: {{ $stepLabel }}{{ $isStepDone ? ' (đã xong)' : '' }}"
                     class="group flex w-full cursor-pointer flex-col items-center gap-3 rounded-md border-0 bg-transparent px-1 py-2 no-underline transition-interactive hover:no-underline active:translate-y-px"
                 >
                     <span aria-hidden="true" @class([
@@ -55,7 +58,7 @@
                         @if ($isStepDone)
                             <x-icon name="check" />
                         @else
-                            {{ $start + $index }}
+                            {{ $stepNumber($index) }}
                         @endif
                     </span>
                     <span @class([

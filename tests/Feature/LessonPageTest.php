@@ -135,7 +135,7 @@ it('puts the audio button of an example sentence to the left of its sentence, be
         ->and(substr_count($content, 'data-audio-button'))->toBe(2);
 });
 
-it('labels the words in backticks of an example sentence with a popover and leaves unknown ones as text', function () {
+it('labels the words in backticks of an example sentence, with a popover for the known ones', function () {
     Word::factory()->create(['word' => 'apple', 'ipa_us' => '/ˈæp.əl/', 'meanings' => [['pos' => 'n', 'meaning' => 'quả táo']]]);
     Word::factory()->create(['word' => 'pear', 'meanings' => [['pos' => 'n', 'meaning' => 'quả lê']]]);
     $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
@@ -149,7 +149,7 @@ it('labels the words in backticks of an example sentence with a popover and leav
         ->assertSee('I have an <span class="inline">', false)
         ->assertSeeInOrder(['>Apple</button>', '</span> and a <span class="inline">', '>pear</button>', '</span>.'], false)
         ->assertSee('quả táo')
-        ->assertSee('A pineapple is not a word here.')
+        ->assertSee('A <span class="inline rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text">pineapple</span> is not a word here.', false)
         ->assertSee('data-text="I have an Apple and a pear."', false)
         ->getContent();
 
@@ -249,7 +249,7 @@ it('hides the passage section when the lesson has no passage', function () {
     $this->get(lessonUrl(publishedLesson(['passage' => '<p></p><p>&nbsp;</p>'])))->assertDontSee('data-passage', false);
 });
 
-it('turns inline code that matches a word into a popover and leaves other code as text', function () {
+it('turns inline code that matches a word into a popover and other code into a label that opens nothing', function () {
     Word::factory()->create(['word' => 'apple', 'ipa_us' => '/ˈæp.əl/', 'ipa_uk' => '/ˈæp.əl/', 'meanings' => [['pos' => 'n', 'meaning' => 'quả táo']]]);
     $lesson = publishedLesson(['content' => '<p>Một <code>Apple</code> và <code>zzyzx</code>.</p>']);
 
@@ -258,7 +258,7 @@ it('turns inline code that matches a word into a popover and leaves other code a
         ->assertSee('/ˈæp.əl/')
         ->assertSee('quả táo')
         ->assertSee('Một')
-        ->assertSee('zzyzx')
+        ->assertSee('text-primary-text">zzyzx</span>', false)
         ->assertDontSee('<code>zzyzx</code>', false)
         ->assertDontSee('word-1', false);
 });

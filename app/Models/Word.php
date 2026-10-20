@@ -151,23 +151,31 @@ class Word extends Model
     }
 
     /**
-     * Public URL of the US pronunciation file: storage/app/public/audio/us/{slug}.mp3
+     * Public URL of the US pronunciation file (storage/app/public/audio/us/{slug}.mp3), or null when it has not been saved.
      *
-     * @return Attribute<string, never>
+     * @return Attribute<string|null, never>
      */
     protected function audioUsUrl(): Attribute
     {
-        return Attribute::get(fn (): string => Storage::disk('public')->url("audio/us/{$this->slug}.mp3"));
+        return Attribute::get(fn (): ?string => $this->savedAudioUrl('us'));
     }
 
     /**
-     * Public URL of the UK pronunciation file: storage/app/public/audio/uk/{slug}.mp3
+     * Public URL of the UK pronunciation file (storage/app/public/audio/uk/{slug}.mp3), or null when it has not been saved.
      *
-     * @return Attribute<string, never>
+     * @return Attribute<string|null, never>
      */
     protected function audioUkUrl(): Attribute
     {
-        return Attribute::get(fn (): string => Storage::disk('public')->url("audio/uk/{$this->slug}.mp3"));
+        return Attribute::get(fn (): ?string => $this->savedAudioUrl('uk'));
+    }
+
+    private function savedAudioUrl(string $accent): ?string
+    {
+        $path = "audio/{$accent}/{$this->slug}.mp3";
+        $disk = Storage::disk('public');
+
+        return $disk->exists($path) ? $disk->url($path) : null;
     }
 
     /**

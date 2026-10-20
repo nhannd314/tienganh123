@@ -61,13 +61,13 @@
                             <td lang="en" class="{{ $bodyCell }} text-[length:calc(var(--text-xl)*var(--vs,1))] font-medium text-primary-text">{{ $word->word }}</td>
                             <td class="{{ $bodyCell }}">
                                 <div class="flex items-center gap-2 md:gap-3">
-                                    <x-audio-button size="sm" :text="$word->word" lang="en-GB" />
+                                    <x-audio-button size="sm" :text="$word->word" lang="en-GB" :src="$word->audio_uk_url" />
                                     <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-lg)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_uk }}</span>
                                 </div>
                             </td>
                             <td class="{{ $bodyCell }}">
                                 <div class="flex items-center gap-2 md:gap-3">
-                                    <x-audio-button size="sm" tone="secondary" :text="$word->word" lang="en-US" />
+                                    <x-audio-button size="sm" tone="secondary" :text="$word->word" lang="en-US" :src="$word->audio_us_url" />
                                     <span class="max-md:group-not-data-[expanded]/vocab:hidden font-ipa text-[length:calc(var(--text-lg)*var(--vs,1))] whitespace-nowrap text-fg-body">{{ $word->ipa_us }}</span>
                                 </div>
                             </td>

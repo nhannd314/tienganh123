@@ -16,6 +16,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
 
 class LessonReviewController extends Controller
@@ -106,17 +107,27 @@ class LessonReviewController extends Controller
     ];
 
     /**
-     * Show one part of the lesson review. Only the BUILT_STEPS have questions so far.
+     * Show one part of the lesson review. Only the BUILT_STEPS have questions so far. An advanced part the lesson has
+     * nothing for redirects to the first advanced part it has (when it has one).
      */
-    public function show(Course $course, Unit $unit, Lesson $lesson, int $step): View
+    public function show(Course $course, Unit $unit, Lesson $lesson, int $step): View|RedirectResponse
     {
         $this->ensurePublished($course, $unit, $lesson);
+
+        $availableSteps = $lesson->reviewSteps();
+        $advancedSteps = array_values(array_filter($availableSteps, fn (int $available): bool => $available >= self::ADVANCED_FIRST_STEP));
+
+        if ($step >= self::ADVANCED_FIRST_STEP && $advancedSteps !== [] && ! in_array($step, $advancedSteps, true)) {
+            return redirect()->route('lessons.review.show', [$course, $unit, $lesson, $advancedSteps[0]]);
+        }
 
         if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
             session()->forget($this->pronunciationKey($lesson, $step));
         }
 
-        $firstTabStep = $this->firstTabStep($step);
+        $tabSteps = $this->tabSteps($step, $advancedSteps);
+        $completedSteps = $this->completedSteps($lesson);
+        $nextStep = collect($availableSteps)->first(fn (int $available): bool => $available > $step);
 
         return view('lessons.review', [
             'course' => $course,
@@ -124,16 +135,14 @@ class LessonReviewController extends Controller
             'lesson' => $lesson,
             'step' => $step,
             'stepInfo' => self::STEPS[$step - 1],
-            'firstTabStep' => $firstTabStep,
-            'steps' => collect(self::STEPS)->map(fn (array $info, int $index): array => [
-                'label' => $info['title'],
-                'href' => route('lessons.review.show', [$course, $unit, $lesson, $index + 1]),
-            ])->slice($firstTabStep - 1, $this->tabCount($step))->values()->all(),
-            'completedSteps' => collect($this->completedSteps($lesson))
-                ->map(fn (int $index): int => $index - ($firstTabStep - 1))
-                ->filter(fn (int $index): bool => $index >= 0 && $index < $this->tabCount($step))
-                ->values()
-                ->all(),
+            'activeTab' => (int) array_search($step, $tabSteps, true),
+            'steps' => array_map(fn (int $tabStep): array => [
+                'label' => self::STEPS[$tabStep - 1]['title'],
+                'href' => route('lessons.review.show', [$course, $unit, $lesson, $tabStep]),
+                'number' => $tabStep,
+            ], $tabSteps),
+            'completedSteps' => array_keys(array_filter($tabSteps, fn (int $tabStep): bool => in_array($tabStep - 1, $completedSteps, true))),
+            'advancedUrl' => $advancedSteps !== [] ? route('lessons.review.show', [$course, $unit, $lesson, $advancedSteps[0]]) : null,
             'progress' => auth()->user() ? $lesson->reviewProgress(auth()->user()) : null,
             'enrollCourse' => $course->needsEnrollmentBy(auth()->user()) ? $course : null,
             'canSave' => auth()->check(),
@@ -154,7 +163,7 @@ class LessonReviewController extends Controller
                 default => [],
             },
             'isBuilt' => in_array($step, self::BUILT_STEPS, true),
-            'nextUrl' => $step < count(self::STEPS) ? route('lessons.review.show', [$course, $unit, $lesson, $step + 1]) : null,
+            'nextUrl' => $nextStep !== null ? route('lessons.review.show', [$course, $unit, $lesson, $nextStep]) : null,
             'submitUrl' => route('lessons.review.store', [$course, $unit, $lesson, $step]),
             'passage' => $step === 11 ? app(AdvancedReviewContent::class)->passageParagraphs($lesson) : [],
             'passageAudioUrl' => $lesson->passage_audio_url,
@@ -338,16 +347,18 @@ class LessonReviewController extends Controller
     }
 
     /**
-     * Where the tabs start: the basic parts are shown together, and so are the advanced ones.
+     * The parts shown as tabs: the basic parts together, or the advanced parts the lesson has (all of them when it has none, each telling it has no questions).
+     *
+     * @param  list<int>  $advancedSteps
+     * @return list<int>
      */
-    private function firstTabStep(int $step): int
+    private function tabSteps(int $step, array $advancedSteps): array
     {
-        return $step >= self::ADVANCED_FIRST_STEP ? self::ADVANCED_FIRST_STEP : 1;
-    }
+        if ($step < self::ADVANCED_FIRST_STEP) {
+            return range(1, self::ADVANCED_FIRST_STEP - 1);
+        }
 
-    private function tabCount(int $step): int
-    {
-        return $this->firstTabStep($step) === 1 ? self::ADVANCED_FIRST_STEP - 1 : count(self::STEPS) - self::ADVANCED_FIRST_STEP + 1;
+        return $advancedSteps !== [] ? $advancedSteps : range(self::ADVANCED_FIRST_STEP, count(self::STEPS));
     }
 
     /**

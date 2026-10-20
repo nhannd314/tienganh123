@@ -55,7 +55,7 @@
             </div>
 
             <div class="overflow-x-auto border-b border-line-subtle px-6 py-5 sm:px-8">
-                <x-step-tabs :steps="$steps" :active="$step - $firstTabStep" :completed="$completedSteps" :start="$firstTabStep" label="Các phần ôn tập" :class="count($steps) > 4 ? 'min-w-136' : 'min-w-96'" />
+                <x-step-tabs :steps="$steps" :active="$activeTab" :completed="$completedSteps" label="Các phần ôn tập" :class="count($steps) > 4 ? 'min-w-136' : 'min-w-96'" />
             </div>
 
             @if (! $isBuilt)
@@ -247,7 +247,9 @@
         @if ($firstQuestion)
             <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5">
                 <x-slot:after-progress>
-                    <x-advanced-review-promo :href="route('lessons.review.show', [$course, $unit, $lesson, 7])" />
+                    @if ($advancedUrl)
+                        <x-advanced-review-promo :href="$advancedUrl" />
+                    @endif
                     <x-game-promo :href="route('lessons.games', [$course, $unit, $lesson])" />
                 </x-slot:after-progress>
             </x-lesson-sidebar>

@@ -811,6 +811,33 @@ it('shows only the tabs 7 to 10 on the advanced parts and 1 to 6 on the basic on
         ->assertDontSee('Điền câu');
 });
 
+it('shows only the advanced parts the lesson has and goes straight to the first of them', function () {
+    $lesson = reviewLesson(2);
+    $lesson->update(['passage' => '<p>An <code>apple</code> a day.</p>']);
+
+    $this->get(reviewUrl($lesson, 7))->assertRedirect(reviewUrl($lesson, 11));
+
+    $this->get(reviewUrl($lesson, 11))
+        ->assertOk()
+        ->assertSee('Nghe đoạn văn')
+        ->assertSee('aria-label="Bước 11 trên 11: Nghe đoạn văn"', false)
+        ->assertDontSee('Điền câu')
+        ->assertDontSee(reviewUrl($lesson, 7), false)
+        ->assertDontSee(reviewUrl($lesson, 10), false);
+
+    $this->get(reviewUrl($lesson, 6))->assertSee(reviewUrl($lesson, 11), false);
+
+    $this->get(reviewUrl($lesson, 1))
+        ->assertSee(reviewUrl($lesson, 11), false)
+        ->assertDontSee(reviewUrl($lesson, 7), false);
+});
+
+it('hides the advanced review promo when the lesson has no advanced part', function () {
+    $this->get(reviewUrl(reviewLesson(), 1))
+        ->assertOk()
+        ->assertDontSee('Ôn tập nâng cao');
+});
+
 it('tells the learner when the lesson has no sentences for the advanced parts', function () {
     foreach ([7, 8, 9, 10, 11] as $step) {
         $this->get(reviewUrl(reviewLesson(), $step))
