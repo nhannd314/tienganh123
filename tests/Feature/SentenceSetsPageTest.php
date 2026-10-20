@@ -63,7 +63,7 @@ it('shows a sentence set as an example sentences card', function () {
     $this->get(route('sentences.show', $set))
         ->assertOk()
         ->assertSeeInOrder(['Bộ câu về trái cây', 'Học nói về trái cây', 'Trái cây'])
-        ->assertSeeInOrder(['data-chant-open', 'data-example-toggle', 'I eat an apple.', 'Tôi ăn táo.', 'Water is cold.'], false);
+        ->assertSeeInOrder(['data-sidebar-layout', 'data-chant-open', 'data-example-toggle', 'data-sidebar-toggle', 'I eat an apple.', 'Tôi ăn táo.', 'Water is cold.'], false);
 });
 
 it('does not show a sentence set that has no sentences', function () {
@@ -98,7 +98,7 @@ it('lists in the sidebar the courses, vocabularies, flashcard sets and sentence 
     FlashcardSet::factory()->create(['title' => 'Unrelated flashcards']);
 
     $this->get(route('sentences.show', $set))
-        ->assertSeeInOrder(['Khóa học liên quan', 'Used course', 'Bộ từ vựng liên quan', 'Lesson vocabulary', 'Own vocabulary', 'Flashcard liên quan', 'Lesson flashcards', 'Own flashcards', 'Bộ câu mẫu cùng chủ đề', 'Same topic set'])
+        ->assertSeeInOrder(['Khóa học liên quan', 'Used course', 'Bộ từ vựng liên quan', 'Lesson vocabulary', 'Own vocabulary', 'Flashcard liên quan', 'Lesson flashcards', 'Own flashcards', 'Bộ câu cùng chủ đề', 'Same topic set'])
         ->assertDontSee('Other course')
         ->assertDontSee('Unrelated vocabulary')
         ->assertDontSee('Unrelated flashcards')

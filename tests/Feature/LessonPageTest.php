@@ -92,7 +92,7 @@ it('shows the examples of the word itself in the vocabulary table', function () 
         ->assertSeeInOrder(['xin chào', 'Hello, nice to meet you.', 'Xin chào, rất vui được gặp bạn.']);
 });
 
-it('lists the lesson example sentences with one toggle beside the title for every meaning', function () {
+it('lists the lesson example sentences with one toggle beside the title for every sentence and meaning', function () {
     $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([
         ['sentence' => 'I eat an apple every day.', 'translation' => 'Tôi ăn một quả táo mỗi ngày.', 'audio' => 'lessons/sentence-audio/apple.mp3'],
         ['sentence' => 'Water is cold.', 'translation' => null, 'audio' => null],
@@ -101,7 +101,7 @@ it('lists the lesson example sentences with one toggle beside the title for ever
     attachWords($lesson, Word::factory()->create(['examples' => [['sentence' => 'A word example, not a lesson sentence.']]]));
 
     $response = $this->get(lessonUrl($lesson))
-        ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'Ẩn nghĩa', 'I eat an apple every day.', 'Water is cold.'])
+        ->assertSeeInOrder(['Từ vựng', 'Câu mẫu', 'Ẩn câu và nghĩa', 'I eat an apple every day.', 'Water is cold.'])
         ->assertSee('Tôi ăn một quả táo mỗi ngày.')
         ->assertSee('lessons/sentence-audio/apple.mp3', false)
         ->assertDontSee('Bỏ qua');
@@ -109,15 +109,14 @@ it('lists the lesson example sentences with one toggle beside the title for ever
     expect(substr_count($response->getContent(), 'data-example '))->toBe(2)
         ->and(substr_count($response->getContent(), 'data-example-toggle="'))->toBe(1)
         ->and($response->getContent())->toMatch('/<p data-example-meaning class="mt-1/')->not->toContain('invisible')
-        ->and($response->getContent())->toMatch('/aria-pressed="true"[^>]*data-example-toggle|data-example-toggle[^>]*aria-pressed="true"/');
+        ->and($response->getContent())->toMatch('/aria-pressed="false"[^>]*data-example-toggle|data-example-toggle[^>]*aria-pressed="false"/');
 });
 
-it('leaves out the meaning toggle when no example sentence has a meaning', function () {
+it('keeps the hide toggle and adds the sidebar toggle to the example sentences card when no sentence has a meaning', function () {
     $lesson = publishedLesson(['sentence_set_id' => sentenceSetWith([['sentence' => 'Water is cold.', 'translation' => null]])->id]);
 
     $this->get(lessonUrl($lesson))
-        ->assertSee('Water is cold.')
-        ->assertDontSee('data-example-toggle', false);
+        ->assertSeeInOrder(['Câu mẫu', 'data-example-toggle', 'data-sidebar-toggle', 'Water is cold.'], false);
 });
 
 it('puts the audio button of an example sentence to the left of its sentence, below the image', function () {

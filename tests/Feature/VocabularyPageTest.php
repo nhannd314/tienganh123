@@ -88,6 +88,11 @@ it('shows the example sentences of the sentence set of the vocabulary, and nothi
     $with = Vocabulary::factory()->create(['sentence_set_id' => $set->id]);
     $without = Vocabulary::factory()->create();
 
-    $this->get(route('vocabularies.show', $with))->assertSeeInOrder(['data-example-toggle', 'I eat an apple.', 'Tôi ăn táo.'], false);
+    $this->get(route('vocabularies.show', $with))->assertSeeInOrder(['data-sidebar-layout', 'data-example-toggle', 'data-sidebar-toggle', 'I eat an apple.', 'Tôi ăn táo.'], false);
     $this->get(route('vocabularies.show', $without))->assertDontSee('data-example', false);
+});
+
+it('puts the hide-sidebar button on the vocabulary table, so the sidebar can be hidden without example sentences', function () {
+    $this->get(route('vocabularies.show', Vocabulary::factory()->create()))
+        ->assertSeeInOrder(['data-sidebar-layout', 'data-vocab-action="zoom-in"', 'data-sidebar-toggle', 'Từ vựng cùng chủ đề'], false);
 });

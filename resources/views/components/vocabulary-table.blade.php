@@ -1,6 +1,7 @@
 {{--
     Vocabulary table of a set of words (the lesson page and the vocabulary page): tools to expand, print, copy and zoom
-    it, then the word, its UK / US audio and IPA, and its meanings with examples. The tools are wired by resources/js/app.js.
+    it and to hide the sidebar, then the word, its UK / US audio and IPA, and its meanings with examples. The tools are
+    wired by resources/js/app.js; the hide-sidebar button needs a `data-sidebar-layout` ancestor.
 --}}
 @props([
     'words',
@@ -35,6 +36,7 @@
             <x-icon-button icon="copy" label="Sao chép từ vựng" size="sm" data-vocab-action="copy" />
             <x-icon-button icon="a-arrow-down" label="Giảm cỡ chữ" size="sm" data-vocab-action="zoom-out" />
             <x-icon-button icon="a-arrow-up" label="Tăng cỡ chữ" size="sm" data-vocab-action="zoom-in" />
+            <x-sidebar-toggle />
         </div>
     </div>
 

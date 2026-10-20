@@ -103,6 +103,14 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Whether the members-only features (the vocabulary and sentence set reviews) are open to the user: an admin or a member.
+     */
+    public function hasMemberAccess(): bool
+    {
+        return $this->isAdmin() || $this->isMember();
+    }
+
+    /**
      * The last word of the name: the given name, for a Vietnamese one.
      */
     public function lastName(): string

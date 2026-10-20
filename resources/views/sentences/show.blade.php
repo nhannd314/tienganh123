@@ -25,17 +25,15 @@
         @endif
     </section>
 
-    <div class="flex flex-wrap items-start gap-10">
+    <div data-sidebar-layout class="group/layout flex flex-wrap items-start gap-10">
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             <x-example-sentences :examples="$exampleSentences" />
         </div>
 
-        <aside class="flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6">
-            <x-course-link-list :courses="$courses" />
-            <x-vocabulary-link-list title="Bộ từ vựng liên quan" :vocabularies="$vocabularies" />
-            <x-flashcard-set-link-list title="Flashcard liên quan" :flashcard-sets="$flashcardSets" />
-            <x-sentence-set-link-list title="Bộ câu mẫu cùng chủ đề" :sentence-sets="$sameTopic" />
-        </aside>
+        <x-sentence-set-sidebar :sidebar="$sidebar" class="flex-[1_1_360px] group-data-[sidebar-hidden]/layout:hidden">
+            {{-- The review starts at the first part the set has sentences for --}}
+            <x-quick-review title="Ôn tập câu mẫu" source="câu mẫu" :href="route('sentences.review', [$sentenceSet, 7])" />
+        </x-sentence-set-sidebar>
     </div>
 
     <x-slot:footer>

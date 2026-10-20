@@ -25,7 +25,7 @@
         @endif
     </section>
 
-    <div class="flex flex-wrap items-start gap-10">
+    <div data-sidebar-layout class="group/layout flex flex-wrap items-start gap-10">
         <div class="flex min-w-0 flex-[999_1_560px] flex-col gap-10">
             <x-vocabulary-table :words="$words" empty-message="Bộ từ vựng này chưa có từ nào." />
 
@@ -34,11 +34,11 @@
             @endif
         </div>
 
-        <aside class="flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6">
-            <x-course-link-list :courses="$courses" />
-            <x-vocabulary-link-list title="Từ vựng cùng chủ đề" :vocabularies="$sameTopic" />
-            <x-vocabulary-link-list title="Từ vựng liên quan" :vocabularies="$sameCourse" />
-        </aside>
+        <x-vocabulary-sidebar :sidebar="$sidebar" class="flex-[1_1_360px] group-data-[sidebar-hidden]/layout:hidden">
+            @if ($words->contains(fn ($word): bool => $word->meaningLabels() !== []))
+                <x-quick-review title="Ôn tập từ vựng" source="từ vựng" :href="route('vocabularies.review', [$vocabulary, 1])" />
+            @endif
+        </x-vocabulary-sidebar>
     </div>
 
     <x-slot:footer>

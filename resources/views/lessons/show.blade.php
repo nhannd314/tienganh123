@@ -1,6 +1,4 @@
 @php
-    $flashcardTones = ['primary', 'secondary', 'success', 'accent'];
-
     $statStyles = [
         'primary' => 'text-primary',
         'success' => 'text-success',
@@ -51,32 +49,7 @@
             @foreach ($flashcardSets as $flashcardSet)
             @php($cards = $flashcardSet->flashcards->filter(fn ($card): bool => filled($card->display_title)))
             @if ($cards->isNotEmpty())
-                <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card">
-                    <div class="flex items-center justify-between gap-4">
-                        <h2 class="type-h2 text-fg-strong">{{ $flashcardSet->title }}</h2>
-
-                        <div class="flex items-center gap-2">
-                            <x-chant :slides="$cards->map(fn ($card): array => ['image' => $card->image_url ?? $card->word?->image_url, 'title' => $card->display_title, 'ipa' => $card->word?->ipa_us, 'meaning' => $card->word?->firstPlainMeaning()])->all()" />
-                            <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-flashcard-toggle />
-                            <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
-                            <x-icon-button icon="panel-right-close" label="Ẩn thanh bên" size="sm" aria-pressed="false" class="max-lg:hidden" data-sidebar-toggle />
-                        </div>
-                    </div>
-
-                    <div data-flashcards class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,max(260px,calc((100%_-_2rem)/3))),1fr))] gap-4 group-data-[sidebar-hidden]/layout:grid-cols-[repeat(auto-fill,minmax(min(100%,max(220px,calc((100%_-_3rem)/4))),1fr))]">
-                        @foreach ($cards as $flashcard)
-                            @php($word = $flashcard->word)
-                            <x-flashcard
-                                :word="$flashcard->display_title"
-                                :phonetic="$word?->ipa_us"
-                                :meaning="$word?->firstPlainMeaning()"
-                                :image="$flashcard->image_url ?? $word?->image_url"
-                                :audio="$flashcard->audio_url"
-                                :tone="$flashcardTones[$loop->index % count($flashcardTones)]"
-                            />
-                        @endforeach
-                    </div>
-                </section>
+                <x-flashcard-set-card :title="$flashcardSet->title" :cards="$cards" />
             @endif
             @endforeach
 

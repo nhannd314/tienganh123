@@ -343,7 +343,7 @@ document.addEventListener('click', (event) => {
     }
 });
 
-// Example sentences (lesson page): the button beside the title hides or shows again the Vietnamese meaning of every sentence (shown at first).
+// Example sentences (lesson page): the button beside the title hides or shows again every sentence with its Vietnamese meaning (shown at first).
 document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-example-toggle]');
 
@@ -351,17 +351,17 @@ document.addEventListener('click', (event) => {
         return;
     }
 
-    const shown = button.getAttribute('aria-pressed') !== 'true';
+    const hidden = button.getAttribute('aria-pressed') !== 'true';
 
-    button.closest('section').querySelectorAll('[data-example-meaning]').forEach((meaning) => {
-        meaning.classList.toggle('invisible', !shown);
+    button.closest('section').querySelectorAll('[data-example-sentence], [data-example-meaning]').forEach((text) => {
+        text.classList.toggle('invisible', hidden);
     });
 
-    const label = shown ? 'Ẩn nghĩa' : 'Hiển thị nghĩa';
+    const label = hidden ? 'Hiện câu và nghĩa' : 'Ẩn câu và nghĩa';
 
-    button.setAttribute('aria-pressed', String(shown));
+    button.setAttribute('aria-pressed', String(hidden));
     button.title = button.ariaLabel = label;
-    swapIcon(button, shown ? 'eye-off' : 'eye');
+    swapIcon(button, hidden ? 'eye' : 'eye-off');
 });
 
 /*

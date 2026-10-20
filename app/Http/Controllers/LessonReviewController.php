@@ -12,6 +12,8 @@ use App\Models\Unit;
 use App\Models\Word;
 use App\Services\AdvancedReviewContent;
 use App\Services\AzurePronunciationAssessor;
+use App\Services\SentenceQuestions;
+use App\Services\WordChoiceQuestions;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
@@ -21,8 +23,6 @@ use Illuminate\Support\Str;
 
 class LessonReviewController extends Controller
 {
-    private const OPTIONS_PER_QUESTION = 4;
-
     /**
      * The parts that have questions so far: 1 (word → meaning), 2 (meaning → word), 3 (heard word → meaning),
      * 4 (meaning → typed word), 5 (word → spoken, scored by Azure), 6 (meaning → spoken word, scored by Azure) and
@@ -92,7 +92,7 @@ class LessonReviewController extends Controller
      *
      * @var list<array{title: string, hint: string}>
      */
-    private const STEPS = [
+    public const STEPS = [
         ['title' => 'Trả lời nghĩa', 'hint' => 'Chọn nghĩa đúng cho mỗi từ nhé!'],
         ['title' => 'Trả lời từ', 'hint' => 'Chọn từ tiếng Anh đúng nhé!'],
         ['title' => 'Nghe và trả lời nghĩa', 'hint' => 'Nghe thật kỹ rồi chọn nghĩa đúng nhé!'],
@@ -149,15 +149,15 @@ class LessonReviewController extends Controller
             'topLearners' => $this->lessonTopLearners($lesson),
             'standing' => auth()->user() ? $this->lessonStanding($lesson, auth()->user()) : null,
             'questions' => match ($step) {
-                1 => $this->meaningQuestions($lesson),
-                2 => $this->wordQuestions($lesson),
-                3 => $this->listeningQuestions($lesson),
+                1 => app(WordChoiceQuestions::class)->meaning($lesson->reviewWords()),
+                2 => app(WordChoiceQuestions::class)->word($lesson->reviewWords()),
+                3 => app(WordChoiceQuestions::class)->listening($lesson->reviewWords()),
                 4 => $this->spellingQuestions($lesson),
                 5 => $this->pronunciationQuestions($lesson),
                 6 => $this->recallQuestions($lesson),
-                7 => $this->sentenceQuestions($lesson),
-                8 => $this->writingQuestions($lesson),
-                9 => $this->dictationQuestions($lesson),
+                7 => app(SentenceQuestions::class)->fillIn(app(AdvancedReviewContent::class)->markedSentences($lesson)),
+                8 => app(SentenceQuestions::class)->write(app(AdvancedReviewContent::class)->writingSentences($lesson, true)),
+                9 => app(SentenceQuestions::class)->dictation(app(AdvancedReviewContent::class)->writingSentences($lesson, false)),
                 10 => $this->sentenceReadingQuestions($lesson),
                 11 => $this->passageQuestions($lesson),
                 default => [],
@@ -395,149 +395,6 @@ class LessonReviewController extends Controller
             ->map(fn (int $step): int => $step - 1)
             ->values()
             ->all();
-    }
-
-    /**
-     * Part 7 questions: a sentence cut into its text and the marked words to type in, with its translation under it.
-     *
-     * @return list<array{id: int, prompt: string, phonetic: null, segments: list<array{text: string, isMarked: bool}>, translation: string|null}>
-     */
-    private function sentenceQuestions(Lesson $lesson): array
-    {
-        return array_map(fn (array $sentence): array => [
-            ...$sentence,
-            'prompt' => implode('', array_column($sentence['segments'], 'text')),
-            'phonetic' => null,
-        ], app(AdvancedReviewContent::class)->markedSentences($lesson));
-    }
-
-    /**
-     * Part 8 questions: the meaning of a sentence, and the sentence to write. `word` is the sentence, shown once it has been answered.
-     *
-     * @return list<array{id: int, prompt: string, phonetic: null, word: string}>
-     */
-    private function writingQuestions(Lesson $lesson): array
-    {
-        return array_map(fn (array $sentence): array => [
-            'id' => $sentence['id'],
-            'prompt' => $sentence['translation'],
-            'phonetic' => null,
-            'word' => $sentence['sentence'],
-        ], app(AdvancedReviewContent::class)->writingSentences($lesson, true));
-    }
-
-    /**
-     * Part 9 questions: a sentence that is only heard (`prompt` is what is spoken, or `audio` is played), and the sentence to write.
-     *
-     * @return list<array{id: int, prompt: string, phonetic: null, word: string, audio: string|null}>
-     */
-    private function dictationQuestions(Lesson $lesson): array
-    {
-        return array_map(fn (array $sentence): array => [
-            'id' => $sentence['id'],
-            'prompt' => $sentence['sentence'],
-            'phonetic' => null,
-            'word' => $sentence['sentence'],
-            'audio' => $sentence['audio'],
-        ], app(AdvancedReviewContent::class)->writingSentences($lesson, false));
-    }
-
-    /**
-     * Part 1 questions: a word and all its meanings among the meanings of other words.
-     *
-     * @return list<array{id: int, prompt: string, phonetic: string|null, options: list<string>, answer: int}>
-     */
-    private function meaningQuestions(Lesson $lesson): array
-    {
-        $words = $lesson->reviewWords();
-
-        if ($words->isEmpty()) {
-            return [];
-        }
-
-        $extraLabels = Word::query()
-            ->whereNotIn('id', $words->pluck('id'))
-            ->inRandomOrder()
-            ->limit(30)
-            ->get()
-            ->toBase()
-            ->map(fn (Word $word): string => $word->allMeaningsLabel())
-            ->filter();
-
-        return $words->map(function (Word $word) use ($words, $extraLabels): array {
-            $correct = $word->allMeaningsLabel();
-
-            $distractors = $words
-                ->toBase()
-                ->reject(fn (Word $other): bool => $other->is($word))
-                ->map(fn (Word $other): string => $other->allMeaningsLabel())
-                ->shuffle()
-                ->concat($extraLabels->shuffle())
-                ->unique()
-                ->reject(fn (string $label): bool => $label === $correct)
-                ->take(self::OPTIONS_PER_QUESTION - 1);
-
-            $options = $distractors->push($correct)->shuffle()->values();
-
-            return [
-                'id' => $word->id,
-                'prompt' => $word->word,
-                'phonetic' => $word->ipa_us,
-                'options' => $options->all(),
-                'answer' => $options->search($correct),
-            ];
-        })->all();
-    }
-
-    /**
-     * Part 3 questions: those of part 1, but the word is only heard (`prompt` is what is spoken), so no IPA is given.
-     *
-     * @return list<array{id: int, prompt: string, phonetic: null, options: list<string>, answer: int}>
-     */
-    private function listeningQuestions(Lesson $lesson): array
-    {
-        return array_map(fn (array $question): array => [...$question, 'phonetic' => null], $this->meaningQuestions($lesson));
-    }
-
-    /**
-     * Part 2 questions: all the meanings of a word and the word among other words, of the lesson first.
-     *
-     * @return list<array{id: int, prompt: string, phonetic: null, options: list<string>, answer: int}>
-     */
-    private function wordQuestions(Lesson $lesson): array
-    {
-        $words = $lesson->reviewWords();
-
-        if ($words->isEmpty()) {
-            return [];
-        }
-
-        $extraWords = Word::query()
-            ->whereNotIn('id', $words->pluck('id'))
-            ->inRandomOrder()
-            ->limit(30)
-            ->pluck('word');
-
-        return $words->map(function (Word $word) use ($words, $extraWords): array {
-            $distractors = $words
-                ->reject(fn (Word $other): bool => $other->is($word))
-                ->pluck('word')
-                ->shuffle()
-                ->concat($extraWords->shuffle())
-                ->unique(fn (string $other): string => mb_strtolower($other))
-                ->reject(fn (string $other): bool => mb_strtolower($other) === mb_strtolower($word->word))
-                ->take(self::OPTIONS_PER_QUESTION - 1);
-
-            $options = $distractors->push($word->word)->shuffle()->values();
-
-            return [
-                'id' => $word->id,
-                'prompt' => $word->allMeaningsLabel(),
-                'phonetic' => null,
-                'options' => $options->all(),
-                'answer' => $options->search($word->word),
-            ];
-        })->all();
     }
 
     /**

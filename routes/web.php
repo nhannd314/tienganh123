@@ -20,9 +20,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\SentenceSetController;
 use App\Http\Controllers\SentenceSetIndexController;
+use App\Http\Controllers\SentenceSetReviewController;
 use App\Http\Controllers\SepayWebhookController;
 use App\Http\Controllers\VocabularyController;
 use App\Http\Controllers\VocabularyIndexController;
+use App\Http\Controllers\VocabularyReviewController;
 use App\Http\Middleware\EnsureLessonAccess;
 use App\Http\Middleware\VerifySepayWebhook;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -35,10 +37,18 @@ Route::get('/khoa-hoc/{course:slug}/dang-ky', CourseEnrollmentController::class)
 Route::get('/tim-kiem', SearchController::class)->name('search');
 Route::get('/tu-vung', VocabularyIndexController::class)->name('vocabularies.index');
 Route::get('/tu-vung/{vocabulary:slug}', VocabularyController::class)->name('vocabularies.show');
+Route::get('/tu-vung/{vocabulary:slug}/on-tap/{step}', VocabularyReviewController::class)
+    ->whereIn('step', ['1', '2', '3'])
+    ->middleware('auth')
+    ->name('vocabularies.review');
 Route::get('/flashcard', FlashcardSetIndexController::class)->name('flashcards.index');
 Route::get('/flashcard/{flashcardSet:slug}', FlashcardSetController::class)->name('flashcards.show');
 Route::get('/cau-mau', SentenceSetIndexController::class)->name('sentences.index');
 Route::get('/cau-mau/{sentenceSet:slug}', SentenceSetController::class)->name('sentences.show');
+Route::get('/cau-mau/{sentenceSet:slug}/on-tap/{step}', SentenceSetReviewController::class)
+    ->whereIn('step', ['7', '8', '9'])
+    ->middleware('auth')
+    ->name('sentences.review');
 Route::get('/blog-tieng-anh', PostIndexController::class)->name('posts.index');
 Route::get('/blog-tieng-anh/{post:slug}', PostController::class)->name('posts.show');
 Route::view('/tools/crossword', 'tools.crossword')->name('tools.crossword');

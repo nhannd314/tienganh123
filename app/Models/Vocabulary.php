@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasSlug;
 use Database\Factories\VocabularyFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -37,6 +38,18 @@ class Vocabulary extends Model
             ->withPivot('sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order');
+    }
+
+    /**
+     * The words the review of the vocabulary asks about: all of those that have at least one meaning.
+     *
+     * @return Collection<int, Word>
+     */
+    public function reviewWords(): Collection
+    {
+        return $this->words
+            ->filter(fn (Word $word): bool => $word->meaningLabels() !== [])
+            ->values();
     }
 
     /**

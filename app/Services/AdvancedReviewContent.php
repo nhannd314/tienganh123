@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Lesson;
 use App\Models\Sentence;
+use Illuminate\Support\Collection;
 
 /**
  * The content of the advanced parts of the lesson review (parts 7 to 11): the sentences of the lesson and the paragraphs of
@@ -18,14 +19,25 @@ class AdvancedReviewContent
      */
     public function markedSentences(Lesson $lesson): array
     {
-        return ($lesson->sentenceSet?->sentences ?? collect())
+        return $this->markedSentencesOf($lesson->sentenceSet?->sentences ?? collect(), Lesson::REVIEW_QUESTIONS_PER_PART);
+    }
+
+    /**
+     * The sentences (at most `$limit`, all without one) that have words marked with backticks, each cut into its text and the words to fill in.
+     *
+     * @param  Collection<int, Sentence>  $sentences
+     * @return list<array{id: int, segments: list<array{text: string, isMarked: bool}>, translation: string|null}>
+     */
+    public function markedSentencesOf(Collection $sentences, ?int $limit = null): array
+    {
+        return $sentences
             ->map(fn (Sentence $sentence): array => [
                 'id' => $sentence->id,
                 'segments' => Lesson::sentenceSegments($sentence->sentence),
                 'translation' => $sentence->translation,
             ])
             ->filter(fn (array $sentence): bool => collect($sentence['segments'])->contains('isMarked', true))
-            ->take(Lesson::REVIEW_QUESTIONS_PER_PART)
+            ->when($limit !== null, fn (Collection $marked): Collection => $marked->take($limit))
             ->values()
             ->all();
     }
@@ -38,9 +50,20 @@ class AdvancedReviewContent
      */
     public function writingSentences(Lesson $lesson, bool $needsTranslation): array
     {
-        return ($lesson->sentenceSet?->sentences ?? collect())
+        return $this->writingSentencesOf($lesson->sentenceSet?->sentences ?? collect(), $needsTranslation, Lesson::REVIEW_QUESTIONS_PER_PART);
+    }
+
+    /**
+     * The sentences (at most `$limit`, all without one) to be written whole, with a translation when `$needsTranslation`.
+     *
+     * @param  Collection<int, Sentence>  $sentences
+     * @return list<array{id: int, sentence: string, translation: string|null, audio: string|null}>
+     */
+    public function writingSentencesOf(Collection $sentences, bool $needsTranslation, ?int $limit = null): array
+    {
+        return $sentences
             ->filter(fn (Sentence $sentence): bool => ! $needsTranslation || filled($sentence->translation))
-            ->take(Lesson::REVIEW_QUESTIONS_PER_PART)
+            ->when($limit !== null, fn (Collection $writable): Collection => $writable->take($limit))
             ->map(fn (Sentence $sentence): array => [
                 'id' => $sentence->id,
                 'sentence' => Lesson::spokenSentence($sentence->sentence),
