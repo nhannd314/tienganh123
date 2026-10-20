@@ -4,6 +4,8 @@ use App\Jobs\FetchWordPronunciation;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonReview;
+use App\Models\Sentence;
+use App\Models\SentenceSet;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Word;
@@ -311,7 +313,7 @@ it('returns not found for an unknown part or an unpublished lesson, unit or cour
     $lesson = reviewLesson();
 
     $this->get(reviewUrl($lesson, 0))->assertNotFound();
-    $this->get(reviewUrl($lesson, 7))->assertNotFound();
+    $this->get(reviewUrl($lesson, 12))->assertNotFound();
 
     $lesson->update(['is_published' => false]);
     $this->get(reviewUrl($lesson))->assertNotFound();
@@ -425,7 +427,7 @@ it('marks only the parts the signed-in user passed with at least 80% right', fun
 });
 
 it('offers no next part after the last one', function () {
-    $this->get(reviewUrl(reviewLesson(), 6))->assertOk()->assertDontSee('Phần tiếp theo');
+    $this->get(reviewUrl(reviewLesson(), 10))->assertOk()->assertDontSee('Phần tiếp theo');
 });
 
 it('starts the sidebar progress at zero out of the questions of all six parts', function () {
@@ -765,4 +767,230 @@ it('saves the score when a part is saved and shows the top learners in the sideb
         ->assertJsonPath('standing.rank', '2/2');
 
     $this->actingAs($user)->get(reviewUrl($lesson))->assertSee('Đối Thủ Giỏi')->assertSee('9999');
+});
+
+function reviewLessonWithSentences(): Lesson
+{
+    $lesson = reviewLesson(2);
+    $lesson->update(['sentence_set_id' => SentenceSet::factory()->create()->id]);
+    $lesson->sentenceSet->sentences()->attach([
+        Sentence::factory()->create(['sentence' => 'I have an `apple` and a `pear`.', 'translation' => 'Tôi có một quả táo và một quả lê.'])->id,
+        Sentence::factory()->create(['sentence' => 'No marked word here.', 'translation' => 'Bỏ qua câu này.'])->id,
+    ]);
+
+    return $lesson->fresh();
+}
+
+it('shows part 7 with the sentences that have marked words, split into text and words to fill in', function () {
+    $lesson = reviewLessonWithSentences();
+
+    $response = $this->get(reviewUrl($lesson, 7))
+        ->assertOk()
+        ->assertSee('Điền từ còn thiếu vào câu nhé!')
+        ->assertSee('data-sentence-translation', false)
+        ->assertSee('data-check', false);
+
+    $questions = reviewQuestions($response->getContent());
+
+    expect($questions)->toHaveCount(1)
+        ->and($questions[0]['translation'])->toBe('Tôi có một quả táo và một quả lê.')
+        ->and(array_column(array_filter($questions[0]['segments'], fn (array $segment): bool => $segment['isMarked']), 'text'))->toBe(['apple', 'pear']);
+});
+
+it('shows only the tabs 7 to 10 on the advanced parts and 1 to 6 on the basic ones', function () {
+    $lesson = reviewLessonWithSentences();
+
+    $this->get(reviewUrl($lesson, 7))
+        ->assertSee('Điền câu')
+        ->assertSee('Đọc câu')
+        ->assertSee(reviewUrl($lesson, 10), false)
+        ->assertDontSee('Trả lời nghĩa');
+
+    $this->get(reviewUrl($lesson, 1))
+        ->assertSee('Nhớ phát âm')
+        ->assertDontSee('Điền câu');
+});
+
+it('tells the learner when the lesson has no sentences for the advanced parts', function () {
+    foreach ([7, 8, 9, 10, 11] as $step) {
+        $this->get(reviewUrl(reviewLesson(), $step))
+            ->assertOk()
+            ->assertSee('Chưa có câu hỏi');
+    }
+});
+
+it('grades part 7 on every marked word of the sentence, ignoring case', function () {
+    signIn();
+    $lesson = reviewLessonWithSentences();
+    $sentenceId = Sentence::query()->where('sentence', 'like', 'I have%')->value('id');
+
+    $this->postJson(reviewUrl($lesson, 7, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => $sentenceId, 'selected' => 'Apple| pear'],
+    ]])
+        ->assertCreated()
+        ->assertJson(['total' => 1, 'correct' => 1]);
+
+    $this->postJson(reviewUrl($lesson, 7, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => $sentenceId, 'selected' => 'apple|plum'],
+    ]])->assertJson(['total' => 1, 'correct' => 0]);
+});
+
+it('counts the advanced parts the lesson has questions for in its progress', function () {
+    $user = signIn();
+    $lesson = reviewLessonWithSentences();
+
+    expect($lesson->reviewSteps())->toBe([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        ->and($lesson->reviewProgress($user))->toMatchArray(['parts' => 10, 'total' => 19, 'done' => 0, 'percent' => 0]);
+
+    LessonReview::factory()->for($lesson)->for($user)->create(['step' => 7, 'total' => 1, 'correct' => 1]);
+    LessonReview::factory()->for($lesson)->for($user)->create(['step' => 10, 'total' => 2, 'correct' => 1, 'answers' => [
+        ['word_id' => 1, 'selected' => '8', 'correct' => true],
+        ['word_id' => 2, 'selected' => '4', 'correct' => false],
+    ]]);
+
+    expect($lesson->reviewProgress($user))->toMatchArray(['done' => 3, 'correct' => 2, 'completedParts' => 1, 'percent' => 10, 'pronunciation' => 6.0, 'pronunciationWords' => 2]);
+});
+
+it('leaves out the advanced parts a lesson has nothing for', function () {
+    $user = signIn();
+    $lesson = reviewLesson(5);
+
+    LessonReview::factory()->for($lesson)->for($user)->create(['step' => 7, 'total' => 1, 'correct' => 1]);
+
+    expect($lesson->reviewSteps())->toBe([1, 2, 3, 4, 5, 6])
+        ->and($lesson->reviewProgress($user))->toMatchArray(['parts' => 6, 'total' => 30, 'done' => 0, 'completedParts' => 0]);
+});
+
+it('gives the course page the percent of a lesson over the parts that lesson has', function () {
+    $user = signIn();
+    $lesson = reviewLessonWithSentences();
+
+    LessonReview::factory()->for($lesson)->for($user)->count(5)->sequence(fn ($sequence) => ['step' => $sequence->index + 1])->create(['total' => 10, 'correct' => 10]);
+
+    expect(Lesson::reviewPercentsFor($user, [$lesson->id])->all())->toBe([$lesson->id => 50]);
+});
+
+it('shows part 8 with the meaning of each sentence and the whole sentence to write', function () {
+    $lesson = reviewLessonWithSentences();
+
+    $response = $this->get(reviewUrl($lesson, 8))
+        ->assertOk()
+        ->assertSee('Đọc nghĩa rồi viết lại cả câu tiếng Anh nhé!')
+        ->assertSee('data-write', false);
+
+    expect(reviewQuestions($response->getContent()))->toHaveCount(2)
+        ->and(reviewQuestions($response->getContent())[0])->toMatchArray([
+            'prompt' => 'Tôi có một quả táo và một quả lê.',
+            'word' => 'I have an apple and a pear.',
+        ]);
+});
+
+it('grades part 8 on the whole sentence, ignoring case, punctuation and extra spaces', function () {
+    signIn();
+    $lesson = reviewLessonWithSentences();
+    $sentences = Sentence::query()->orderBy('id')->pluck('id');
+
+    $this->postJson(reviewUrl($lesson, 8, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => $sentences[0], 'selected' => '  i have an  APPLE and a pear '],
+        ['word_id' => $sentences[1], 'selected' => 'No marked word.'],
+    ]])
+        ->assertCreated()
+        ->assertJson(['total' => 2, 'correct' => 1]);
+});
+
+it('shows part 9 with a sentence to listen to, hidden, and the whole sentence to write', function () {
+    $lesson = reviewLessonWithSentences();
+
+    $response = $this->get(reviewUrl($lesson, 9))
+        ->assertOk()
+        ->assertSee('Nghe thật kỹ rồi viết lại cả câu nhé!')
+        ->assertSee('data-prompt-listen', false)
+        ->assertSee('data-write', false);
+
+    expect(reviewQuestions($response->getContent()))->toHaveCount(2)
+        ->and(reviewQuestions($response->getContent())[0])->toMatchArray(['prompt' => 'I have an apple and a pear.', 'word' => 'I have an apple and a pear.']);
+});
+
+it('grades part 9 on the whole sentence that was heard', function () {
+    signIn();
+    $lesson = reviewLessonWithSentences();
+    $sentences = Sentence::query()->orderBy('id')->pluck('id');
+
+    $this->postJson(reviewUrl($lesson, 9, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => $sentences[0], 'selected' => 'I have an apple and a pear'],
+        ['word_id' => $sentences[1], 'selected' => 'Something else'],
+    ]])->assertCreated();
+
+    expect(LessonReview::sole()->correct)->toBe(1);
+});
+
+it('shows part 10 with the sentence to read and the microphone', function () {
+    $lesson = reviewLessonWithSentences();
+
+    $response = $this->get(reviewUrl($lesson, 10))
+        ->assertOk()
+        ->assertSee('Nghe mẫu, rồi bấm micro và đọc to cả câu này nhé!')
+        ->assertSee('data-record', false)
+        ->assertSee('"maxRecordingMs":15000', false);
+
+    expect(reviewQuestions($response->getContent()))->toHaveCount(2)
+        ->and(reviewQuestions($response->getContent())[0])->toMatchArray(['prompt' => 'I have an apple and a pear.']);
+});
+
+it('has Azure score a whole sentence in part 10 and grades the part from those scores', function () {
+    config(['services.azure_speech' => ['key' => 'speech-key', 'region' => 'southeastasia', 'endpoint' => null]]);
+    Http::fake(['*' => azureAssessment(85)]);
+    signIn();
+    $lesson = reviewLessonWithSentences();
+    $sentences = Sentence::query()->orderBy('id')->pluck('id');
+
+    $this->get(reviewUrl($lesson, 10));
+
+    $this->post(
+        route('lessons.review.pronounce', [$lesson->unit->course, $lesson->unit, $lesson]),
+        ['word_id' => $sentences[0], 'step' => 10, 'audio' => fakeWav()],
+        ['Accept' => 'application/json'],
+    )->assertJson(['score' => 9, 'passed' => true]);
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request->header('Pronunciation-Assessment')[0] ?? '', base64_encode('I have an apple and a pear.')) || str_contains(base64_decode($request->header('Pronunciation-Assessment')[0] ?? ''), 'I have an apple and a pear.'));
+
+    $this->postJson(reviewUrl($lesson, 10, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => $sentences[0], 'selected' => '9'],
+        ['word_id' => $sentences[1], 'selected' => '0'],
+    ]])
+        ->assertCreated()
+        ->assertJson(['total' => 2, 'correct' => 1]);
+});
+
+it('shows part 11 with the whole passage, an input for each marked word and the audio player', function () {
+    $lesson = reviewLesson(2);
+    $lesson->update([
+        'passage' => '<p>An <code>apple</code> a day keeps the <code>doctor</code> away.</p><p>No marked word.</p><p>I <strong>like</strong> <code>pears</code>.</p>',
+        'passage_audio' => 'lessons/passage-audio/story.mp3',
+    ]);
+
+    $response = $this->get(reviewUrl($lesson, 11))
+        ->assertOk()
+        ->assertSee('Nghe đoạn văn rồi điền từ còn thiếu nhé!')
+        ->assertSee('Điền 3 từ còn thiếu')
+        ->assertSee('<audio controls preload="none" src="', false)
+        ->assertSee('lessons/passage-audio/story.mp3', false)
+        ->assertSee('No marked word.')
+        ->assertSee('data-check', false);
+
+    expect(substr_count($response->getContent(), 'data-id='))->toBe(3)
+        ->and(array_column(reviewQuestions($response->getContent()), 'word'))->toBe(['apple', 'doctor', 'pears']);
+});
+
+it('grades part 11 on each word of the passage', function () {
+    signIn();
+    $lesson = reviewLesson(2);
+    $lesson->update(['passage' => '<p>An <code>apple</code> a day keeps the <code>doctor</code> away.</p>']);
+
+    $this->postJson(reviewUrl($lesson, 11, 'lessons.review.store'), ['duration' => 20, 'answers' => [
+        ['word_id' => 1, 'selected' => 'APPLE'],
+        ['word_id' => 2, 'selected' => 'nurse'],
+    ]])
+        ->assertCreated()
+        ->assertJson(['total' => 2, 'correct' => 1]);
 });

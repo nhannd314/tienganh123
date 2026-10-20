@@ -1,6 +1,6 @@
 {{--
     Lesson stepper: a numbered circle per step with its label underneath, joined by a line (green once the previous step
-    is done). `steps` is a list of labels or ['label' => ..., 'href' => ...]; `active` is the current 0-based index.
+    is done). `steps` is a list of labels or ['label' => ..., 'href' => ...]; `active` is the current 0-based index; `start` is the number of the first step.
     Steps before `active` count as done unless `completed` (list of indexes) is given.
 --}}
 @props([
@@ -8,6 +8,7 @@
     'active' => 0,
     'completed' => null,
     'label' => 'Các bước',
+    'start' => 1,
 ])
 
 @php
@@ -42,7 +43,7 @@
                 <{{ $tag }}
                     @if ($stepHref) href="{{ $stepHref }}" @else type="button" @endif
                     @if ($isCurrent) aria-current="step" @endif
-                    aria-label="Bước {{ $index + 1 }} trên {{ $total }}: {{ $stepLabel }}{{ $isStepDone ? ' (đã xong)' : '' }}"
+                    aria-label="Bước {{ $start + $index }} trên {{ $start + $total - 1 }}: {{ $stepLabel }}{{ $isStepDone ? ' (đã xong)' : '' }}"
                     class="group flex w-full cursor-pointer flex-col items-center gap-3 rounded-md border-0 bg-transparent px-1 py-2 no-underline transition-interactive hover:no-underline active:translate-y-px"
                 >
                     <span aria-hidden="true" @class([
@@ -54,7 +55,7 @@
                         @if ($isStepDone)
                             <x-icon name="check" />
                         @else
-                            {{ $index + 1 }}
+                            {{ $start + $index }}
                         @endif
                     </span>
                     <span @class([

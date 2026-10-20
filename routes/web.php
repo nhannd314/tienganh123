@@ -41,6 +41,8 @@ Route::get('/cau-mau', SentenceSetIndexController::class)->name('sentences.index
 Route::get('/cau-mau/{sentenceSet:slug}', SentenceSetController::class)->name('sentences.show');
 Route::get('/blog-tieng-anh', PostIndexController::class)->name('posts.index');
 Route::get('/blog-tieng-anh/{post:slug}', PostController::class)->name('posts.show');
+Route::view('/tools/crossword', 'tools.crossword')->name('tools.crossword');
+Route::view('/tools/wordsearch', 'tools.wordsearch')->name('tools.wordsearch');
 Route::get('/trang/{page:slug}', PageController::class)->name('pages.show');
 Route::get('/ho-so', [ProfileController::class, 'show'])->middleware('auth')->name('profile.show');
 Route::put('/ho-so', [ProfileController::class, 'update'])->middleware('auth')->name('profile.update');
@@ -63,12 +65,12 @@ Route::post('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/tro-choi/{game}/t
     ->middleware(['auth', EnsureLessonAccess::class, 'throttle:30,1'])
     ->name('lessons.games.score');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/review/{step}', [LessonReviewController::class, 'show'])
-    ->whereIn('step', ['1', '2', '3', '4', '5', '6'])
+    ->whereIn('step', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'])
     ->scopeBindings()
     ->middleware(EnsureLessonAccess::class)
     ->name('lessons.review.show');
 Route::post('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/review/{step}', [LessonReviewController::class, 'store'])
-    ->whereIn('step', ['1', '2', '3', '4', '5', '6'])
+    ->whereIn('step', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'])
     ->scopeBindings()
     ->middleware(['auth', EnsureLessonAccess::class])
     ->name('lessons.review.store');

@@ -21,7 +21,7 @@ class StoreLessonReviewRequest extends FormRequest
     {
         return [
             'duration' => ['required', 'integer', 'min:0', 'max:86400'],
-            'answers' => ['required', 'array', 'min:1', 'max:10'],
+            'answers' => ['required', 'array', 'min:1', 'max:30'],
             'answers.*.word_id' => ['required', 'integer', 'distinct'],
             'answers.*.selected' => ['required', 'string', 'max:255'],
         ];

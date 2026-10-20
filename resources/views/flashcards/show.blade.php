@@ -46,7 +46,7 @@
                             <x-chant :slides="$cards->map(fn ($card): array => ['image' => $card->image_url ?? $card->word?->image_url, 'title' => $card->display_title, 'ipa' => $card->word?->ipa_us, 'meaning' => $card->word?->firstPlainMeaning()])->all()" />
                             <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-flashcard-toggle />
                             <x-icon-button icon="printer" label="In flashcard" size="sm" data-print-flashcards />
-                            <x-icon-button icon="panel-right-close" label="Ẩn thanh bên" size="sm" aria-pressed="false" data-sidebar-toggle />
+                            <x-icon-button icon="panel-right-close" label="Ẩn thanh bên" size="sm" aria-pressed="false" class="max-lg:hidden" data-sidebar-toggle />
                         </div>
                     </div>
 

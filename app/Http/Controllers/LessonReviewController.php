@@ -7,8 +7,10 @@ use App\Http\Requests\StorePronunciationRequest;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonReview;
+use App\Models\Sentence;
 use App\Models\Unit;
 use App\Models\Word;
+use App\Services\AdvancedReviewContent;
 use App\Services\AzurePronunciationAssessor;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Client\ConnectionException;
@@ -22,18 +24,50 @@ class LessonReviewController extends Controller
 
     /**
      * The parts that have questions so far: 1 (word → meaning), 2 (meaning → word), 3 (heard word → meaning),
-     * 4 (meaning → typed word), 5 (word → spoken, scored by Azure) and 6 (meaning → spoken word, scored by Azure).
+     * 4 (meaning → typed word), 5 (word → spoken, scored by Azure), 6 (meaning → spoken word, scored by Azure) and
+     * 7 (sentence with its marked words typed in) 8 (meaning of a sentence → the whole sentence typed), 9 (heard sentence → the whole sentence typed) and 10
+     * (sentence → read aloud, scored by Azure) and 11 (heard passage → its marked words typed in, all at once).
      *
      * @var list<int>
      */
-    private const BUILT_STEPS = [1, 2, 3, 4, 5, 6];
+    private const BUILT_STEPS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+
+    /**
+     * The first part of the advanced review (parts 7 to 10); the parts before it make the basic review. The tabs show one of the two groups.
+     */
+    private const ADVANCED_FIRST_STEP = 7;
+
+    /**
+     * The sentence parts, where the questions are the sentences of the lesson and not its words: 7 fills in the marked
+     * words, 8 and 9 write the whole sentence (from its meaning, or after hearing it).
+     *
+     * @var list<int>
+     */
+    private const SENTENCE_STEPS = [7, 8, 9];
+
+    /**
+     * The parts that work on whole sentences: typed in 8 and 9, read aloud in 10.
+     *
+     * @var list<int>
+     */
+    private const WRITING_STEPS = [8, 9, 10];
+
+    /**
+     * The part where a sentence is read into the microphone: its scores are kept apart from those of the words of parts 5 and 6.
+     */
+    private const SENTENCE_READING_STEP = 10;
+
+    /**
+     * Joins the words typed into one sentence in the answer sent by the browser (see resources/js/review.js).
+     */
+    private const SENTENCE_BLANK_SEPARATOR = '|';
 
     /**
      * The parts where the word is read into the microphone and scored by Azure.
      *
      * @var list<int>
      */
-    private const PRONUNCIATION_STEPS = [5, 6];
+    private const PRONUNCIATION_STEPS = [5, 6, 10];
 
     /**
      * A word counts as read right in parts 5 and 6 from this score out of 10.
@@ -44,6 +78,13 @@ class LessonReviewController extends Controller
      * How many times a word may be read in parts 5 and 6; its best score counts.
      */
     public const PRONUNCIATION_ATTEMPTS = 3;
+
+    /**
+     * How long a reading may last: a word, or a whole sentence (the WAV must stay under 1 MB, see StorePronunciationRequest).
+     */
+    private const WORD_RECORDING_MS = 4000;
+
+    private const SENTENCE_RECORDING_MS = 15000;
 
     /**
      * The review parts, in order, with the instruction shown above the questions.
@@ -57,6 +98,11 @@ class LessonReviewController extends Controller
         ['title' => 'Điền từ tiếng Anh', 'hint' => 'Gõ từ tiếng Anh đúng vào các ô nhé!'],
         ['title' => 'Chấm điểm phát âm', 'hint' => 'Nghe mẫu, rồi bấm micro và đọc to từ này nhé!'],
         ['title' => 'Nhớ phát âm', 'hint' => 'Nhớ lại cách phát âm và chọn đáp án nhé!'],
+        ['title' => 'Điền câu', 'hint' => 'Điền từ còn thiếu vào câu nhé!'],
+        ['title' => 'Viết câu', 'hint' => 'Đọc nghĩa rồi viết lại cả câu tiếng Anh nhé!'],
+        ['title' => 'Nghe câu', 'hint' => 'Nghe thật kỹ rồi viết lại cả câu nhé!'],
+        ['title' => 'Đọc câu', 'hint' => 'Nghe mẫu, rồi bấm micro và đọc to cả câu này nhé!'],
+        ['title' => 'Nghe đoạn văn', 'hint' => 'Nghe đoạn văn rồi điền từ còn thiếu nhé!'],
     ];
 
     /**
@@ -67,8 +113,10 @@ class LessonReviewController extends Controller
         $this->ensurePublished($course, $unit, $lesson);
 
         if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
-            session()->forget($this->pronunciationKey($lesson));
+            session()->forget($this->pronunciationKey($lesson, $step));
         }
+
+        $firstTabStep = $this->firstTabStep($step);
 
         return view('lessons.review', [
             'course' => $course,
@@ -76,11 +124,16 @@ class LessonReviewController extends Controller
             'lesson' => $lesson,
             'step' => $step,
             'stepInfo' => self::STEPS[$step - 1],
+            'firstTabStep' => $firstTabStep,
             'steps' => collect(self::STEPS)->map(fn (array $info, int $index): array => [
                 'label' => $info['title'],
                 'href' => route('lessons.review.show', [$course, $unit, $lesson, $index + 1]),
-            ])->all(),
-            'completedSteps' => $this->completedSteps($lesson),
+            ])->slice($firstTabStep - 1, $this->tabCount($step))->values()->all(),
+            'completedSteps' => collect($this->completedSteps($lesson))
+                ->map(fn (int $index): int => $index - ($firstTabStep - 1))
+                ->filter(fn (int $index): bool => $index >= 0 && $index < $this->tabCount($step))
+                ->values()
+                ->all(),
             'progress' => auth()->user() ? $lesson->reviewProgress(auth()->user()) : null,
             'enrollCourse' => $course->needsEnrollmentBy(auth()->user()) ? $course : null,
             'canSave' => auth()->check(),
@@ -93,11 +146,19 @@ class LessonReviewController extends Controller
                 4 => $this->spellingQuestions($lesson),
                 5 => $this->pronunciationQuestions($lesson),
                 6 => $this->recallQuestions($lesson),
+                7 => $this->sentenceQuestions($lesson),
+                8 => $this->writingQuestions($lesson),
+                9 => $this->dictationQuestions($lesson),
+                10 => $this->sentenceReadingQuestions($lesson),
+                11 => $this->passageQuestions($lesson),
                 default => [],
             },
             'isBuilt' => in_array($step, self::BUILT_STEPS, true),
             'nextUrl' => $step < count(self::STEPS) ? route('lessons.review.show', [$course, $unit, $lesson, $step + 1]) : null,
             'submitUrl' => route('lessons.review.store', [$course, $unit, $lesson, $step]),
+            'passage' => $step === 11 ? app(AdvancedReviewContent::class)->passageParagraphs($lesson) : [],
+            'passageAudioUrl' => $lesson->passage_audio_url,
+            'maxRecordingMs' => $step === self::SENTENCE_READING_STEP ? self::SENTENCE_RECORDING_MS : self::WORD_RECORDING_MS,
             'pronounceUrl' => route('lessons.review.pronounce', [$course, $unit, $lesson]),
         ]);
     }
@@ -111,16 +172,22 @@ class LessonReviewController extends Controller
         $this->ensurePublished($course, $unit, $lesson);
         abort_unless(in_array($step, self::BUILT_STEPS, true), 404);
 
-        $words = $lesson->reviewWords()->keyBy('id');
+        $isSentencePart = in_array($step, self::SENTENCE_STEPS, true);
+        $words = match (true) {
+            $step === 11 => collect(app(AdvancedReviewContent::class)->passageBlanks($lesson))->map(fn (string $word, int $id): array => ['id' => $id, 'word' => $word])->keyBy('id'),
+            in_array($step, self::WRITING_STEPS, true) => collect(app(AdvancedReviewContent::class)->writingSentences($lesson, $step === 8))->keyBy('id'),
+            $isSentencePart => collect(app(AdvancedReviewContent::class)->markedSentences($lesson))->keyBy('id'),
+            default => $lesson->reviewWords()->keyBy('id'),
+        };
         $answers = collect($request->validated('answers'));
 
         if ($answers->count() !== $words->count() || $answers->contains(fn (array $answer): bool => ! $words->has($answer['word_id']))) {
             return response()->json(['message' => 'The answers do not match the questions of this lesson.'], 422);
         }
 
-        $scores = session($this->pronunciationKey($lesson), []);
+        $scores = session($this->pronunciationKey($lesson, $step), []);
 
-        $graded = $answers->map(function (array $answer) use ($words, $step, $scores): array {
+        $graded = $answers->map(function (array $answer) use ($words, $step, $scores, $isSentencePart): array {
             if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
                 $best = $scores[$answer['word_id']]['best'] ?? 0;
 
@@ -130,7 +197,12 @@ class LessonReviewController extends Controller
             return [
                 'word_id' => (int) $answer['word_id'],
                 'selected' => $answer['selected'],
-                'correct' => $this->isCorrect($words[$answer['word_id']], $step, $answer['selected']),
+                'correct' => match (true) {
+                    in_array($step, self::WRITING_STEPS, true) => $this->normalizeSentence($words[$answer['word_id']]['sentence']) === $this->normalizeSentence($answer['selected']),
+                    $step === 11 => $this->normalizeBlank($words[$answer['word_id']]['word']) === $this->normalizeBlank($answer['selected']),
+                    $isSentencePart => $this->isSentenceCorrect($words[$answer['word_id']], $answer['selected']),
+                    default => $this->isCorrect($words[$answer['word_id']], $step, $answer['selected']),
+                },
             ];
         })->values();
 
@@ -145,7 +217,7 @@ class LessonReviewController extends Controller
         ]);
 
         if (in_array($step, self::PRONUNCIATION_STEPS, true)) {
-            session()->forget($this->pronunciationKey($lesson));
+            session()->forget($this->pronunciationKey($lesson, $step));
         }
 
         $user = $request->user();
@@ -174,30 +246,37 @@ class LessonReviewController extends Controller
             return response()->json(['message' => 'Chức năng chấm phát âm chưa được cấu hình.'], 503);
         }
 
-        $word = $lesson->reviewWords()->firstWhere('id', (int) $request->validated('word_id'));
+        $step = (int) ($request->validated('step') ?? 5);
+        $id = (int) $request->validated('word_id');
 
-        if ($word === null) {
-            return response()->json(['message' => 'Từ này không có trong bài ôn tập.'], 422);
+        if ($step === self::SENTENCE_READING_STEP) {
+            $text = collect(app(AdvancedReviewContent::class)->writingSentences($lesson, false))->firstWhere('id', $id)['sentence'] ?? null;
+        } else {
+            $text = $lesson->reviewWords()->firstWhere('id', $id)?->word;
         }
 
-        $key = $this->pronunciationKey($lesson);
+        if ($text === null) {
+            return response()->json(['message' => 'Nội dung này không có trong bài ôn tập.'], 422);
+        }
+
+        $key = $this->pronunciationKey($lesson, $step);
         $scores = session($key, []);
-        $attempts = $scores[$word->id]['attempts'] ?? 0;
+        $attempts = $scores[$id]['attempts'] ?? 0;
 
         if ($attempts >= self::PRONUNCIATION_ATTEMPTS) {
             return response()->json(['message' => 'Bạn đã đọc từ này đủ số lần.'], 422);
         }
 
         try {
-            $score = $assessor->assess($request->file('audio')->get(), $word->word);
+            $score = $assessor->assess($request->file('audio')->get(), $text);
         } catch (RequestException|ConnectionException $exception) {
             report($exception);
 
             return response()->json(['message' => 'Chưa chấm được, bạn đọc lại nhé.'], 502);
         }
 
-        $best = max($score, $scores[$word->id]['best'] ?? 0);
-        $scores[$word->id] = ['best' => $best, 'attempts' => $attempts + 1];
+        $best = max($score, $scores[$id]['best'] ?? 0);
+        $scores[$id] = ['best' => $best, 'attempts' => $attempts + 1];
         session([$key => $scores]);
 
         return response()->json([
@@ -226,11 +305,59 @@ class LessonReviewController extends Controller
     }
 
     /**
-     * Session key of the part 5 and 6 scores of the lesson: word id => best score and attempts.
+     * Whether the words typed into a sentence (joined by SENTENCE_BLANK_SEPARATOR, in order) are all its marked words, in any case.
+     *
+     * @param  array{id: int, segments: list<array{text: string, isMarked: bool}>, translation: string|null}  $sentence
      */
-    private function pronunciationKey(Lesson $lesson): string
+    private function isSentenceCorrect(array $sentence, string $selected): bool
     {
-        return "lesson-review.pronunciation.{$lesson->id}";
+        $expected = collect($sentence['segments'])->where('isMarked', true)->pluck('text')
+            ->map(fn (string $text): string => mb_strtolower(Str::squish($text)))
+            ->all();
+        $typed = array_map(fn (string $text): string => mb_strtolower(Str::squish($text)), explode(self::SENTENCE_BLANK_SEPARATOR, $selected));
+
+        return $typed === $expected;
+    }
+
+    /**
+     * A word typed into a blank as it is compared: any case, one space between the words.
+     */
+    private function normalizeBlank(string $word): string
+    {
+        return mb_strtolower(Str::squish($word));
+    }
+
+    /**
+     * A sentence as it is compared when written: any case, no punctuation, one space between the words.
+     */
+    private function normalizeSentence(string $sentence): string
+    {
+        $plain = str_replace(['’', '‘'], "'", Lesson::spokenSentence($sentence));
+
+        return mb_strtolower(Str::squish(preg_replace('/[^\p{L}\p{N}\' ]+/u', ' ', $plain)));
+    }
+
+    /**
+     * Where the tabs start: the basic parts are shown together, and so are the advanced ones.
+     */
+    private function firstTabStep(int $step): int
+    {
+        return $step >= self::ADVANCED_FIRST_STEP ? self::ADVANCED_FIRST_STEP : 1;
+    }
+
+    private function tabCount(int $step): int
+    {
+        return $this->firstTabStep($step) === 1 ? self::ADVANCED_FIRST_STEP - 1 : count(self::STEPS) - self::ADVANCED_FIRST_STEP + 1;
+    }
+
+    /**
+     * Session key of the scores of the lesson, word id (sentence id in part 10) => best score and attempts: one for parts 5 and 6, one for part 10.
+     */
+    private function pronunciationKey(Lesson $lesson, int $step): string
+    {
+        $kind = $step === self::SENTENCE_READING_STEP ? 'sentences' : 'words';
+
+        return "lesson-review.pronunciation.{$kind}.{$lesson->id}";
     }
 
     private function ensurePublished(Course $course, Unit $unit, Lesson $lesson): void
@@ -257,6 +384,51 @@ class LessonReviewController extends Controller
             ->map(fn (int $step): int => $step - 1)
             ->values()
             ->all();
+    }
+
+    /**
+     * Part 7 questions: a sentence cut into its text and the marked words to type in, with its translation under it.
+     *
+     * @return list<array{id: int, prompt: string, phonetic: null, segments: list<array{text: string, isMarked: bool}>, translation: string|null}>
+     */
+    private function sentenceQuestions(Lesson $lesson): array
+    {
+        return array_map(fn (array $sentence): array => [
+            ...$sentence,
+            'prompt' => implode('', array_column($sentence['segments'], 'text')),
+            'phonetic' => null,
+        ], app(AdvancedReviewContent::class)->markedSentences($lesson));
+    }
+
+    /**
+     * Part 8 questions: the meaning of a sentence, and the sentence to write. `word` is the sentence, shown once it has been answered.
+     *
+     * @return list<array{id: int, prompt: string, phonetic: null, word: string}>
+     */
+    private function writingQuestions(Lesson $lesson): array
+    {
+        return array_map(fn (array $sentence): array => [
+            'id' => $sentence['id'],
+            'prompt' => $sentence['translation'],
+            'phonetic' => null,
+            'word' => $sentence['sentence'],
+        ], app(AdvancedReviewContent::class)->writingSentences($lesson, true));
+    }
+
+    /**
+     * Part 9 questions: a sentence that is only heard (`prompt` is what is spoken, or `audio` is played), and the sentence to write.
+     *
+     * @return list<array{id: int, prompt: string, phonetic: null, word: string, audio: string|null}>
+     */
+    private function dictationQuestions(Lesson $lesson): array
+    {
+        return array_map(fn (array $sentence): array => [
+            'id' => $sentence['id'],
+            'prompt' => $sentence['sentence'],
+            'phonetic' => null,
+            'word' => $sentence['sentence'],
+            'audio' => $sentence['audio'],
+        ], app(AdvancedReviewContent::class)->writingSentences($lesson, false));
     }
 
     /**
@@ -386,6 +558,37 @@ class LessonReviewController extends Controller
             'phonetic' => null,
             'word' => $word->word,
         ])->all();
+    }
+
+    /**
+     * Part 11 questions: one per word to fill in across the passage, which is shown whole with an input for each (`word` is
+     * compared on the server, and shown once the part is graded).
+     *
+     * @return list<array{id: int, prompt: string, phonetic: null, word: string}>
+     */
+    private function passageQuestions(Lesson $lesson): array
+    {
+        $questions = [];
+
+        foreach (app(AdvancedReviewContent::class)->passageBlanks($lesson) as $id => $word) {
+            $questions[] = ['id' => $id, 'prompt' => $word, 'phonetic' => null, 'word' => $word];
+        }
+
+        return $questions;
+    }
+
+    /**
+     * Part 10 questions: the sentence to read, which may be heard first.
+     *
+     * @return list<array{id: int, prompt: string, phonetic: null}>
+     */
+    private function sentenceReadingQuestions(Lesson $lesson): array
+    {
+        return array_map(fn (array $sentence): array => [
+            'id' => $sentence['id'],
+            'prompt' => $sentence['sentence'],
+            'phonetic' => null,
+        ], app(AdvancedReviewContent::class)->writingSentences($lesson, false));
     }
 
     /**

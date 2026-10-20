@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSlug;
+use App\Services\AdvancedReviewContent;
 use App\Services\LessonScoreCalculator;
 use Database\Factories\LessonFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -37,7 +38,8 @@ class Lesson extends Model
     use HasFactory, HasSlug;
 
     /**
-     * Parts of the lesson review, and the most questions one part asks.
+     * Parts of the basic lesson review, which every lesson has, and the most questions one part asks. The advanced parts
+     * (7 to 11) count in the progress of a lesson only when it has what they are made of (see reviewSteps).
      */
     public const REVIEW_PARTS = 6;
 
@@ -46,7 +48,7 @@ class Lesson extends Model
      *
      * @var list<int>
      */
-    public const PRONUNCIATION_STEPS = [5, 6];
+    public const PRONUNCIATION_STEPS = [5, 6, 10];
 
     public const REVIEW_QUESTIONS_PER_PART = 10;
 
@@ -175,19 +177,53 @@ class Lesson extends Model
     }
 
     /**
+     * The parts the review of this lesson has: the basic ones, and each advanced part the lesson has questions for
+     * (7: sentences with marked words, 8: sentences with a translation, 9 and 10: sentences, 11: a passage with marked words).
+     *
+     * @return list<int>
+     */
+    public function reviewSteps(): array
+    {
+        return array_keys($this->reviewQuestionCounts(false));
+    }
+
+    /**
+     * How many questions each part of the review asks, by part: the words of the lesson in the basic parts, its sentences or
+     * paragraphs in the advanced ones, which the lesson leaves out when it has none. `$withWords` false skips counting
+     * the words, for when only the parts matter.
+     *
+     * @return array<int, int>
+     */
+    public function reviewQuestionCounts(bool $withWords = true): array
+    {
+        $content = app(AdvancedReviewContent::class);
+        $sentences = count($content->writingSentences($this, false));
+        $counts = array_fill_keys(range(1, self::REVIEW_PARTS), $withWords ? $this->reviewWords()->count() : 0) + array_filter([
+            7 => count($content->markedSentences($this)),
+            8 => count($content->writingSentences($this, true)),
+            9 => $sentences,
+            10 => $sentences,
+            11 => count($content->passageBlanks($this)),
+        ]);
+
+        return $counts;
+    }
+
+    /**
      * Progress of the user over the whole review: completed parts out of all parts, answered questions out of the
      * questions of every part, and the time spent. The answers count once per part, with its latest attempt; a part
      * is completed once an attempt at it passed (see LessonReview::isPassed), even if a later one did not.
      *
-     * `pronunciation` is the average of the average scores out of 10 of parts 5 and 6 (their latest attempts), 0 when neither was played.
+     * `pronunciation` is the average of the average scores out of 10 of the reading parts 5, 6 and 10 that were played (their latest attempts), 0 when none was.
      *
-     * `pronunciationWords` is the number of words read in those parts.
+     * `pronunciationWords` is the number of words and sentences read in those parts.
      *
      * @return array{percent: int, completedParts: int, parts: int, done: int, correct: int, wrong: int, total: int, seconds: int, pronunciation: float, pronunciationWords: int}
      */
     public function reviewProgress(User $user): array
     {
-        $attempts = $this->reviews()->where('user_id', $user->id)->orderByDesc('id')->get();
+        $counts = $this->reviewQuestionCounts();
+        $attempts = $this->reviews()->where('user_id', $user->id)->whereIn('step', array_keys($counts))->orderByDesc('id')->get();
         $latest = $attempts->unique('step');
         $completedParts = $attempts->filter(fn (LessonReview $review): bool => $review->isPassed())->unique('step')->count();
         $done = (int) $latest->sum('total');
@@ -198,13 +234,13 @@ class Lesson extends Model
             ->map(fn (LessonReview $review): float => collect(array_column($review->answers ?? [], 'selected'))->map(fn ($score): float => (float) $score)->avg() ?? 0.0);
 
         return [
-            'percent' => self::reviewPercent($completedParts),
+            'percent' => self::reviewPercent($completedParts, count($counts)),
             'completedParts' => $completedParts,
-            'parts' => self::REVIEW_PARTS,
+            'parts' => count($counts),
             'done' => $done,
             'correct' => $correct,
             'wrong' => $done - $correct,
-            'total' => $this->reviewWords()->count() * self::REVIEW_PARTS,
+            'total' => array_sum($counts),
             'seconds' => (int) $latest->sum('duration_seconds'),
             'pronunciation' => $pronunciationScores->isEmpty() ? 0.0 : round($pronunciationScores->avg(), 1),
             'pronunciationWords' => (int) $latest->whereIn('step', self::PRONUNCIATION_STEPS)->sum('total'),
@@ -274,22 +310,29 @@ class Lesson extends Model
      */
     public static function reviewPercentsFor(User $user, iterable $lessonIds): Collection
     {
-        return LessonReview::query()
+        $passedSteps = LessonReview::query()
             ->passed()
             ->where('user_id', $user->id)
             ->whereIn('lesson_id', $lessonIds)
-            ->groupBy('lesson_id')
-            ->selectRaw('lesson_id, count(distinct step) as completed_parts')
-            ->pluck('completed_parts', 'lesson_id')
-            ->map(fn ($completedParts): int => self::reviewPercent((int) $completedParts));
+            ->distinct()
+            ->get(['lesson_id', 'step'])
+            ->groupBy('lesson_id');
+
+        $lessons = self::query()->with('sentenceSet.sentences')->findMany($passedSteps->keys())->keyBy('id');
+
+        return $passedSteps->map(function (Collection $reviews, int $lessonId) use ($lessons): int {
+            $steps = $lessons->get($lessonId)?->reviewSteps() ?? range(1, self::REVIEW_PARTS);
+
+            return self::reviewPercent($reviews->whereIn('step', $steps)->count(), count($steps));
+        });
     }
 
     /**
      * The share of the review parts finished, in percent.
      */
-    private static function reviewPercent(int $completedParts): int
+    private static function reviewPercent(int $completedParts, int $parts): int
     {
-        return (int) round($completedParts / self::REVIEW_PARTS * 100);
+        return (int) round($completedParts / $parts * 100);
     }
 
     /**

@@ -15,7 +15,7 @@ class StorePronunciationRequest extends FormRequest
     }
 
     /**
-     * One recording of one word: a WAV of at most 1 MB (about 30 seconds of 16 kHz mono audio).
+     * One recording of one word, or of one sentence in part 10: a WAV of at most 1 MB (about 30 seconds of 16 kHz mono audio).
      *
      * @return array<string, list<string>>
      */
@@ -23,6 +23,7 @@ class StorePronunciationRequest extends FormRequest
     {
         return [
             'word_id' => ['required', 'integer'],
+            'step' => ['nullable', 'integer', 'in:5,6,10'],
             'audio' => ['required', 'file', 'mimes:wav', 'max:1024'],
         ];
     }

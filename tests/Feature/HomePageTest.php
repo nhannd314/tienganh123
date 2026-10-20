@@ -55,7 +55,7 @@ it('renders the hero, features and footer', function () {
         ->assertSee('bằng tất cả niềm vui')
         ->assertSeeInOrder(['Học từ vựng', 'Thực hành nhiều', 'Chơi và ghi nhớ'])
         ->assertSee('Vì sao bạn sẽ thích FunEnglish')
-        ->assertSee('Learn • Play • Grow');
+        ->assertSee('Học tiếng Anh như này mà còn không học được nữa thì thôi!');
 });
 
 it('ranks the learners in the leaderboard by their total score over all the published lessons', function () {

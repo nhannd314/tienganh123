@@ -1,10 +1,14 @@
 /*
  * Lesson review quiz (part 1: word → meaning, part 2: meaning → word, part 3: heard word → meaning, part 4: meaning →
- * typed word, part 5: word → spoken and scored out of 10 by Azure on the server). Loaded only by
+ * typed word, part 5: word → spoken and scored out of 10 by Azure on the server (part 10 the same for a whole sentence), parts 7 and 11: a sentence or paragraph with its marked
+ * words typed into inputs). Loaded only by
  * resources/views/lessons/review.blade.php.
  *
  * Questions come from the server as JSON. In the `choice` mode an answer is graded the moment it is picked; in the
- * `spell` mode the word is typed into one box per letter and graded as soon as every box is filled. The next question follows after
+ * `spell` mode the word is typed into one box per letter and graded as soon as every box is filled; in the `sentence`
+ * mode every marked word of the sentence is an input, graded when "Kiểm tra" is pressed; the `write` mode (part 8) has the
+ * whole sentence typed into one box the same way (part 9 after hearing it); the `passage` mode (part 11) shows the whole
+ * passage with an input for each of its words and grades them all at once. The next question follows after
  * `autoAdvanceMs`, and the results are sent to the server once, after the last question has been answered. A sound
  * tells a right answer from a wrong one, the same in every part.
  */
@@ -28,11 +32,15 @@ if (root) {
 function startReview(root) {
     const config = JSON.parse(root.querySelector('[data-review-config]').textContent);
     const { questions, submitUrl, csrf, autoAdvanceMs, canSave, optionsLang, passPercent, autoListen, mode } = config;
-    const { pronounceUrl, pronunciationPassScore, recordHint } = config;
+    const { pronounceUrl, pronunciationPassScore, recordHint, step, maxRecordingMs } = config;
     const total = questions.length;
 
     const answersBox = root.querySelector('[data-answers]');
     const slotsBox = root.querySelector('[data-slots]');
+    const sentenceBox = root.querySelector('[data-sentence]');
+    const translationBox = root.querySelector('[data-sentence-translation]');
+    const checkButton = root.querySelector('[data-check]');
+    const writeInput = root.querySelector('[data-write]');
     const recordButton = root.querySelector('[data-record]');
     const recordStatus = root.querySelector('[data-record-status]');
     const recordScore = root.querySelector('[data-record-score]');
@@ -136,6 +144,12 @@ function startReview(root) {
     const renderQuestion = () => {
         const question = questions[state.index];
 
+        if (mode === 'passage') {
+            resetPassage();
+
+            return;
+        }
+
         root.querySelector('[data-q-current]').textContent = String(state.index + 1);
         const promptWord = prompt.querySelector('[data-prompt-word]');
 
@@ -154,6 +168,11 @@ function startReview(root) {
 
         prompt.querySelectorAll('[data-audio-button]').forEach((button) => {
             button.dataset.text = question.prompt;
+
+            // A recorded sentence is played when there is one, otherwise the text is spoken.
+            if (question.audio !== undefined) {
+                button.dataset.src = question.audio ?? '';
+            }
 
             if (!autoListen) {
                 button.setAttribute('aria-label', `Nghe phát âm ${question.prompt}`);
@@ -175,6 +194,23 @@ function startReview(root) {
 
         if (mode === 'spell') {
             renderSlots(question.word);
+
+            return;
+        }
+
+        if (mode === 'sentence') {
+            renderSentence(question);
+
+            return;
+        }
+
+        if (mode === 'write') {
+            writeInput.value = '';
+            writeInput.disabled = false;
+            writeInput.classList.remove('border-success', 'bg-success-bg', 'text-success-text', 'border-danger', 'bg-danger-bg', 'text-danger-text');
+            writeInput.classList.add('border-line-default');
+            checkButton.disabled = false;
+            writeInput.focus({ preventScroll: true });
 
             return;
         }
@@ -336,6 +372,165 @@ function startReview(root) {
         showAlert(isCorrect, question.word);
     };
 
+    // Sentence mode: the text of the sentence with an input in place of each marked word. The words typed are joined by `|`,
+    // as LessonReviewController expects, and graded like there: ignoring case and extra spaces.
+    const blankInputs = () => [...sentenceBox.querySelectorAll('[data-blank]')];
+    const normalize = (text) => text.trim().replace(/\s+/g, ' ').toLowerCase();
+
+    const renderSentence = (question) => {
+        sentenceBox.replaceChildren(
+            ...question.segments.map((segment) => {
+                if (!segment.isMarked) {
+                    const text = document.createElement('span');
+
+                    text.className = 'whitespace-pre-wrap';
+                    text.textContent = segment.text;
+
+                    return text;
+                }
+
+                const input = template('blank');
+
+                input.size = Math.max([...segment.text].length, 3);
+                input.setAttribute('aria-label', 'Từ cần điền');
+
+                return input;
+            }),
+        );
+        translationBox.textContent = question.translation ?? '';
+        translationBox.hidden = !question.translation;
+        checkButton.disabled = false;
+
+        const inputs = blankInputs();
+
+        inputs.forEach((input, index) => {
+            input.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (inputs[index + 1]) {
+                    inputs[index + 1].focus();
+                } else {
+                    checkSentence();
+                }
+            });
+        });
+
+        inputs[0]?.focus({ preventScroll: true });
+    };
+
+    const checkSentence = () => {
+        if (state.answers[state.index] || state.finished) {
+            return;
+        }
+
+        const question = questions[state.index];
+        const expected = question.segments.filter((segment) => segment.isMarked).map((segment) => segment.text);
+        const inputs = blankInputs();
+        let isCorrect = true;
+
+        inputs.forEach((input, index) => {
+            const isRight = normalize(input.value) === normalize(expected[index]);
+
+            isCorrect &&= isRight;
+            input.disabled = true;
+            input.classList.remove('border-line-default');
+            input.classList.add(...(isRight ? ['border-success', 'bg-success-bg', 'text-success-text'] : ['border-danger', 'bg-danger-bg', 'text-danger-text']));
+        });
+
+        checkButton.disabled = true;
+        record(question, inputs.map((input) => input.value).join('|'), isCorrect);
+        showAlert(isCorrect, expected.join(', '));
+    };
+
+    // Passage mode (part 11): the whole passage is on the page with an input for each word; "Kiểm tra" grades them all at once and
+    // the graded passage stays on the page, with the right word beside each wrong one, under the summary.
+    const passageInputs = () => [...root.querySelectorAll('[data-passage] [data-blank]')];
+
+    const resetPassage = () => {
+        passageInputs().forEach((input, index) => {
+            input.value = '';
+            input.disabled = false;
+            input.classList.remove('border-success', 'bg-success-bg', 'text-success-text', 'border-danger', 'bg-danger-bg', 'text-danger-text');
+            input.classList.add('border-line-default');
+            input.nextElementSibling.hidden = true;
+
+            if (!input.dataset.bound) {
+                input.dataset.bound = '1';
+                input.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter') {
+                        return;
+                    }
+
+                    event.preventDefault();
+
+                    const inputs = passageInputs();
+
+                    if (inputs[inputs.indexOf(input) + 1]) {
+                        inputs[inputs.indexOf(input) + 1].focus();
+                    } else {
+                        checkPassage();
+                    }
+                });
+            }
+
+            if (index === 0) {
+                input.focus({ preventScroll: true });
+            }
+        });
+        checkButton.disabled = false;
+    };
+
+    const checkPassage = () => {
+        if (state.finished) {
+            return;
+        }
+
+        const inputs = passageInputs();
+
+        state.answers = inputs.map((input) => {
+            const question = questions.find((candidate) => String(candidate.id) === input.dataset.id);
+            const isCorrect = normalize(input.value) === normalize(question.word);
+            const hint = input.nextElementSibling;
+
+            input.disabled = true;
+            input.classList.remove('border-line-default');
+            input.classList.add(...(isCorrect ? ['border-success', 'bg-success-bg', 'text-success-text'] : ['border-danger', 'bg-danger-bg', 'text-danger-text']));
+            hint.textContent = isCorrect ? '' : `(${question.word})`;
+            hint.hidden = isCorrect;
+
+            return { wordId: question.id, selected: input.value, correct: isCorrect, score: null };
+        });
+
+        checkButton.disabled = true;
+        (state.answers.every((answer) => answer.correct) ? playCorrect : playWrong)();
+        renderPartStats();
+        finish();
+        showSummary();
+    };
+
+    // Write mode: the sentence typed whole, compared like the server does: any case, no punctuation, single spaces.
+    const normalizeSentence = (text) => text.replace(/[’‘]/g, "'").replace(/[^\p{L}\p{N}' ]+/gu, ' ').trim().replace(/\s+/g, ' ').toLowerCase();
+
+    const checkWrite = () => {
+        if (state.answers[state.index] || state.finished || writeInput.value.trim() === '') {
+            return;
+        }
+
+        const question = questions[state.index];
+        const isCorrect = normalizeSentence(writeInput.value) === normalizeSentence(question.word);
+
+        writeInput.disabled = true;
+        writeInput.classList.remove('border-line-default');
+        writeInput.classList.add(...(isCorrect ? ['border-success', 'bg-success-bg', 'text-success-text'] : ['border-danger', 'bg-danger-bg', 'text-danger-text']));
+        checkButton.disabled = true;
+        record(question, writeInput.value, isCorrect);
+        showAlert(isCorrect, question.word);
+    };
+
     // Speak mode: the word is recorded and sent to the server, which has Azure score it out of 10. A word may be read
     // again while its best score stays under the pass score and readings are left.
     let recording = null;
@@ -364,6 +559,7 @@ function startReview(root) {
         const body = new FormData();
 
         body.append('word_id', String(question.id));
+        body.append('step', String(step));
         body.append('audio', audio, 'word.wav');
 
         const response = await fetch(pronounceUrl, {
@@ -444,7 +640,7 @@ function startReview(root) {
         }
 
         try {
-            recording = await startRecording(MAX_RECORDING_MS);
+            recording = await startRecording(maxRecordingMs ?? MAX_RECORDING_MS);
         } catch {
             setRecordStatus('Bạn cần cho phép trang dùng micro để đọc.');
 
@@ -456,7 +652,7 @@ function startReview(root) {
         alertBox.replaceChildren();
         setRecordStatus('Đang nghe… đọc xong bấm micro lần nữa.');
 
-        // Stops by itself after MAX_RECORDING_MS.
+        // Stops by itself after the maximum recording time.
         const current = recording;
 
         current.done.then(() => {
@@ -520,7 +716,6 @@ function startReview(root) {
     const showSummary = () => {
         const correct = state.answers.filter((answer) => answer.correct).length;
 
-        resultArea.style.minHeight = `${playArea.offsetHeight}px`;
         resultArea.querySelector('[data-result-correct]').textContent = String(correct);
 
         // Same rule as LessonReview::isPassed: at least passPercent of the answers right.
@@ -530,8 +725,13 @@ function startReview(root) {
         resultArea.querySelectorAll('[data-result-failed]').forEach((element) => {
             element.hidden = isPassed;
         });
-        playArea.hidden = true;
         resultArea.hidden = false;
+
+        // The passage stays on the page, graded; the other parts give the room of the question to the summary.
+        if (mode !== 'passage') {
+            resultArea.style.minHeight = `${playArea.offsetHeight}px`;
+            playArea.hidden = true;
+        }
     };
 
     const finish = () => {
@@ -572,6 +772,13 @@ function startReview(root) {
 
     document.querySelectorAll('[data-review-restart]').forEach((button) => button.addEventListener('click', restart));
     recordButton?.addEventListener('click', toggleRecording);
+    checkButton?.addEventListener('click', { write: checkWrite, passage: checkPassage }[mode] ?? checkSentence);
+    writeInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            checkWrite();
+        }
+    });
 
     renderQuestion();
     renderPartStats();
