@@ -13,20 +13,13 @@ class CreateLesson extends CreateRecord
     protected static string $resource = LessonResource::class;
 
     /**
-     * Fields of the form that are not lesson columns: the lines saved as the vocabulary, flashcard set and sentence set of the lesson.
-     *
-     * @var list<string>
-     */
-    private const CONTENT_LINES_FIELDS = ['vocabulary_lines', 'flashcard_lines', 'sentence_lines', 'generate_sentence_images'];
-
-    /**
      * @param  array<string, mixed>  $data
      */
     protected function handleRecordCreation(array $data): Model
     {
-        $lesson = parent::handleRecordCreation(Arr::except($data, self::CONTENT_LINES_FIELDS));
+        $lesson = parent::handleRecordCreation(Arr::except($data, LessonForm::CONTENT_LINES_FIELDS));
 
-        LessonForm::createContentSets($lesson, Arr::only($data, self::CONTENT_LINES_FIELDS));
+        LessonForm::createContentSets($lesson, Arr::only($data, LessonForm::CONTENT_LINES_FIELDS));
 
         return $lesson;
     }

@@ -30,6 +30,13 @@ use Illuminate\Validation\Rules\Unique;
 
 class LessonForm
 {
+    /**
+     * Fields of the form that are not lesson columns: the lines saved as the vocabulary, flashcard set and sentence set of the lesson.
+     *
+     * @var list<string>
+     */
+    public const CONTENT_LINES_FIELDS = ['vocabulary_lines', 'flashcard_lines', 'sentence_lines', 'generate_sentence_images'];
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -113,9 +120,9 @@ class LessonForm
     }
 
     /**
-     * Fields of the create form only: the words, flashcards and sentences of the new lesson, one per line, each list
-     * saved as a vocabulary, a flashcard set and a sentence set titled like the lesson. The sentences are left out
-     * once an existing sentence set is chosen.
+     * The words, flashcards and sentences of the lesson, one per line, each list saved as a vocabulary, a flashcard set
+     * and a sentence set titled like the lesson. Each field shows only while the lesson has no such set yet: the
+     * vocabulary and flashcard lines while none is attached, the sentences while no sentence set is chosen.
      *
      * @return list<Component>
      */
@@ -123,7 +130,7 @@ class LessonForm
     {
         $sentenceFields = array_map(
             fn (Component $field): Component => $field
-                ->visible(fn (Get $get, string $operation): bool => $operation === 'create' && blank($get('sentence_set_id')))
+                ->visible(fn (Get $get): bool => blank($get('sentence_set_id')))
                 ->columnSpanFull(),
             SentenceSetForm::sentenceLinesFields(isRequired: false),
         );
@@ -136,7 +143,7 @@ class LessonForm
                 ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác | câu ví dụ = bản dịch. Gõ một từ đã có rồi bấm Tab để tự nạp nghĩa. Lưu thành một bộ từ vựng cùng tên với bài học.')
                 ->live(onBlur: true)
                 ->afterStateUpdated(fn (Set $set, ?string $state) => $set('vocabulary_lines', BulkAddWordsAction::loadKnownWords((string) $state)))
-                ->visibleOn('create')
+                ->visible(fn (?Lesson $record): bool => $record === null || $record->vocabularies()->doesntExist())
                 ->columnSpanFull(),
             Textarea::make('flashcard_lines')
                 ->label('Flashcards')
@@ -154,37 +161,44 @@ class LessonForm
                         }
                     },
                 ])
-                ->visibleOn('create')
+                ->visible(fn (?Lesson $record): bool => $record === null || $record->flashcardSets()->doesntExist())
                 ->columnSpanFull(),
             ...$sentenceFields,
         ];
     }
 
     /**
-     * Save the lines typed in the create form as the vocabulary, the flashcard set and the sentence set of the new
-     * lesson, each titled like the lesson. An empty list creates nothing.
+     * Save the typed lines as the vocabulary, the flashcard set and the sentence set of the lesson, each titled like the
+     * lesson, when it has no such set yet. An empty list creates nothing. Returns whether a set was created.
      *
      * @param  array{vocabulary_lines?: string|null, flashcard_lines?: string|null, sentence_lines?: string|null, generate_sentence_images?: bool|null}  $lines
      */
-    public static function createContentSets(Lesson $lesson, array $lines): void
+    public static function createContentSets(Lesson $lesson, array $lines): bool
     {
-        if (filled($entries = BulkAddWordsAction::parse((string) ($lines['vocabulary_lines'] ?? '')))) {
+        $hasCreatedSet = false;
+
+        if (filled($entries = BulkAddWordsAction::parse((string) ($lines['vocabulary_lines'] ?? ''))) && $lesson->vocabularies()->doesntExist()) {
             $vocabulary = Vocabulary::create(['title' => $lesson->title]);
             BulkAddWordsAction::apply($vocabulary, $entries);
             $lesson->vocabularies()->attach($vocabulary, ['sort_order' => 1]);
+            $hasCreatedSet = true;
         }
 
-        if (filled(FlashcardSetForm::parseLines($lines['flashcard_lines'] ?? null))) {
+        if (filled(FlashcardSetForm::parseLines($lines['flashcard_lines'] ?? null)) && $lesson->flashcardSets()->doesntExist()) {
             $flashcardSet = FlashcardSet::create(['title' => $lesson->title]);
             FlashcardSetForm::addFlashcards($flashcardSet, $lines['flashcard_lines']);
             $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+            $hasCreatedSet = true;
         }
 
         if (blank($lesson->sentence_set_id) && filled(SentenceSetForm::parseLines($lines['sentence_lines'] ?? null))) {
             $sentenceSet = SentenceSet::create(['title' => $lesson->title]);
             SentenceSetForm::addSentences($sentenceSet, $lines['sentence_lines'], (bool) ($lines['generate_sentence_images'] ?? false));
             $lesson->update(['sentence_set_id' => $sentenceSet->id]);
+            $hasCreatedSet = true;
         }
+
+        return $hasCreatedSet;
     }
 
     /**

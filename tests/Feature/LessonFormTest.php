@@ -194,14 +194,53 @@ it('creates no set when the lines are left empty, and keeps a chosen sentence se
         ->and(FlashcardSet::count())->toBe(0);
 });
 
-it('shows the lines fields only when creating a lesson', function () {
-    $lesson = Lesson::factory()->create();
+it('hides the lines fields when editing a lesson that already has each set', function () {
+    $lesson = Lesson::factory()->for(SentenceSet::factory())->create();
+    $lesson->vocabularies()->attach(Vocabulary::factory()->create(), ['sort_order' => 1]);
+    $lesson->flashcardSets()->attach(FlashcardSet::factory()->create(), ['sort_order' => 1]);
 
     Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
         ->assertFormFieldHidden('vocabulary_lines')
         ->assertFormFieldHidden('flashcard_lines')
         ->assertFormFieldHidden('sentence_lines')
         ->assertFormFieldHidden('generate_sentence_images');
+});
+
+it('creates the missing sets when editing a lesson without them, then reloads the page', function () {
+    Queue::fake();
+    $lesson = Lesson::factory()->create(['title' => 'Animals', 'sentence_set_id' => null]);
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->assertFormFieldVisible('vocabulary_lines')
+        ->assertFormFieldVisible('flashcard_lines')
+        ->assertFormFieldVisible('sentence_lines')
+        ->fillForm([
+            'vocabulary_lines' => 'cat [n] con mèo',
+            'flashcard_lines' => 'cat',
+            'sentence_lines' => 'I have a `cat`.',
+        ])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertRedirect(EditLesson::getUrl(['record' => $lesson]));
+
+    $lesson->refresh();
+
+    expect($lesson->vocabularies->pluck('title')->all())->toBe(['Animals'])
+        ->and($lesson->flashcardSets->pluck('title')->all())->toBe(['Animals'])
+        ->and($lesson->sentenceSet->title)->toBe('Animals');
+});
+
+it('stays on the page when editing a lesson with the lines left empty', function () {
+    $lesson = Lesson::factory()->create();
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->fillForm(['title' => 'Renamed'])
+        ->call('save')
+        ->assertHasNoFormErrors()
+        ->assertNoRedirect();
+
+    expect(Vocabulary::count())->toBe(0)
+        ->and(FlashcardSet::count())->toBe(0);
 });
 
 it('lists and reorders the attached vocabularies and flashcard sets of the lesson', function () {
