@@ -26,9 +26,12 @@ class UserForm
                     ->disabledOn('edit'),
                 TextInput::make('phone')
                     ->tel()
+                    ->autocomplete(false)
                     ->maxLength(20),
+                // "new-password" keeps the browser from filling in the admin's own saved login here (and in the field before it).
                 TextInput::make('password')
                     ->password()
+                    ->autocomplete('new-password')
                     ->revealable()
                     ->required(fn (string $operation): bool => $operation === 'create')
                     ->dehydrated(fn (?string $state): bool => filled($state))
@@ -41,9 +44,11 @@ class UserForm
                     ->maxLength(255),
                 TextInput::make('parent_email')
                     ->email()
+                    ->autocomplete(false)
                     ->maxLength(255),
                 TextInput::make('parent_phone')
                     ->tel()
+                    ->autocomplete(false)
                     ->maxLength(20),
                 Select::make('membership')
                     ->options(Membership::class)

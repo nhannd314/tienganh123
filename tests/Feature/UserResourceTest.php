@@ -5,6 +5,7 @@ use App\Filament\Resources\Users\Pages\CreateUser;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Models\User;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
@@ -63,6 +64,26 @@ it('makes a learner a member until a given day', function () {
     expect($learner->fresh())
         ->membership->toBe(Membership::Member)
         ->membership_expires_on->toDateString()->toBe('2027-12-31');
+});
+
+it('makes the selected learners members at once and leaves the others alone', function () {
+    [$first, $second, $other] = User::factory()->count(3)->create();
+
+    Livewire::test(ListUsers::class)
+        ->selectTableRecords([$first->getKey(), $second->getKey()])
+        ->callAction(TestAction::make('grantMembership')->table()->bulk(), ['membership' => Membership::Member->value, 'membership_expires_on' => '2027-12-31'])
+        ->assertHasNoFormErrors()
+        ->assertNotified('Đã thêm gói thành viên');
+
+    expect($first->fresh())->membership->toBe(Membership::Member)->membership_expires_on->toDateString()->toBe('2027-12-31')
+        ->and($second->fresh())->membership->toBe(Membership::Member)
+        ->and($other->fresh()->membership)->toBeNull();
+});
+
+it('turns off autofill for the phone and password of a learner', function () {
+    Livewire::test(CreateUser::class)
+        ->assertSeeHtml('autocomplete="new-password"')
+        ->assertSeeHtml('autocomplete="off"');
 });
 
 it('does not let the email of a learner be changed', function () {
