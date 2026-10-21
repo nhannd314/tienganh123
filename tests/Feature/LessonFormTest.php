@@ -230,6 +230,20 @@ it('creates the missing sets when editing a lesson without them, then reloads th
         ->and($lesson->sentenceSet->title)->toBe('Animals');
 });
 
+it('saves a heading made from a line deep inside the rich content, such as a table cell', function () {
+    $lesson = Lesson::factory()->create([
+        'content' => '<table><tbody><tr><td><p>Greetings</p></td></tr></tbody></table>',
+    ]);
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->set('data.content.content.0.content.0.content.0.content.0.type', 'heading')
+        ->set('data.content.content.0.content.0.content.0.content.0.attrs', ['textAlign' => 'start', 'level' => 3])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($lesson->refresh()->content)->toContain('<h3', 'Greetings</h3>');
+});
+
 it('stays on the page when editing a lesson with the lines left empty', function () {
     $lesson = Lesson::factory()->create();
 
