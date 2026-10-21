@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->unsavedChangesAlerts()
             ->navigationGroups(['Learning content', 'Vocabulary', 'Content', 'Pricing', 'Affiliate', 'Users'])
             ->navigationItems([
                 NavigationItem::make('Website')
