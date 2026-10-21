@@ -12,13 +12,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
-#[Fillable(['name', 'email', 'phone', 'avatar', 'birthday', 'grade', 'school', 'parent_email', 'parent_phone', 'password', 'membership', 'membership_expires_on'])]
+#[Fillable(['name', 'email', 'phone', 'avatar', 'birthday', 'grade', 'school', 'parent_email', 'parent_phone', 'password', 'membership', 'membership_expires_on', 'affiliate_commission_rate', 'affiliate_bank_name', 'affiliate_bank_account_number', 'affiliate_bank_account_name'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements FilamentUser
 {
@@ -39,6 +40,8 @@ class User extends Authenticatable implements FilamentUser
             'role' => UserRole::class,
             'membership' => Membership::class,
             'membership_expires_on' => 'date',
+            'referred_at' => 'datetime',
+            'affiliate_commission_rate' => 'integer',
         ];
     }
 
@@ -56,6 +59,96 @@ class User extends Authenticatable implements FilamentUser
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * The affiliate who brought the user in.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'referred_by_id');
+    }
+
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(self::class, 'referred_by_id');
+    }
+
+    /**
+     * @return HasMany<AffiliateCommission, $this>
+     */
+    public function affiliateCommissions(): HasMany
+    {
+        return $this->hasMany(AffiliateCommission::class, 'affiliate_id');
+    }
+
+    /**
+     * @return HasMany<AffiliatePayout, $this>
+     */
+    public function affiliatePayouts(): HasMany
+    {
+        return $this->hasMany(AffiliatePayout::class);
+    }
+
+    /**
+     * The percent of each payment of a referred user that the affiliate earns: their own rate, else the default.
+     */
+    public function affiliateCommissionRate(): int
+    {
+        return $this->affiliate_commission_rate ?? (int) config('affiliate.commission_rate');
+    }
+
+    /**
+     * What the affiliate has in approved commissions that no payout has taken yet.
+     */
+    public function affiliatePayableBalance(): int
+    {
+        return (int) $this->affiliateCommissions()->payable()->sum('amount');
+    }
+
+    /**
+     * The code in the user's referral link, made the first time it is needed.
+     */
+    public function referralCode(): string
+    {
+        if ($this->referral_code === null) {
+            do {
+                $code = Str::upper(Str::random(8));
+            } while (static::where('referral_code', $code)->exists());
+
+            $this->forceFill(['referral_code' => $code])->save();
+        }
+
+        return $this->referral_code;
+    }
+
+    /**
+     * The link the user shares to bring people in.
+     */
+    public function referralUrl(): string
+    {
+        return route('home', ['ref' => $this->referralCode()]);
+    }
+
+    /**
+     * Credit the affiliate behind the referral code, once: a user already referred, or the affiliate themselves, is left alone.
+     */
+    public function attachReferrer(?string $code): void
+    {
+        if ($this->referred_by_id !== null || blank($code)) {
+            return;
+        }
+
+        $referrer = static::where('referral_code', Str::upper($code))->whereKeyNot($this->getKey())->first();
+
+        if ($referrer !== null) {
+            $this->forceFill(['referred_by_id' => $referrer->id, 'referred_at' => now()])->save();
+        }
     }
 
     /**

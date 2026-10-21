@@ -3,6 +3,7 @@
         'achievements' => ['label' => 'Thành tích học tập', 'icon' => 'trophy'],
         'info' => ['label' => 'Thông tin cá nhân', 'icon' => 'user-round-pen'],
         'courses' => ['label' => 'Khóa học đã mua', 'icon' => 'shopping-bag'],
+        'affiliate' => ['label' => 'Giới thiệu bạn bè', 'icon' => 'gift'],
     ];
     $courseTones = ['primary', 'secondary', 'success', 'accent'];
     $toneTextClasses = ['primary' => 'text-primary-text', 'secondary' => 'text-secondary-text', 'success' => 'text-success-text', 'accent' => 'text-accent-text'];
@@ -256,6 +257,106 @@
                         <x-button variant="outline" :href="route('courses.index')">Xem khóa học</x-button>
                     </x-card>
                 @endforelse
+            @elseif ($tab === 'affiliate')
+                @if (session('status'))
+                    <x-alert tone="success" title="Đã lưu">{{ session('status') }}</x-alert>
+                @endif
+
+                <x-card class="flex flex-col gap-4">
+                    <h2 class="type-h2 text-fg-strong">Giới thiệu bạn bè</h2>
+                    <p class="type-body text-fg-body">Gửi link này cho bạn bè. Mỗi khi người bạn đăng ký qua link của bạn thanh toán, bạn nhận {{ $commissionRate }}% số tiền đó.</p>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <input type="text" readonly value="{{ $referralUrl }}" aria-label="Link giới thiệu" onfocus="this.select()" class="h-12 min-w-60 flex-[1_1_320px] rounded-md border border-line-subtle bg-surface-hover px-4 type-body text-fg-strong">
+                        <x-button type="button" variant="outline" icon-left="copy" onclick="navigator.clipboard.writeText(@js($referralUrl)); this.textContent = 'Đã chép'">Sao chép</x-button>
+                    </div>
+                </x-card>
+
+                <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,200px),1fr))] gap-4">
+                    @foreach ([
+                        ['label' => 'Bạn bè đã giới thiệu', 'value' => number_format($referralCount, 0, ',', '.')],
+                        ['label' => 'Chờ duyệt', 'value' => number_format($earnings['pending'], 0, ',', '.').'₫'],
+                        ['label' => 'Đã duyệt, chờ chi trả', 'value' => number_format($earnings['approved'], 0, ',', '.').'₫'],
+                        ['label' => 'Đã nhận', 'value' => number_format($earnings['paid'], 0, ',', '.').'₫'],
+                    ] as $stat)
+                        <x-card padding="none" class="flex flex-col gap-2 p-5">
+                            <b class="text-2xl leading-tight font-semibold text-fg-strong tabular-nums">{{ $stat['value'] }}</b>
+                            <span class="type-body-sm text-fg-muted">{{ $stat['label'] }}</span>
+                        </x-card>
+                    @endforeach
+                </div>
+
+                @php $minimumPayout = (int) config('affiliate.minimum_payout') @endphp
+                <x-card class="flex flex-col gap-4">
+                    <h2 class="type-h2 text-fg-strong">Rút tiền</h2>
+                    <p class="type-body text-fg-body">
+                        Có thể rút: <b class="text-fg-strong tabular-nums">{{ number_format($payableBalance, 0, ',', '.') }}₫</b>.
+                        Cần tối thiểu {{ number_format($minimumPayout, 0, ',', '.') }}₫ hoa hồng đã duyệt và đã nhập tài khoản nhận tiền.
+                    </p>
+                    @error('payout')
+                        <x-alert tone="danger" title="Chưa rút được">{{ $message }}</x-alert>
+                    @enderror
+                    @if ($pendingPayout)
+                        <p class="type-body-sm text-fg-muted">Bạn đang có một yêu cầu rút tiền chờ chuyển khoản.</p>
+                    @endif
+                    <form method="POST" action="{{ route('profile.affiliate.payout') }}" class="flex justify-end">
+                        @csrf
+                        <x-button type="submit" icon-left="banknote" :disabled="$payableBalance < $minimumPayout">Yêu cầu rút tiền</x-button>
+                    </form>
+                </x-card>
+
+                <x-card class="flex flex-col gap-4">
+                    <h2 class="type-h2 text-fg-strong">Hoa hồng gần đây</h2>
+
+                    @forelse ($commissions as $commission)
+                        <div class="grid grid-cols-[1fr_auto] items-center gap-4 border-b border-line-subtle py-3 last:border-b-0">
+                            <div class="flex min-w-0 flex-col gap-1">
+                                <b class="type-label-lg truncate text-fg-strong">{{ $commission->referredUser?->name }}</b>
+                                <span class="type-body-sm text-fg-muted">{{ $commission->created_at->format('d/m/Y') }} · {{ $commission->rate }}% của {{ number_format($commission->payment_amount, 0, ',', '.') }}₫</span>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                                <b class="type-label-lg text-fg-strong tabular-nums">{{ number_format($commission->amount, 0, ',', '.') }}₫</b>
+                                <span class="type-body-sm text-fg-muted">{{ $commission->status->getLabel() }}</span>
+                            </div>
+                        </div>
+                    @empty
+                        <p class="type-body text-fg-muted">Chưa có hoa hồng nào. Hãy chia sẻ link giới thiệu cho bạn bè nhé!</p>
+                    @endforelse
+                </x-card>
+
+                <x-card>
+                  <details class="group" {{ $errors->hasAny(['affiliate_bank_name', 'affiliate_bank_account_number', 'affiliate_bank_account_name']) ? 'open' : '' }}>
+                    <summary class="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
+                        <h2 class="type-h2 text-fg-strong">Tài khoản nhận tiền</h2>
+                        <x-icon name="chevron-down" size="lg" class="text-fg-muted transition-transform group-open:rotate-180" />
+                    </summary>
+
+                    <form method="POST" action="{{ route('profile.affiliate.update') }}" class="flex flex-col gap-6 pt-8">
+                        @csrf
+                        @method('PUT')
+
+                        <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-x-6 gap-y-5">
+                            @foreach ([
+                                'affiliate_bank_name' => ['label' => 'Ngân hàng', 'placeholder' => 'Ví dụ: Vietcombank'],
+                                'affiliate_bank_account_number' => ['label' => 'Số tài khoản', 'placeholder' => '0123456789'],
+                                'affiliate_bank_account_name' => ['label' => 'Tên chủ tài khoản', 'placeholder' => 'NGUYEN MINH AN'],
+                            ] as $name => $field)
+                                <x-text-input
+                                    :name="$name"
+                                    :label="$field['label']"
+                                    :placeholder="$field['placeholder']"
+                                    :value="old($name, $user->{$name})"
+                                    :state="$errors->has($name) ? 'wrong' : null"
+                                    :hint="$errors->first($name)"
+                                />
+                            @endforeach
+                        </div>
+
+                        <div class="flex justify-end">
+                            <x-button type="submit" icon-left="check">Lưu tài khoản</x-button>
+                        </div>
+                    </form>
+                  </details>
+                </x-card>
             @endif
         </div>
     </div>

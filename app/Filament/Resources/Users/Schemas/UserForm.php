@@ -57,6 +57,23 @@ class UserForm
                 DatePicker::make('membership_expires_on')
                     ->displayFormat('d/m/Y')
                     ->helperText('Last day of the membership. Leave empty for a membership that never expires.'),
+                TextInput::make('affiliate_commission_rate')
+                    ->label('Affiliate commission rate')
+                    ->numeric()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->suffix('%')
+                    ->placeholder(fn (): string => config('affiliate.commission_rate').' (default)')
+                    ->helperText('Leave empty to use the default rate.'),
+                TextInput::make('affiliate_bank_name')
+                    ->label('Affiliate bank')
+                    ->maxLength(255),
+                TextInput::make('affiliate_bank_account_number')
+                    ->label('Affiliate bank account number')
+                    ->maxLength(50),
+                TextInput::make('affiliate_bank_account_name')
+                    ->label('Affiliate bank account name')
+                    ->maxLength(255),
                 FileUpload::make('avatar')
                     ->image()
                     ->avatar()

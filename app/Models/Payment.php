@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PaymentStatus;
 use App\Events\PaymentPaid;
+use App\Events\PaymentSettled;
 use Database\Factories\PaymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -80,6 +81,7 @@ class Payment extends Model
                 'meta' => [...($payment->meta ?? []), ...$meta],
             ])->save();
 
+            DB::afterCommit(fn () => rescue(fn () => PaymentSettled::dispatch($payment)));
             DB::afterCommit(fn () => rescue(fn () => PaymentPaid::dispatch($payment)));
 
             $subscribable = $payment->payable;

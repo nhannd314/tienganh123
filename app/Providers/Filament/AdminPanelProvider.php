@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->navigationGroups(['Learning content', 'Vocabulary', 'Content', 'Pricing', 'Users'])
+            ->navigationGroups(['Learning content', 'Vocabulary', 'Content', 'Pricing', 'Affiliate', 'Users'])
             ->navigationItems([
                 NavigationItem::make('Website')
                     ->url(fn (): string => route('home'), shouldOpenInNewTab: true)

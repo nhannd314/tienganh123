@@ -56,6 +56,8 @@ Route::view('/tools/wordsearch', 'tools.wordsearch')->name('tools.wordsearch');
 Route::get('/trang/{page:slug}', PageController::class)->name('pages.show');
 Route::get('/ho-so', [ProfileController::class, 'show'])->middleware('auth')->name('profile.show');
 Route::put('/ho-so', [ProfileController::class, 'update'])->middleware('auth')->name('profile.update');
+Route::put('/ho-so/gioi-thieu', [ProfileController::class, 'updateAffiliateBank'])->middleware('auth')->name('profile.affiliate.update');
+Route::post('/ho-so/gioi-thieu/rut-tien', [ProfileController::class, 'requestAffiliatePayout'])->middleware('auth')->name('profile.affiliate.payout');
 Route::put('/ho-so/mat-khau', [ProfileController::class, 'updatePassword'])->middleware('auth')->name('profile.password.update');
 Route::get('/thanh-toan/{payment}/trang-thai', PaymentStatusController::class)->middleware('auth')->name('payments.status');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}', LessonController::class)

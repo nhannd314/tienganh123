@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AffiliateCommissionStatus;
+use App\Enums\AffiliatePayoutStatus;
+use App\Http\Requests\UpdateAffiliateBankRequest;
 use App\Http\Requests\UpdatePasswordRequest;
 use App\Http\Requests\UpdateProfileRequest;
+use App\Mail\AffiliatePayoutRequested;
+use App\Models\AffiliatePayout;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\LessonReview;
@@ -14,11 +19,12 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
-    private const TABS = ['achievements', 'info', 'courses'];
+    private const TABS = ['achievements', 'info', 'courses', 'affiliate'];
 
     private const PROFILE_FIELDS = ['name', 'phone', 'avatar', 'birthday', 'grade', 'school', 'parent_email', 'parent_phone'];
 
@@ -35,6 +41,7 @@ class ProfileController extends Controller
         $data = match ($tab) {
             'achievements' => $this->achievements($user),
             'courses' => ['subscriptions' => $this->courseSubscriptions($user)],
+            'affiliate' => $this->affiliate($user),
             default => ['isEditing' => $request->boolean('edit') || ($request->session()->get('errors')?->hasAny(self::PROFILE_FIELDS) ?? false)],
         };
 
@@ -76,6 +83,68 @@ class ProfileController extends Controller
         return redirect()
             ->route('profile.show', ['tab' => 'info'])
             ->with('status', 'Mật khẩu của bạn đã được đổi.');
+    }
+
+    /**
+     * Save the bank account the affiliate payouts of the learner are sent to.
+     */
+    public function updateAffiliateBank(UpdateAffiliateBankRequest $request): RedirectResponse
+    {
+        $request->user()->update($request->validated());
+
+        return redirect()
+            ->route('profile.show', ['tab' => 'affiliate'])
+            ->with('status', 'Tài khoản nhận tiền của bạn đã được lưu.');
+    }
+
+    /**
+     * Ask to withdraw the approved commissions: opens a payout and mails the owner. Needs a bank account and the
+     * minimum payout in approved commissions.
+     */
+    public function requestAffiliatePayout(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $back = redirect()->route('profile.show', ['tab' => 'affiliate']);
+
+        if (blank($user->affiliate_bank_name) || blank($user->affiliate_bank_account_number) || blank($user->affiliate_bank_account_name)) {
+            return $back->withErrors(['payout' => 'Bạn cần nhập tài khoản nhận tiền trước khi rút.']);
+        }
+
+        $payout = AffiliatePayout::openFor($user);
+
+        if ($payout === null) {
+            return $back->withErrors(['payout' => 'Bạn cần có tối thiểu '.number_format(config('affiliate.minimum_payout'), 0, ',', '.').'₫ hoa hồng đã duyệt để rút tiền.']);
+        }
+
+        if (filled($to = config('payment.notify_email'))) {
+            rescue(fn () => Mail::to($to)->send(new AffiliatePayoutRequested($payout)));
+        }
+
+        return $back->with('status', 'Đã gửi yêu cầu rút tiền. Chúng tôi sẽ chuyển khoản cho bạn sớm.');
+    }
+
+    /**
+     * The referral link, the people brought in and the commissions earned by the learner.
+     *
+     * @return array<string, mixed>
+     */
+    private function affiliate(User $user): array
+    {
+        $totals = $user->affiliateCommissions()
+            ->selectRaw('status, SUM(amount) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return [
+            'referralUrl' => $user->referralUrl(),
+            'referralCount' => $user->referrals()->count(),
+            'commissionRate' => $user->affiliateCommissionRate(),
+            'payableBalance' => $user->affiliatePayableBalance(),
+            'pendingPayout' => $user->affiliatePayouts()->where('status', AffiliatePayoutStatus::Pending)->exists(),
+            'earnings' => collect(AffiliateCommissionStatus::cases())
+                ->mapWithKeys(fn (AffiliateCommissionStatus $status): array => [$status->value => (int) ($totals[$status->value] ?? 0)]),
+            'commissions' => $user->affiliateCommissions()->with('referredUser')->latest('id')->limit(20)->get(),
+        ];
     }
 
     /**

@@ -54,6 +54,7 @@
                         ['label' => 'Thành tích học tập', 'icon' => 'trophy', 'href' => route('profile.show')],
                         ['label' => 'Thông tin cá nhân', 'icon' => 'user-round-pen', 'href' => route('profile.show', ['tab' => 'info'])],
                         ['label' => 'Khóa học đã mua', 'icon' => 'shopping-bag', 'href' => route('profile.show', ['tab' => 'courses'])],
+                        ['label' => 'Giới thiệu bạn bè', 'icon' => 'gift', 'href' => route('profile.show', ['tab' => 'affiliate'])],
                     ];
                 @endphp
                 <div class="relative">

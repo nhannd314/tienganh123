@@ -202,7 +202,7 @@ class LessonForm
     }
 
     /**
-     * Rich text editor shared by the passage and the content: formatting, headings, lists, image attachments, and YouTube, video and audio blocks.
+     * Rich text editor shared by the passage and the content: formatting, headings, lists, tables, image attachments, and YouTube, video and audio blocks.
      */
     private static function richContentEditor(string $name): RichEditor
     {
@@ -211,7 +211,7 @@ class LessonForm
                 ['bold', 'italic', 'underline', 'strike', 'code', 'link'],
                 ['h2', 'h3'],
                 ['blockquote', 'bulletList', 'orderedList'],
-                ['attachFiles', 'customBlocks'],
+                ['table', 'attachFiles', 'customBlocks'],
                 ['undo', 'redo'],
             ])
             ->customBlocks([YoutubeVideoBlock::class, VideoBlock::class, AudioBlock::class])

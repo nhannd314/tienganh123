@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\CaptureReferral;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
@@ -30,6 +31,8 @@ class RegisteredUserController extends Controller
             'email' => $request->validated('email'),
             'password' => $request->validated('password'),
         ]);
+
+        $user->attachReferrer($request->cookie(CaptureReferral::COOKIE));
 
         event(new Registered($user));
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\CaptureReferral;
 use App\Models\User;
 use GuzzleHttp\Exception\ClientException;
 use Illuminate\Auth\Events\Registered;
@@ -59,7 +60,7 @@ class GoogleAuthController extends Controller
             return $this->failed('Email Google của bạn chưa được xác minh nên chưa thể đăng nhập.');
         }
 
-        Auth::login($this->findOrCreateUser($googleUser), remember: true);
+        Auth::login($this->findOrCreateUser($googleUser, $request->cookie(CaptureReferral::COOKIE)), remember: true);
         $request->session()->regenerate();
 
         return redirect()->intended(route('home'));
@@ -71,7 +72,7 @@ class GoogleAuthController extends Controller
      * An existing account whose email was never verified may have been registered by someone else, so its password is
      * replaced: only Google can open it from now on.
      */
-    private function findOrCreateUser(SocialUser $googleUser): User
+    private function findOrCreateUser(SocialUser $googleUser, ?string $referralCode): User
     {
         $user = User::where('google_id', $googleUser->getId())->first();
 
@@ -89,6 +90,8 @@ class GoogleAuthController extends Controller
                 'password' => Str::random(40),
             ]);
             $user->forceFill(['google_id' => $googleUser->getId(), 'email_verified_at' => now()])->save();
+
+            $user->attachReferrer($referralCode);
 
             event(new Registered($user));
 

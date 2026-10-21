@@ -445,3 +445,13 @@ it('keeps the Chant popup dark, puts the picture of a flashcard slide on a light
         ->and($images[1][0])->not->toContain('data-chant-animate')
         ->and($images[1][1])->not->toContain('data-chant-animate');
 });
+
+it('embeds a YouTube video block of the content', function () {
+    $lesson = publishedLesson([
+        'content' => '<p>Watch</p><div data-type="customBlock" data-config="{&quot;url&quot;:&quot;https://www.youtube.com/watch?v=dQw4w9WgXcQ&quot;}" data-id="youtube_video"></div>',
+    ]);
+
+    $this->get(lessonUrl($lesson))
+        ->assertOk()
+        ->assertSee('<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"', false);
+});

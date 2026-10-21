@@ -11,11 +11,11 @@ beforeEach(function () {
     Filament::setCurrentPanel('admin');
 });
 
-it('groups the admin menu into learning content, vocabulary, content, pricing and users, in that order', function () {
+it('groups the admin menu into learning content, vocabulary, content, pricing, affiliate and users, in that order', function () {
     $groups = collect(Filament::getNavigation())->filter(fn ($group) => filled($group->getLabel()));
 
     expect($groups->map(fn ($group) => $group->getLabel())->values()->all())
-        ->toBe(['Learning content', 'Vocabulary', 'Content', 'Pricing', 'Users']);
+        ->toBe(['Learning content', 'Vocabulary', 'Content', 'Pricing', 'Affiliate', 'Users']);
 
     $labelsOf = fn (string $group) => $groups->first(fn ($candidate) => $candidate->getLabel() === $group)
         ->getItems()
@@ -27,6 +27,7 @@ it('groups the admin menu into learning content, vocabulary, content, pricing an
         ->and($labelsOf('Vocabulary'))->toBe(['Words', 'Vocabularies', 'Flashcards', 'Flashcard Sets', 'Sentences', 'Sentence Sets', 'Tags'])
         ->and($labelsOf('Content'))->toBe(['Categories', 'Posts', 'Pages'])
         ->and($labelsOf('Pricing'))->toBe(['Payments'])
+        ->and($labelsOf('Affiliate'))->toBe(['Commissions', 'Payouts'])
         ->and($labelsOf('Users'))->toBe(['Users']);
 });
 
@@ -36,8 +37,8 @@ it('gives every menu item its own icon', function () {
         ->filter(fn ($item) => $item->getLabel() !== 'Dashboard')
         ->map(fn ($item) => $item->getIcon());
 
-    expect($icons)->toHaveCount(16)
-        ->and($icons->unique())->toHaveCount(16)
+    expect($icons)->toHaveCount(18)
+        ->and($icons->unique())->toHaveCount(18)
         ->and($icons->filter(fn ($icon) => blank($icon)))->toBeEmpty();
 });
 

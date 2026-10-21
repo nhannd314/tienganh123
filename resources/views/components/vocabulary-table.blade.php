@@ -51,6 +51,7 @@
             <table class="w-full border-collapse max-md:group-data-[expanded]/vocab:min-w-190 md:min-w-190">
                 <thead>
                     <tr>
+                        <th scope="col" class="{{ $headerCell }} w-12 text-center">STT</th>
                         <th scope="col" class="{{ $headerCell }}">Từ vựng</th>
                         <th scope="col" class="{{ $headerCell }}">UK</th>
                         <th scope="col" class="{{ $headerCell }}">US</th>
@@ -60,6 +61,7 @@
                 <tbody>
                     @foreach ($words as $word)
                         <tr>
+                            <td class="{{ $bodyCell }} w-12 text-center text-[length:calc(var(--text-lg)*var(--vs,1))] text-fg-muted">{{ $loop->iteration }}</td>
                             <td lang="en" class="{{ $bodyCell }} text-[length:calc(var(--text-xl)*var(--vs,1))] font-medium text-primary-text">{{ $word->word }}</td>
                             <td class="{{ $bodyCell }}">
                                 <div class="flex items-center gap-2 md:gap-3">
