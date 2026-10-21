@@ -19,12 +19,13 @@ class HomeController extends Controller
     private const FLASHCARD_TILES = 4;
 
     /**
-     * Show the home page with the latest published courses and the leaderboard.
+     * Show the home page with the published courses, by sort order then from the newest, and the leaderboard.
      */
     public function __invoke(): View
     {
         $courses = Course::query()
             ->published()
+            ->orderBy('sort_order')
             ->latest()
             ->latest('id')
             ->limit(self::LATEST_COURSES)

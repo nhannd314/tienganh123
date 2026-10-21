@@ -5,14 +5,15 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('lists published courses by sort order and hides drafts', function () {
-    Course::factory()->published()->create(['title' => 'Second Course', 'sort_order' => 2]);
-    Course::factory()->published()->create(['title' => 'First Course', 'sort_order' => 1]);
+it('lists published courses by sort order, then the newest first, and hides drafts', function () {
+    Course::factory()->published()->create(['title' => 'Last Course', 'sort_order' => 2, 'created_at' => now()->addDay()]);
+    Course::factory()->published()->create(['title' => 'Older Course', 'sort_order' => 1, 'created_at' => now()->subDay()]);
+    Course::factory()->published()->create(['title' => 'Newer Course', 'sort_order' => 1, 'created_at' => now()]);
     Course::factory()->create(['title' => 'Draft Course']);
 
     $this->get(route('courses.index'))
         ->assertOk()
-        ->assertSeeInOrder(['Tất cả khóa học', 'First Course', 'Second Course'])
+        ->assertSeeInOrder(['Tất cả khóa học', 'Newer Course', 'Older Course', 'Last Course'])
         ->assertDontSee('Draft Course');
 });
 

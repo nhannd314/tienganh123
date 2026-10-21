@@ -11,13 +11,14 @@ use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
-it('lists the newest published courses first', function () {
-    Course::factory()->published()->create(['title' => 'Older Course', 'created_at' => now()->subDay()]);
-    Course::factory()->published()->create(['title' => 'Newer Course', 'created_at' => now()]);
+it('lists the published courses by sort order, then the newest first', function () {
+    Course::factory()->published()->create(['title' => 'Last Course', 'sort_order' => 2, 'created_at' => now()->addDay()]);
+    Course::factory()->published()->create(['title' => 'Older Course', 'sort_order' => 1, 'created_at' => now()->subDay()]);
+    Course::factory()->published()->create(['title' => 'Newer Course', 'sort_order' => 1, 'created_at' => now()]);
 
     $this->get(route('home'))
         ->assertOk()
-        ->assertSeeInOrder(['Danh sách khóa học', 'Newer Course', 'Older Course']);
+        ->assertSeeInOrder(['Danh sách khóa học', 'Newer Course', 'Older Course', 'Last Course']);
 });
 
 it('shows only the 20 newest courses and links to the full list', function () {

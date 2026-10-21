@@ -44,6 +44,18 @@ it('returns not found for an unpublished course', function () {
     $this->get(route('courses.show', $course))->assertNotFound();
 });
 
+it('lists the lessons of a unit by sort order, then from the oldest to the newest', function () {
+    $course = Course::factory()->published()->create();
+    $unit = Unit::factory()->for($course)->create();
+
+    Lesson::factory()->published()->for($unit)->create(['title' => 'Lesson Last', 'sort_order' => 2, 'created_at' => now()->subWeek()]);
+    Lesson::factory()->published()->for($unit)->create(['title' => 'Lesson Newer', 'sort_order' => 1, 'created_at' => now()]);
+    Lesson::factory()->published()->for($unit)->create(['title' => 'Lesson Older', 'sort_order' => 1, 'created_at' => now()->subDay()]);
+
+    $this->get(route('courses.show', $course))
+        ->assertSeeInOrder(['Lesson Older', 'Lesson Newer', 'Lesson Last']);
+});
+
 it('numbers lessons continuously across units and skips unpublished ones', function () {
     $course = Course::factory()->published()->create();
     $firstUnit = Unit::factory()->for($course)->create(['title' => 'Hello!', 'sort_order' => 1]);

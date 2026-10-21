@@ -47,10 +47,12 @@ class Unit extends Model
     }
 
     /**
+     * The lessons by sort order, then from the oldest to the newest.
+     *
      * @return HasMany<Lesson, $this>
      */
     public function lessons(): HasMany
     {
-        return $this->hasMany(Lesson::class)->orderBy('sort_order');
+        return $this->hasMany(Lesson::class)->orderBy('sort_order')->oldest()->oldest('id');
     }
 }
