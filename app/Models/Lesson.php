@@ -50,8 +50,6 @@ class Lesson extends Model
      */
     public const PRONUNCIATION_STEPS = [5, 6, 10];
 
-    public const REVIEW_QUESTIONS_PER_PART = 10;
-
     /**
      * Slugs are unique within the parent unit_id.
      *
@@ -139,7 +137,7 @@ class Lesson extends Model
     }
 
     /**
-     * The words a review asks about: the first ten that have at least one meaning.
+     * The words a review asks about: all the words that have at least one meaning.
      *
      * @return Collection<int, Word>
      */
@@ -147,7 +145,6 @@ class Lesson extends Model
     {
         return $this->words
             ->filter(fn (Word $word): bool => $word->meaningLabels() !== [])
-            ->take(self::REVIEW_QUESTIONS_PER_PART)
             ->values();
     }
 

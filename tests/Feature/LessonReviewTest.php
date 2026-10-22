@@ -274,11 +274,11 @@ it('borrows wrong options from other words when the lesson has too few words', f
         ->and($questions[0]['options'])->toHaveCount(4);
 });
 
-it('asks about at most ten words and skips words without a meaning', function () {
+it('asks about every word that has a meaning', function () {
     $lesson = reviewLesson(12);
     $lesson->words->first()->update(['meanings' => []]);
 
-    expect(reviewQuestions($this->get(reviewUrl($lesson))->getContent()))->toHaveCount(10);
+    expect(reviewQuestions($this->get(reviewUrl($lesson))->getContent()))->toHaveCount(11);
 });
 
 it('shows an empty state when the lesson has no words', function () {

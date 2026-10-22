@@ -13,13 +13,13 @@ use Illuminate\Support\Collection;
 class AdvancedReviewContent
 {
     /**
-     * The sentences of the lesson (at most REVIEW_QUESTIONS_PER_PART) that have words marked with backticks, each cut into its text and the words to fill in.
+     * The sentences of the lesson that have words marked with backticks, each cut into its text and the words to fill in.
      *
      * @return list<array{id: int, segments: list<array{text: string, isMarked: bool}>, translation: string|null}>
      */
     public function markedSentences(Lesson $lesson): array
     {
-        return $this->markedSentencesOf($lesson->sentenceSet?->sentences ?? collect(), Lesson::REVIEW_QUESTIONS_PER_PART);
+        return $this->markedSentencesOf($lesson->sentenceSet?->sentences ?? collect());
     }
 
     /**
@@ -43,14 +43,14 @@ class AdvancedReviewContent
     }
 
     /**
-     * The sentences of the lesson (at most REVIEW_QUESTIONS_PER_PART) to be written whole; part 8 shows their meaning, so
+     * The sentences of the lesson to be written whole; part 8 shows their meaning, so
      * it needs a translation, part 9 only needs them to be heard.
      *
      * @return list<array{id: int, sentence: string, translation: string|null, audio: string|null}>
      */
     public function writingSentences(Lesson $lesson, bool $needsTranslation): array
     {
-        return $this->writingSentencesOf($lesson->sentenceSet?->sentences ?? collect(), $needsTranslation, Lesson::REVIEW_QUESTIONS_PER_PART);
+        return $this->writingSentencesOf($lesson->sentenceSet?->sentences ?? collect(), $needsTranslation);
     }
 
     /**
