@@ -140,7 +140,7 @@ class LessonForm
                 ->label('Vocabulary')
                 ->rows(8)
                 ->placeholder("apple [noun] quả táo, táo | I have an apple = Tôi có một quả táo\nwork [noun] công việc [verb] làm việc")
-                ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác | câu ví dụ = bản dịch. Gõ một từ đã có rồi bấm Tab để tự nạp nghĩa. Lưu thành một bộ từ vựng cùng tên với bài học.')
+                ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác [từ loại] nghĩa | câu ví dụ = bản dịch. Mỗi [từ loại] là một nghĩa: "[n] táo, quả táo" lưu chung một nghĩa, "[n] quả táo [n] táo" lưu hai nghĩa. Gõ một từ đã có rồi bấm Tab để tự nạp nghĩa. Lưu thành một bộ từ vựng cùng tên với bài học.')
                 ->live(onBlur: true)
                 ->afterStateUpdated(fn (Set $set, ?string $state) => $set('vocabulary_lines', BulkAddWordsAction::loadKnownWords((string) $state)))
                 ->visible(fn (?Lesson $record): bool => $record === null || $record->vocabularies()->doesntExist())

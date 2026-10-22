@@ -29,9 +29,9 @@ it('attaches a word to the vocabulary', function () {
     expect($vocabulary->words()->pluck('words.id')->all())->toBe([$word->id]);
 });
 
-it('parses one word per line with its parts of speech and comma separated meanings', function () {
+it('parses one word per line, each part of speech with its meaning, the comma separated words of a meaning kept together', function () {
     expect(BulkAddWordsAction::parse("apple [noun] quả táo, táo\n\n  work [noun] công việc [verb] làm việc  \nice cream [noun] kem, kem, Kem\nwater"))->toBe([
-        ['word' => 'apple', 'meanings' => [['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo']], 'examples' => []],
+        ['word' => 'apple', 'meanings' => [['pos' => 'noun', 'meaning' => 'quả táo, táo']], 'examples' => []],
         ['word' => 'work', 'meanings' => [['pos' => 'noun', 'meaning' => 'công việc'], ['pos' => 'verb', 'meaning' => 'làm việc']], 'examples' => []],
         ['word' => 'ice cream', 'meanings' => [['pos' => 'noun', 'meaning' => 'kem']], 'examples' => []],
         ['word' => 'water', 'meanings' => [], 'examples' => []],
@@ -40,7 +40,7 @@ it('parses one word per line with its parts of speech and comma separated meanin
 
 it('keeps the round brackets of a meaning, which are only a note, even with a comma inside', function () {
     expect(BulkAddWordsAction::parse('book [verb] đặt trước (vé, phòng), đặt chỗ [noun] quyển sách (to)'))->toBe([
-        ['word' => 'book', 'meanings' => [['pos' => 'verb', 'meaning' => 'đặt trước (vé, phòng)'], ['pos' => 'verb', 'meaning' => 'đặt chỗ'], ['pos' => 'noun', 'meaning' => 'quyển sách (to)']], 'examples' => []],
+        ['word' => 'book', 'meanings' => [['pos' => 'verb', 'meaning' => 'đặt trước (vé, phòng), đặt chỗ'], ['pos' => 'noun', 'meaning' => 'quyển sách (to)']], 'examples' => []],
     ]);
 });
 
@@ -68,7 +68,7 @@ it('bulk adds new words and adds only the missing meanings to existing words', f
         ->assertHasNoFormErrors();
 
     expect(Word::where('word', 'apple')->count())->toBe(1)
-        ->and(Word::firstWhere('word', 'apple')->meanings)->toBe([['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo']])
+        ->and(Word::firstWhere('word', 'apple')->meanings)->toBe([['pos' => 'noun', 'meaning' => 'quả táo, táo']])
         ->and(Word::firstWhere('word', 'apple')->examples)->toBe([['sentence' => 'I have an apple', 'translation' => 'Tôi có một quả táo', 'audio' => null]])
         ->and(Word::whereRaw('lower(word) = ?', ['work'])->count())->toBe(1)
         ->and($work->fresh()->meanings)->toBe([
@@ -116,7 +116,7 @@ it('loads a word that is already stored, with its meanings but not its examples,
     ]);
 
     expect(BulkAddWordsAction::loadKnownWords("apple\nbanana\nwork [noun] công việc"))
-        ->toBe('Apple [n] quả táo, táo [v] ăn táo
+        ->toBe('Apple [n] quả táo [n] táo [v] ăn táo
 banana
 work [noun] công việc')
         ->and(BulkAddWordsAction::loadKnownWords('banana'))->toBe('banana');
@@ -167,14 +167,14 @@ it('stores an abbreviated part of speech in full, and keeps a full or unknown on
 
     $entries = BulkAddWordsAction::parse("apple [n] quả táo, táo [v] ăn táo\nslow [a] chậm [adv] một cách chậm chạp\nwork [noun] công việc [N] việc làm");
 
-    expect($entries[0]['meanings'])->toBe([['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']])
+    expect($entries[0]['meanings'])->toBe([['pos' => 'noun', 'meaning' => 'quả táo, táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']])
         ->and(array_column($entries[1]['meanings'], 'pos'))->toBe(['adjective', 'adverb'])
         ->and(array_column($entries[2]['meanings'], 'pos'))->toBe(['noun', 'noun']);
 
     $vocabulary = Vocabulary::factory()->create();
     BulkAddWordsAction::apply($vocabulary, $entries);
 
-    expect(Word::firstWhere('word', 'apple')->meanings)->toBe([['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']]);
+    expect(Word::firstWhere('word', 'apple')->meanings)->toBe([['pos' => 'noun', 'meaning' => 'quả táo, táo'], ['pos' => 'verb', 'meaning' => 'ăn táo']]);
 });
 
 it('does not add a second meaning when the same one is typed again with the abbreviated part of speech', function () {
@@ -185,4 +185,25 @@ it('does not add a second meaning when the same one is typed again with the abbr
 
     expect($result['updated'])->toBe(0)
         ->and($word->fresh()->meanings)->toHaveCount(1);
+});
+
+it('saves a meaning for each part of speech typed, even twice the same one', function () {
+    expect(BulkAddWordsAction::parse('apple [n] quả táo [n] táo [n] Quả táo')[0]['meanings'])
+        ->toBe([['pos' => 'noun', 'meaning' => 'quả táo'], ['pos' => 'noun', 'meaning' => 'táo']]);
+});
+
+it('adds to an existing word only the words of a meaning it does not have yet for that part of speech', function () {
+    $vocabulary = Vocabulary::factory()->create();
+    $apple = Word::factory()->create(['word' => 'apple', 'meanings' => [['pos' => 'noun', 'meaning' => 'quả táo, trái táo']], 'examples' => []]);
+
+    $unchanged = BulkAddWordsAction::apply($vocabulary, BulkAddWordsAction::parse('apple [n] Trái táo, quả táo'));
+    $updated = BulkAddWordsAction::apply($vocabulary, BulkAddWordsAction::parse('apple [n] táo, quả táo [v] trái táo'));
+
+    expect($unchanged['updated'])->toBe(0)
+        ->and($updated['updated'])->toBe(1)
+        ->and($apple->fresh()->meanings)->toBe([
+            ['pos' => 'noun', 'meaning' => 'quả táo, trái táo'],
+            ['pos' => 'noun', 'meaning' => 'táo'],
+            ['pos' => 'verb', 'meaning' => 'trái táo'],
+        ]);
 });
