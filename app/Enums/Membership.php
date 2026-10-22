@@ -11,7 +11,7 @@ enum Membership: string implements HasLabel
     public function getLabel(): string
     {
         return match ($this) {
-            self::Member => 'Thành viên',
+            self::Member => 'Membership',
         };
     }
 }

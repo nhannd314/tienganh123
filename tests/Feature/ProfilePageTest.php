@@ -22,7 +22,7 @@ it('shows the avatar opening the account menu in the header of a signed-in visit
     $this->actingAs($user)->get(route('courses.index'))
         ->assertSee('Tài khoản của Nguyễn Minh An')
         ->assertSee('data-toggle="nav-account-menu"', false)
-        ->assertSeeInOrder(['id="nav-account-menu"', 'an@example.com', 'Thành viên', 'Thành tích học tập', 'Thông tin cá nhân', 'Khóa học đã mua', 'Đăng xuất'], false)
+        ->assertSeeInOrder(['id="nav-account-menu"', 'an@example.com', 'Membership', 'Thành tích học tập', 'Thông tin cá nhân', 'Khóa học đã mua', 'Đăng xuất'], false)
         ->assertSee('href="'.route('profile.show', ['tab' => 'info']).'"', false)
         ->assertSee('action="'.route('logout').'"', false);
 });
@@ -30,7 +30,7 @@ it('shows the avatar opening the account menu in the header of a signed-in visit
 it('shows the running membership under the name, with its last day or for ever', function (?string $expiresOn, string $until) {
     $user = User::factory()->member($expiresOn)->create(['name' => 'Nguyễn Minh An']);
 
-    $this->actingAs($user)->get(route('profile.show'))->assertSeeInOrder(['Nguyễn Minh An', 'Thành viên', $until]);
+    $this->actingAs($user)->get(route('profile.show'))->assertSeeInOrder(['Nguyễn Minh An', 'Membership', $until]);
 })->with([
     'until a day' => ['2099-12-31', 'Đến 31/12/2099'],
     'for ever' => [null, 'Vĩnh viễn'],
