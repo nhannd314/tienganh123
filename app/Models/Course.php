@@ -57,6 +57,14 @@ class Course extends Model
     }
 
     /**
+     * @return HasMany<Exam, $this>
+     */
+    public function exams(): HasMany
+    {
+        return $this->hasMany(Exam::class);
+    }
+
+    /**
      * The learners with the highest total score over the lessons of the course, best first (ties go to whoever has the
      * lowest user id). A learner's `progress` is the average review percent of all the lessons of the course, so a lesson
      * they have not started counts as 0.

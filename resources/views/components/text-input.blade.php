@@ -1,11 +1,13 @@
 {{--
     Large text field used for typing answers. `state` = correct | wrong shows a status icon and
-    tints the field like x-alert. `class` styles the wrapper; other attributes go to the <input>.
+    tints the field like x-alert. Sizes: lg (56px, the default) · md (48px, smaller text). `class` styles the wrapper;
+    other attributes go to the <input>.
 --}}
 @props([
     'label' => null,
     'hint' => null,
     'state' => null,
+    'size' => 'lg',
 ])
 
 @php
@@ -24,7 +26,9 @@
             @if ($isWrong) aria-invalid="true" @endif
             @if ($hintId) aria-describedby="{{ $hintId }}" @endif
             {{ $attributes->except('class')->class([
-                'h-14 w-full rounded-md border px-4 text-xl leading-snug text-fg-strong outline-none transition-interactive focus:shadow-focus',
+                'w-full rounded-md border px-4 leading-snug text-fg-strong outline-none transition-interactive focus:shadow-focus',
+                'h-12 text-lg' => $size === 'md',
+                'h-14 text-xl' => $size !== 'md',
                 'disabled:cursor-not-allowed disabled:border-line-disabled disabled:bg-surface-disabled disabled:text-fg-disabled',
                 'pr-12' => $state,
                 'border-success-border bg-success-bg' => $isCorrect,

@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\CourseIndexController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\FlashcardSetController;
 use App\Http\Controllers\FlashcardSetIndexController;
 use App\Http\Controllers\HomeController;
@@ -51,6 +52,13 @@ Route::get('/cau-mau/{sentenceSet:slug}/on-tap/{step}', SentenceSetReviewControl
     ->whereIn('step', ['7', '8', '9'])
     ->middleware('auth')
     ->name('sentences.review');
+Route::get('/de-thi/{exam:slug}', [ExamController::class, 'show'])->name('exams.show');
+Route::post('/de-thi/{exam:slug}/bat-dau', [ExamController::class, 'start'])->middleware('throttle:10,1')->name('exams.start');
+Route::get('/de-thi/{exam:slug}/lam-bai', [ExamController::class, 'take'])->name('exams.take');
+Route::post('/de-thi/{exam:slug}/nop-bai', [ExamController::class, 'submit'])->name('exams.submit');
+Route::get('/de-thi/{exam:slug}/ket-qua', [ExamController::class, 'result'])->name('exams.result');
+// Each call is a paid Azure request, hence the rate limit.
+Route::post('/de-thi/{exam:slug}/phat-am', [ExamController::class, 'pronounce'])->middleware('throttle:20,1')->name('exams.pronounce');
 Route::get('/blog-tieng-anh', PostIndexController::class)->name('posts.index');
 Route::get('/blog-tieng-anh/{post:slug}', PostController::class)->name('posts.show');
 Route::view('/tools/crossword', 'tools.crossword')->name('tools.crossword');
