@@ -448,7 +448,7 @@ class LessonReviewController extends Controller
     /**
      * Part 10 questions: the sentence to read, which may be heard first.
      *
-     * @return list<array{id: int, prompt: string, phonetic: null}>
+     * @return list<array{id: int, prompt: string, phonetic: null, audio: string|null}>
      */
     private function sentenceReadingQuestions(Lesson $lesson): array
     {
@@ -456,13 +456,14 @@ class LessonReviewController extends Controller
             'id' => $sentence['id'],
             'prompt' => $sentence['sentence'],
             'phonetic' => null,
+            'audio' => $sentence['audio'],
         ], app(AdvancedReviewContent::class)->writingSentences($lesson, false));
     }
 
     /**
      * Part 5 questions: the word to read, with its IPA (it may be heard first).
      *
-     * @return list<array{id: int, prompt: string, phonetic: string|null}>
+     * @return list<array{id: int, prompt: string, phonetic: string|null, audio: string|null}>
      */
     private function pronunciationQuestions(Lesson $lesson): array
     {
@@ -470,6 +471,7 @@ class LessonReviewController extends Controller
             'id' => $word->id,
             'prompt' => $word->word,
             'phonetic' => $word->ipa_us,
+            'audio' => $word->audio_us_url,
         ])->all();
     }
 }

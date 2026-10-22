@@ -176,7 +176,13 @@
                     @endphp
                     <li @class(['grid grid-cols-[36px_40px_minmax(0,1fr)_auto] items-center gap-3 rounded-md border px-3 py-2', $podium['row']])>
                         <span @class(['flex size-8 items-center justify-center rounded-full type-label font-bold', $podium['rank']])>{{ $index + 1 }}</span>
-                        <span @class(['flex size-10 items-center justify-center rounded-full type-label-sm', $avatarStyles[$index % count($avatarStyles)]])>{{ $initials }}</span>
+                        <span @class(['flex size-10 items-center justify-center overflow-hidden rounded-full type-label-sm', $avatarStyles[$index % count($avatarStyles)]])>
+                            @if ($learner['avatarUrl'])
+                                <img src="{{ $learner['avatarUrl'] }}" alt="" class="size-full object-cover">
+                            @else
+                                {{ $initials }}
+                            @endif
+                        </span>
                         <span class="flex min-w-0 flex-col">
                             <span @class(['type-label font-semibold', $rankTitle['color']])>{{ $rankTitle['title'] }}</span>
                             <span class="truncate type-body-sm text-fg-muted">{{ $learner['name'] }}</span>

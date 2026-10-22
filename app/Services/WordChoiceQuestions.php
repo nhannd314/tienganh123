@@ -23,7 +23,7 @@ class WordChoiceQuestions
      * Part 1 questions: a word and all its meanings among the meanings of other words.
      *
      * @param  Collection<int, Word>  $words
-     * @return list<array{id: int, prompt: string, phonetic: string|null, options: list<string>, answer: int}>
+     * @return list<array{id: int, prompt: string, phonetic: string|null, audio: string|null, options: list<string>, answer: int}>
      */
     public function meaning(Collection $words): array
     {
@@ -59,6 +59,7 @@ class WordChoiceQuestions
                 'id' => $word->id,
                 'prompt' => $word->word,
                 'phonetic' => $word->ipa_us,
+                'audio' => $word->audio_us_url,
                 'options' => $options->all(),
                 'answer' => $options->search($correct),
             ];
@@ -109,7 +110,7 @@ class WordChoiceQuestions
      * Part 3 questions: those of part 1, but the word is only heard (`prompt` is what is spoken), so no IPA is given.
      *
      * @param  Collection<int, Word>  $words
-     * @return list<array{id: int, prompt: string, phonetic: null, options: list<string>, answer: int}>
+     * @return list<array{id: int, prompt: string, phonetic: null, audio: string|null, options: list<string>, answer: int}>
      */
     public function listening(Collection $words): array
     {

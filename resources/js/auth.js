@@ -69,6 +69,20 @@ const rules = {
         email: emailRule,
         password: (value) => (value === '' ? 'Bạn chưa nhập mật khẩu.' : null),
     },
+    forgot: {
+        email: emailRule,
+    },
+    reset: {
+        email: emailRule,
+        password: (value) => (value.length < MIN_PASSWORD_LENGTH ? 'Mật khẩu cần có ít nhất 6 ký tự.' : null),
+        password_confirmation: (value, read) => {
+            if (value === '') {
+                return 'Bạn chưa nhập lại mật khẩu.';
+            }
+
+            return value === read('password') ? null : 'Mật khẩu nhập lại chưa khớp.';
+        },
+    },
     register: {
         name: (value) => (value === '' ? 'Bạn chưa nhập họ và tên.' : null),
         email: emailRule,

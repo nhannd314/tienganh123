@@ -58,7 +58,7 @@ class HomeController extends Controller
      * Top 10 learners by the total of their best scores over all the published lessons, best first (ties go to whoever
      * has the lowest user id).
      *
-     * @return list<array{name: string, points: int}>
+     * @return list<array{name: string, avatarUrl: string|null, points: int}>
      */
     private function leaderboard(): array
     {
@@ -76,7 +76,7 @@ class HomeController extends Controller
             ->limit(self::LEADERBOARD_SIZE)
             ->with('user')
             ->get()
-            ->map(fn (LessonScore $row): array => ['name' => $row->user->name, 'points' => (int) $row->points])
+            ->map(fn (LessonScore $row): array => ['name' => $row->user->name, 'avatarUrl' => $row->user->avatar_url, 'points' => (int) $row->points])
             ->all();
     }
 }

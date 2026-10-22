@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
@@ -98,6 +100,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/dang-nhap/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
     Route::get('/dang-ky', [RegisteredUserController::class, 'create'])->name('register');
     Route::post('/dang-ky', [RegisteredUserController::class, 'store'])->name('register.store');
+    Route::get('/quen-mat-khau', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/quen-mat-khau', [PasswordResetLinkController::class, 'store'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/dat-lai-mat-khau/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/dat-lai-mat-khau', [NewPasswordController::class, 'store'])->middleware('throttle:5,1')->name('password.store');
 });
 Route::post('/dang-xuat', [AuthenticatedSessionController::class, 'destroy'])->middleware('auth')->name('logout');
 Route::post('/webhooks/sepay', SepayWebhookController::class)

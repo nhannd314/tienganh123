@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Membership;
 use App\Enums\UserRole;
+use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -201,6 +202,14 @@ class User extends Authenticatable implements FilamentUser
     public function hasMemberAccess(): bool
     {
         return $this->isAdmin() || $this->isMember();
+    }
+
+    /**
+     * Mail the link to choose a new password, in Vietnamese.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     /**

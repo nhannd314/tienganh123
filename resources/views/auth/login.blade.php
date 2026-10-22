@@ -8,6 +8,10 @@
                 <p class="type-body text-fg-muted">Chào mừng bạn quay lại FunEnglish!</p>
             </div>
 
+            @if (session('status'))
+                <x-alert tone="success">{{ session('status') }}</x-alert>
+            @endif
+
             @if ($errors->has('credentials'))
                 <x-alert tone="danger">{{ $errors->first('credentials') }}</x-alert>
             @endif
@@ -21,7 +25,7 @@
 
                 <x-auth-field name="password" label="Mật khẩu" placeholder="Nhập mật khẩu" autocomplete="current-password" password toggle>
                     <x-slot:aside>
-                        <a href="#" class="type-body-sm">Quên mật khẩu?</a>
+                        <a href="{{ route('password.request') }}" class="type-body-sm">Quên mật khẩu?</a>
                     </x-slot:aside>
                 </x-auth-field>
 

@@ -519,7 +519,8 @@ document.addEventListener('change', async (event) => {
  * or Escape closes the popup. The wait is counted in JS, not by a CSS animation, because the reduced-motion rule of the page speeds
  * CSS animations up.
  */
-const CHANT_SLIDE_MS = 12000;
+// public/chant/beat.mp3 is about 93.75 BPM (0.64 s a beat): a slide lasts 20 beats (5 bars).
+const CHANT_SLIDE_MS = 12800;
 
 const chants = new WeakMap();
 
@@ -538,7 +539,7 @@ const showChantSlide = (dialog, index) => {
         const element = dialog.querySelector(`[data-chant-${name}]`);
 
         element.textContent = text ?? '';
-        element.hidden = !text;
+        element.hidden = !text || chant.isTextHidden;
     });
 
     dialog.querySelector('[data-chant-counter]').textContent = `${chant.index + 1} / ${chant.slides.length}`;
@@ -646,7 +647,11 @@ document.addEventListener('click', (event) => {
         window.speechSynthesis?.cancel();
         window.playingAudio?.pause();
 
+        // The hide button of the card the chant belongs to (flashcards, example sentences) also hides the text of the slides.
+        const isTextHidden = open.closest('section')?.querySelector('[data-flashcard-toggle], [data-example-toggle]')?.getAttribute('aria-pressed') === 'true';
+
         chants.set(dialog, {
+            isTextHidden,
             slides: JSON.parse(dialog.dataset.slides),
             tracks,
             track: Math.floor(Math.random() * Math.max(tracks.length, 1)),
