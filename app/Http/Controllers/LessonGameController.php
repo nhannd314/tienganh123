@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\LearnerAchieved;
 use App\Models\Course;
 use App\Models\GameScore;
 use App\Models\Lesson;
@@ -90,7 +91,11 @@ class LessonGameController extends Controller
 
         $validated = $request->validate(['milliseconds' => $timeRules]);
 
-        GameScore::record($lesson, $game, $request->user(), $validated['milliseconds']);
+        $best = GameScore::record($lesson, $game, $request->user(), $validated['milliseconds']);
+
+        if ($best->wasRecentlyCreated || $best->wasChanged('milliseconds')) {
+            LearnerAchieved::bestTime($request->user(), $game, $best->milliseconds)->announce();
+        }
 
         return response()->json([
             'html' => view('lessons.games.best-times', ['times' => GameScore::leaderboard($lesson, $game, $request->user())])->render(),

@@ -239,6 +239,21 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * The member id of the user in a presence channel: one per tab (its socket) in the `learning` channel, so closing a
+     * tab does not take the user out while another is open, and each tab tells what it is about (see routes/channels.php).
+     */
+    public function getAuthIdentifierForBroadcasting(): mixed
+    {
+        $socketId = request('socket_id');
+
+        if (request('channel_name') === 'presence-learning' && is_string($socketId) && $socketId !== '') {
+            return $this->getAuthIdentifier().'.'.$socketId;
+        }
+
+        return $this->getAuthIdentifier();
+    }
+
+    /**
      * Only admins can sign in to the Filament admin panel.
      */
     public function canAccessPanel(Panel $panel): bool

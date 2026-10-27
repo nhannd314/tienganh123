@@ -728,3 +728,176 @@ document.addEventListener('fullscreenchange', () => {
         document.querySelectorAll('[data-chant-dialog][open]').forEach((dialog) => dialog.close());
     }
 });
+
+/*
+ * "Đang học bài" (x-learners-now): every page of a signed-in user (`data-learners-now`) joins the `learning` presence channel
+ * with what it is about (the `learning-activity` meta, see ShareLearningActivity) and lists, live, the users on the site,
+ * the latest first, with their number on the button. Each tab is a member of its own (`socket`): a user is listed once,
+ * with the activity of the tab they opened last (`since`), and stays while any of their tabs is open.
+ */
+const learnersNow = document.querySelector('[data-learners-now]');
+
+if (learnersNow) {
+    import('./echo').then(() => {
+        const channel = window.Echo.join('learning');
+        const avatarStyles = JSON.parse(learnersNow.dataset.avatarStyles);
+        const template = learnersNow.querySelector('[data-learner-template]');
+        const list = learnersNow.querySelector('[data-learners-list]');
+        const badge = learnersNow.querySelector('[data-learners-badge]');
+        let members = [];
+
+        const render = () => {
+            const latestTabs = new Map();
+
+            members.forEach((tab) => {
+                if ((latestTabs.get(tab.id)?.since ?? -1) < tab.since) {
+                    latestTabs.set(tab.id, tab);
+                }
+            });
+
+            const learners = [...latestTabs.values()].sort((first, second) => second.since - first.since);
+
+            list.replaceChildren(...learners.map((learner, index) => {
+                const item = template.content.firstElementChild.cloneNode(true);
+                const image = item.querySelector('[data-learner-image]');
+
+                item.querySelector('[data-learner-avatar]').classList.add(...avatarStyles[index % avatarStyles.length].split(' '));
+                item.querySelector('[data-learner-name]').textContent = learner.name;
+                item.querySelector('[data-learner-activity]').textContent = learner.activity;
+
+                if (learner.avatarUrl) {
+                    image.src = learner.avatarUrl;
+                } else {
+                    image.remove();
+                    item.querySelector('[data-learner-initials]').textContent = learner.initials;
+                }
+
+                return item;
+            }));
+
+            list.hidden = learners.length === 0;
+            learnersNow.querySelector('[data-learners-empty]').hidden = learners.length > 0;
+            learnersNow.querySelector('[data-learners-count]').textContent = learners.length;
+            badge.textContent = learners.length > 99 ? '99+' : learners.length;
+            badge.hidden = learners.length === 0;
+            learnersNow.querySelector('[data-toggle="learners-now"]').ariaLabel = `Đang học: ${learners.length} bạn`;
+        };
+
+        channel
+            .here((current) => {
+                members = current;
+                render();
+            })
+            .joining((member) => {
+                members = [...members.filter(({ socket }) => socket !== member.socket), member];
+                render();
+            })
+            .leaving((member) => {
+                members = members.filter(({ socket }) => socket !== member.socket);
+                render();
+            });
+    });
+}
+
+/*
+ * x-achievement-toast: listen on the public `achievements` channel (see LearnerAchieved) and show each achievement in a
+ * toast, one after the other, for ACHIEVEMENT_TOAST_MS each (or until closed).
+ */
+const ACHIEVEMENT_TOAST_MS = 6000;
+const ACHIEVEMENT_QUEUE_MAX = 5;
+
+/*
+ * Confetti of the achievement toast: one burst, from the icon of the card, of CONFETTI_PIECES small diamonds and dots of
+ * many colours. They shoot out every way, slow down while spinning and vanish where they stop. Skipped when the visitor
+ * prefers reduced motion.
+ */
+const CONFETTI_COLORS = ['--color-secondary', '--color-primary', '--color-accent', '--color-success', '--color-danger', '--color-pink-500'];
+const CONFETTI_PIECES = 40;
+
+const randomBetween = (min, max) => min + Math.random() * (max - min);
+
+const launchConfetti = (layer) => {
+    if (!layer || !layer.animate || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+    }
+
+    const origin = layer.closest('.achievement-toast').querySelector('[data-achievement-icon]:not([hidden])')?.parentElement;
+    const layerBox = layer.getBoundingClientRect();
+    const originBox = (origin ?? layer).getBoundingClientRect();
+    const x = originBox.left + originBox.width / 2 - layerBox.left;
+    const y = originBox.top + originBox.height / 2 - layerBox.top;
+
+    for (let index = 0; index < CONFETTI_PIECES; index++) {
+        const piece = document.createElement('span');
+        const isDiamond = index % 4 !== 0;
+        const size = isDiamond ? randomBetween(5, 8) : randomBetween(4, 6);
+        const color = `var(${CONFETTI_COLORS[index % CONFETTI_COLORS.length]})`;
+        // Spread evenly around the circle, each a little off its slot.
+        const angle = ((index + randomBetween(-0.4, 0.4)) / CONFETTI_PIECES) * Math.PI * 2;
+        const distance = randomBetween(50, 130);
+        const dx = Math.cos(angle) * distance;
+        const dy = Math.sin(angle) * distance;
+        const spin = randomBetween(-360, 360);
+
+        piece.style.cssText = `position:absolute;left:${x - size / 2}px;top:${y - size / 2}px;width:${size}px;height:${size}px;`
+            + `background:${color};border-radius:${isDiamond ? '1px' : '9999px'};opacity:0`;
+        layer.append(piece);
+        // Shoots out fast, then slows down; it only fades once it has (nearly) stopped.
+        piece.animate([
+            { transform: 'translate(0, 0) rotate(45deg) scale(0.3)', opacity: 1, easing: 'cubic-bezier(0.15, 0.85, 0.3, 1)' },
+            { transform: `translate(${dx * 0.9}px, ${dy * 0.9}px) rotate(${45 + spin * 0.7}deg) scale(1)`, opacity: 1, offset: 0.55, easing: 'ease-in' },
+            { transform: `translate(${dx}px, ${dy}px) rotate(${45 + spin}deg) scale(0.5)`, opacity: 0 },
+        ], { duration: randomBetween(900, 1200), delay: randomBetween(0, 60), fill: 'both' })
+            .finished.then(() => piece.remove(), () => piece.remove());
+    }
+};
+
+const achievementToasts = document.querySelector('[data-achievement-toasts]');
+
+if (achievementToasts) {
+    const queue = [];
+    let current = null;
+
+    const showNext = () => {
+        current?.remove();
+        current = null;
+
+        const achievement = queue.shift();
+
+        if (!achievement) {
+            return;
+        }
+
+        const toast = achievementToasts.querySelector('[data-achievement-template]').content.firstElementChild.cloneNode(true);
+
+        ['title', 'name', 'message', 'value', 'subject'].forEach((field) => {
+            toast.querySelector(`[data-achievement-${field}]`).textContent = achievement[field];
+        });
+        toast.querySelectorAll('[data-achievement-icon]').forEach((icon) => {
+            icon.hidden = icon.dataset.achievementIcon !== achievement.kind;
+        });
+
+        const timer = setTimeout(showNext, ACHIEVEMENT_TOAST_MS);
+
+        toast.querySelector('[data-achievement-close]').addEventListener('click', () => {
+            clearTimeout(timer);
+            showNext();
+        });
+
+        current = toast;
+        achievementToasts.append(toast);
+        launchConfetti(toast.querySelector('[data-achievement-confetti]'));
+    };
+
+    import('./echo').then(() => {
+        window.Echo.channel('achievements').listen('.achieved', (achievement) => {
+            // A burst (many learners at once) keeps only the latest few.
+            queue.push(achievement);
+            queue.splice(0, Math.max(queue.length - ACHIEVEMENT_QUEUE_MAX, 0));
+
+            if (!current) {
+                showNext();
+            }
+        });
+    });
+}

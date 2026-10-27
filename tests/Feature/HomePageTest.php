@@ -110,9 +110,3 @@ it('speaks a flashcard without audio and uses the picture of its word', function
 it('hides the flashcards when there are none', function () {
     $this->get(route('home'))->assertDontSee('data-flashcard-image', false);
 });
-
-it('shows a floating Messenger chat button linking to the Facebook page of the site', function () {
-    $this->get(route('home'))
-        ->assertSee('href="https://m.me/nhannd314"', false)
-        ->assertSee('aria-label="Chat Messenger"', false);
-});

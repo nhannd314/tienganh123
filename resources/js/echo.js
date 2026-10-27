@@ -11,4 +11,6 @@ window.Echo = new Echo({
     wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
     enabledTransports: ['ws', 'wss'],
+    // What the page is about, encrypted by the layout, for the `learning` presence channel (see routes/channels.php).
+    auth: { params: { activity: document.querySelector('meta[name="learning-activity"]')?.content ?? '' } },
 });

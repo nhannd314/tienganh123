@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Flashcard;
-use App\Models\Lesson;
-use App\Models\LessonScore;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,12 +12,10 @@ class HomeController extends Controller
 {
     private const LATEST_COURSES = 20;
 
-    private const LEADERBOARD_SIZE = 10;
-
     private const FLASHCARD_TILES = 4;
 
     /**
-     * Show the home page with the published courses, by sort order then from the newest, and the leaderboard.
+     * Show the home page with the published courses, by sort order then from the newest.
      */
     public function __invoke(): View
     {
@@ -34,7 +30,6 @@ class HomeController extends Controller
         return view('home', [
             'courses' => $courses,
             'flashcards' => $this->randomFlashcards(),
-            'leaderboard' => $this->leaderboard(),
         ]);
     }
 
@@ -52,31 +47,5 @@ class HomeController extends Controller
             ->inRandomOrder()
             ->limit(self::FLASHCARD_TILES)
             ->get();
-    }
-
-    /**
-     * Top 10 learners by the total of their best scores over all the published lessons, best first (ties go to whoever
-     * has the lowest user id).
-     *
-     * @return list<array{name: string, avatarUrl: string|null, points: int}>
-     */
-    private function leaderboard(): array
-    {
-        $lessonIds = Lesson::query()
-            ->published()
-            ->whereHas('unit', fn (Builder $unit) => $unit->whereHas('course', fn (Builder $course) => $course->published()))
-            ->select('lessons.id');
-
-        return LessonScore::query()
-            ->whereIn('lesson_id', $lessonIds)
-            ->groupBy('user_id')
-            ->selectRaw('user_id, sum(score) as points')
-            ->orderByDesc('points')
-            ->orderBy('user_id')
-            ->limit(self::LEADERBOARD_SIZE)
-            ->with('user')
-            ->get()
-            ->map(fn (LessonScore $row): array => ['name' => $row->user->name, 'avatarUrl' => $row->user->avatar_url, 'points' => (int) $row->points])
-            ->all();
     }
 }

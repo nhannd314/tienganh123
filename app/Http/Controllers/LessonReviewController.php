@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\LearnerAchieved;
 use App\Http\Requests\StoreLessonReviewRequest;
 use App\Http\Requests\StorePronunciationRequest;
 use App\Models\Course;
@@ -12,6 +13,7 @@ use App\Models\Unit;
 use App\Models\Word;
 use App\Services\AdvancedReviewContent;
 use App\Services\AzurePronunciationAssessor;
+use App\Services\Leaderboard;
 use App\Services\SentenceQuestions;
 use App\Services\WordChoiceQuestions;
 use Illuminate\Contracts\View\View;
@@ -176,7 +178,7 @@ class LessonReviewController extends Controller
      * Save the finished part. Correctness is recomputed from the stored meanings, never trusted from the browser; in
      * parts 5 and 6 it comes from the scores Azure gave this session (see pronounce).
      */
-    public function store(StoreLessonReviewRequest $request, Course $course, Unit $unit, Lesson $lesson, int $step): JsonResponse
+    public function store(StoreLessonReviewRequest $request, Course $course, Unit $unit, Lesson $lesson, int $step, Leaderboard $leaderboard): JsonResponse
     {
         $this->ensurePublished($course, $unit, $lesson);
         abort_unless(in_array($step, self::BUILT_STEPS, true), 404);
@@ -215,6 +217,9 @@ class LessonReviewController extends Controller
             ];
         })->values();
 
+        $user = $request->user();
+        $wasPassed = $user !== null && $lesson->reviews()->passed()->where('user_id', $user->id)->where('step', $step)->exists();
+
         $review = LessonReview::create([
             'lesson_id' => $lesson->id,
             'user_id' => $request->user()?->id,
@@ -229,10 +234,19 @@ class LessonReviewController extends Controller
             session()->forget($this->pronunciationKey($lesson, $step));
         }
 
-        $user = $request->user();
-
         if ($user) {
-            $lesson->recordScore($user);
+            $best = $lesson->recordScore($user);
+            $isNewBest = $best->score > 0 && ($best->wasRecentlyCreated || $best->wasChanged('score'));
+
+            if ($review->isPassed() && ! $wasPassed) {
+                LearnerAchieved::reviewCompleted($user, $lesson, $review)->announce();
+            } elseif ($isNewBest) {
+                LearnerAchieved::bestScore($user, $lesson, $best->score)->announce();
+            }
+
+            if ($isNewBest) {
+                $leaderboard->refreshAfterScoreOf($user);
+            }
         }
 
         return response()->json([

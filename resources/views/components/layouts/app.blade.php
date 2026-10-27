@@ -48,6 +48,10 @@
         <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
         <link rel="apple-touch-icon" href="{{ asset('images/logo-icon.png') }}">
 
+        @if (filled($learningActivity ?? null))
+            <meta name="learning-activity" content="{{ encrypt($learningActivity) }}">
+        @endif
+
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap&subset=vietnamese">
@@ -62,7 +66,9 @@
 
         {{ $footer ?? '' }}
 
-        <x-messenger-button />
+        <x-leaderboard />
+        <x-learners-now />
+        <x-achievement-toast />
 
         {{ $scripts ?? '' }}
     </body>
