@@ -648,15 +648,12 @@ function startGame(root) {
     // A won game: the time goes to the server, which keeps it when it is the best of the player, and the list of the
     // fastest players on the page is replaced by the one it answers with. A guest is told to sign in to be ranked.
     const saveTime = async (milliseconds) => {
-        resultNote.hidden = false;
-
         if (!config.saveUrl) {
             resultNote.textContent = 'Đăng nhập để lưu vào bảng xếp hạng.';
+            resultNote.hidden = false;
 
             return;
         }
-
-        resultNote.textContent = 'Đang lưu thời gian...';
 
         try {
             const response = await fetch(config.saveUrl, {
@@ -675,9 +672,9 @@ function startGame(root) {
                 bestTimes.innerHTML = html;
             }
 
-            resultNote.textContent = 'Đã lưu thời gian của bạn.';
         } catch {
             resultNote.textContent = 'Không lưu được thời gian, bạn thử lại sau nhé.';
+            resultNote.hidden = false;
         }
     };
 
@@ -706,7 +703,7 @@ function startGame(root) {
 
         const seconds = Math.round(state.elapsed / 1000);
 
-        finish('Chiến thắng!', `Bạn đã hạ quái vật sau ${seconds} giây, gõ đúng cả ${config.words.length} từ.`, 'win');
+        finish('Quái vật đã gục!', `Thắng sau ${seconds} giây.`, 'win');
         saveTime(Math.round(state.elapsed));
     };
 
@@ -719,7 +716,7 @@ function startGame(root) {
             state.soldier.animation = animation(sprites.soldierDie, false);
         }, ATTACK_MS);
 
-        finish('Hết giờ rồi!', `Quái vật đã tới nơi. Bạn gõ đúng ${state.wordsDone}/${config.words.length} từ, thử lại nhé!`, 'lose');
+        finish('Quái vật tràn tới!', `Hạ được ${state.wordsDone}/${config.words.length} từ. Thử lại nhé!`, 'lose');
     };
 
     root.querySelector('[data-restart]').addEventListener('click', begin);

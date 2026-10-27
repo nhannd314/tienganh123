@@ -517,8 +517,6 @@ function startGame(root) {
         spawnIn: 0,
         wordsDone: 0,
         elapsed: 0,
-        rightLetters: 0,
-        wrongLetters: 0,
     });
 
     // Runs `callback` after `ms` unless another game has started since, so a restart never inherits an old timer.
@@ -794,7 +792,6 @@ function startGame(root) {
         const candidates = state.meteors.filter((meteor) => !meteor.isCompleted && next.every((character, index) => meteor.plain[index] === character));
 
         if (candidates.length === 0) {
-            state.wrongLetters += 1;
             playWrongLetter();
 
             return;
@@ -807,7 +804,6 @@ function startGame(root) {
         const meteor = state.target;
 
         state.typed = next;
-        state.rightLetters += 1;
         shoot(meteor);
 
         if (next.length === meteor.plain.length) {
@@ -942,7 +938,7 @@ function startGame(root) {
                 bestTimes.innerHTML = html;
             }
 
-            return 'Đã lưu thời gian của bạn.';
+            return '';
         } catch {
             return 'Không lưu được thời gian, bạn thử lại sau nhé.';
         }
@@ -958,17 +954,15 @@ function startGame(root) {
 
         later(() => {
             const seconds = Math.round(state.elapsed / 1000);
-            const typedLetters = state.rightLetters + state.wrongLetters;
-            const accuracy = Math.round((state.rightLetters / typedLetters) * 100);
 
-            resultScreen.querySelector('[data-result-title]').textContent = 'Chiến thắng!';
-            resultScreen.querySelector('[data-result-text]').textContent = `Bạn đã bảo vệ dải ngân hà, gõ đúng cả ${config.words.length} từ sau ${seconds} giây.`;
-            resultNote.textContent = `Độ chính xác: ${accuracy}%`;
+            resultScreen.querySelector('[data-result-title]').textContent = 'Ngân hà bình yên!';
+            resultScreen.querySelector('[data-result-text]').textContent = `Xong trong ${seconds} giây.`;
+            resultNote.textContent = '';
             resultScreen.hidden = false;
 
             saved.then((message) => {
                 if (state === game) {
-                    resultNote.textContent = `Độ chính xác: ${accuracy}%. ${message}`;
+                    resultNote.textContent = message;
                 }
             });
         }, RESULT_DELAY_MS);

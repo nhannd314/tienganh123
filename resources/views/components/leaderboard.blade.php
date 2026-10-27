@@ -27,7 +27,7 @@
         aria-label="BXH"
         title="BXH"
         data-toggle="leaderboard"
-        class="fixed top-1/2 right-0 z-30 flex -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md bg-accent px-3 py-3 text-on-accent shadow-[inset_4px_0_0_var(--color-accent-strong)] transition-interactive hover:bg-accent-strong"
+        class="fixed top-1/3 right-0 z-30 flex -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md bg-accent px-3 py-3 text-on-accent shadow-[inset_4px_0_0_var(--color-accent-strong)] transition-interactive hover:bg-accent-strong"
     >
         <x-icon name="trophy" size="lg" />
     </button>

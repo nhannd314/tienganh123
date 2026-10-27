@@ -66,7 +66,7 @@
             <div data-start class="absolute inset-0 z-20 flex overflow-y-auto bg-ink-900/50 p-[1.5cqw]">
                 <div class="flex m-auto max-w-[min(94cqw,max(60cqw,300px))] flex-col items-center gap-[max(4px,1.4cqw)] rounded-lg bg-surface-card p-[max(8px,2.6cqw)] text-center shadow-raised">
                     <h2 class="text-[max(17px,3.4cqw)] leading-tight font-bold text-fg-strong">{{ $title }}</h2>
-                    <p class="text-[max(12px,1.8cqw)] text-fg-body">Gõ đúng từ của từng thiên thạch để bắn hạ nó. Không giới hạn thời gian, hạ hết <b>{{ count($words) }} thiên thạch</b> càng nhanh càng tốt.</p>
+                    <p class="text-[max(12px,1.8cqw)] text-fg-body">Thiên thạch đang rơi! Bắn hạ <b>{{ count($words) }} thiên thạch</b>.</p>
                     <x-button variant="secondary" size="lg" icon-left="play" data-start-button><span data-start-label>Bắt đầu</span></x-button>
                 </div>
             </div>

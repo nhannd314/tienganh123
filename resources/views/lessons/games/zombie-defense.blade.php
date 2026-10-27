@@ -87,7 +87,7 @@
             <div data-start class="absolute inset-0 z-20 flex overflow-y-auto bg-ink-900/60 p-[1.5cqw]">
                 <div class="flex m-auto max-w-[min(94cqw,max(60cqw,300px))] flex-col items-center gap-[max(4px,1.4cqw)] rounded-lg bg-surface-card p-[max(8px,2.6cqw)] text-center shadow-raised">
                     <h2 class="text-[max(17px,3.4cqw)] leading-tight font-bold text-fg-strong">{{ $title }}</h2>
-                    <p class="text-[max(12px,1.8cqw)] text-fg-body">Gõ đúng từ để hạ <b>{{ count($words) }} zombie</b>, {{ $secondsPerWord }} giây cho mỗi từ. Zombie nào đến nhà trước khi bạn gõ xong sẽ tấn công nhà, và từ của nó quay lại ở cuối hàng đợi.</p>
+                    <p class="text-[max(12px,1.8cqw)] text-fg-body"><b>{{ count($words) }} zombie</b> đang kéo tới! {{ $secondsPerWord }} giây mỗi từ.</p>
                     <x-button variant="accent" size="lg" icon-left="play" data-start-button>Bắt đầu</x-button>
                 </div>
             </div>

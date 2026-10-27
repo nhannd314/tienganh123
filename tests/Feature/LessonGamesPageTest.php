@@ -93,7 +93,7 @@ it('plays Galaxy Defender with the review words of the lesson, without a time li
         ->assertOk()
         ->assertSeeInOrder(['Trò chơi', 'Galaxy Defender'])
         ->assertSee('data-galaxy-game', false)
-        ->assertSee('Không giới hạn thời gian')
+        ->assertSee('Thiên thạch đang rơi!')
         ->assertSee('BXH Cao thủ')
         ->getContent();
 
@@ -120,7 +120,7 @@ it('plays Zombie Defense with the words of the lesson and four seconds per word'
         ->assertSeeInOrder(['Trò chơi', 'Zombie Defense'])
         ->assertSee('data-zombie-game', false)
         ->assertSee('BXH Cao thủ')
-        ->assertSee('4 giây cho mỗi từ')
+        ->assertSee('4 giây mỗi từ')
         ->getContent();
 
     preg_match('/<script type="application\/json" data-game-config>(.*?)<\/script>/s', $content, $match);

@@ -847,7 +847,7 @@ const launchConfetti = (layer) => {
             { transform: 'translate(0, 0) rotate(45deg) scale(0.3)', opacity: 1, easing: 'cubic-bezier(0.15, 0.85, 0.3, 1)' },
             { transform: `translate(${dx * 0.9}px, ${dy * 0.9}px) rotate(${45 + spin * 0.7}deg) scale(1)`, opacity: 1, offset: 0.55, easing: 'ease-in' },
             { transform: `translate(${dx}px, ${dy}px) rotate(${45 + spin}deg) scale(0.5)`, opacity: 0 },
-        ], { duration: randomBetween(900, 1200), delay: randomBetween(0, 60), fill: 'both' })
+        ], { duration: randomBetween(1600, 2100), delay: randomBetween(0, 80), fill: 'both' })
             .finished.then(() => piece.remove(), () => piece.remove());
     }
 };

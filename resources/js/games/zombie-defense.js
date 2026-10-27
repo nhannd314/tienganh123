@@ -376,8 +376,6 @@ function startGame(root) {
         typed: [],
         pendingLetters: [],
         isLeaving: false,
-        rightLetters: 0,
-        wrongLetters: 0,
         elapsed: 0,
         flash: 0,
         houseFlash: 0,
@@ -492,13 +490,11 @@ function startGame(root) {
 
         // A wrong letter is not accepted: nothing shows and the same box waits for the right one.
         if (!isRight) {
-            state.wrongLetters += 1;
             flashWrong(state.slots[index]);
 
             return;
         }
 
-        state.rightLetters += 1;
         state.typed.push(letter);
         state.slots[index].textContent = expected;
         markActive();
@@ -884,7 +880,7 @@ function startGame(root) {
                 bestTimes.innerHTML = html;
             }
 
-            return 'Đã lưu thời gian của bạn.';
+            return '';
         } catch {
             return 'Không lưu được thời gian, bạn thử lại sau nhé.';
         }
@@ -903,23 +899,22 @@ function startGame(root) {
     };
 
     const showResult = () => {
-        const attempts = state.rightLetters + state.wrongLetters;
-        const accuracy = attempts === 0 ? 0 : Math.round((state.rightLetters / attempts) * 100);
         const seconds = Math.round(state.elapsed / 1000);
         const game = state;
-        const note = `Gõ đúng ${state.rightLetters}/${attempts} chữ cái (${accuracy}%).`;
 
         state.phase = 'won';
         panel.hidden = true;
 
-        resultScreen.querySelector('[data-result-title]').textContent = 'Chiến thắng!';
-        resultScreen.querySelector('[data-result-text]').textContent = `Bạn đã hạ ${plan.zombies} zombie sau ${seconds} giây, ngôi nhà bị tấn công ${state.passed} lần.`;
-        resultNote.textContent = note;
+        resultScreen.querySelector('[data-result-title]').textContent = 'Bình minh đã lên!';
+        resultScreen.querySelector('[data-result-text]').textContent = state.passed === 0
+            ? `Xong trong ${seconds} giây, nhà nguyên vẹn!`
+            : `Xong trong ${seconds} giây.`;
+        resultNote.textContent = '';
         resultScreen.hidden = false;
 
         state.saved?.then((message) => {
             if (state === game) {
-                resultNote.textContent = `${note} ${message}`;
+                resultNote.textContent = message;
             }
         });
     };
