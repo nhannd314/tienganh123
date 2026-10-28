@@ -13,7 +13,7 @@
     $footerColumns = [
         'Học tập' => ['Khóa học' => route('courses.index'), 'Từ vựng' => route('vocabularies.index'), 'Flashcard' => route('flashcards.index'), 'Câu mẫu' => route('sentences.index')],
         'Hỗ trợ' => ['Blog tiếng Anh' => route('posts.index'), ...$supportLinks],
-        'Thư viện' => ['Crossword' => route('tools.crossword'), 'Wordsearch' => route('tools.wordsearch')],
+        'Thư viện' => ['Crossword' => route('tools.crossword'), 'Wordsearch' => route('tools.wordsearch'), 'Học phát âm' => 'https://phatam.tienganh.pro.vn/'],
     ];
 
     $contactLinks = [
