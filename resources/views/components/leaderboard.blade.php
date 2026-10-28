@@ -4,13 +4,13 @@
         ['title' => 'Nhà vua', 'color' => 'text-accent-text'],
         ['title' => 'Thái sư', 'color' => 'text-primary-text'],
         ['title' => 'Đô đốc', 'color' => 'text-secondary-text'],
-        ['title' => 'Đại tướng', 'color' => 'text-success-text'],
-        ['title' => 'Phó tướng', 'color' => 'text-fg-strong'],
-        ['title' => 'Hiệp sĩ', 'color' => 'text-fg-strong'],
-        ['title' => 'Cung thủ', 'color' => 'text-fg-strong'],
-        ['title' => 'Kỵ binh', 'color' => 'text-fg-strong'],
-        ['title' => 'Lính tiên phong', 'color' => 'text-fg-strong'],
-        ['title' => 'Tân binh', 'color' => 'text-fg-strong'],
+        ['title' => 'Đại tướng', 'color' => 'text-danger-text'],
+        ['title' => 'Phó tướng', 'color' => 'text-warning-text'],
+        ['title' => 'Hiệp sĩ', 'color' => 'text-info-text'],
+        ['title' => 'Cung thủ', 'color' => 'text-success-text'],
+        ['title' => 'Kỵ binh', 'color' => 'text-primary-text'],
+        ['title' => 'Lính tiên phong', 'color' => 'text-secondary-text'],
+        ['title' => 'Tân binh', 'color' => 'text-fg-muted'],
     ];
     $podiumStyles = [
         ['row' => 'border-accent-border bg-accent-bg', 'rank' => 'bg-accent text-on-accent'],
@@ -64,7 +64,7 @@
                     @php
                         $nameParts = explode(' ', $learner['name']);
                         $initials = mb_strtoupper(mb_substr($nameParts[count($nameParts) - 2] ?? '', 0, 1).mb_substr(end($nameParts), 0, 1));
-                        $rankTitle = $rankTitles[$index] ?? ['title' => 'Tân binh', 'color' => 'text-fg-strong'];
+                        $rankTitle = $rankTitles[$index] ?? ['title' => 'Tân binh', 'color' => 'text-fg-muted'];
                         $podium = $podiumStyles[$index] ?? ['row' => 'border-transparent', 'rank' => 'bg-surface-hover text-fg-body'];
                     @endphp
                     <li @class(['grid grid-cols-[36px_40px_minmax(0,1fr)_auto] items-center gap-3 rounded-md border px-3 py-2', $podium['row']])>
