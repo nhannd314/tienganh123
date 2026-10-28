@@ -769,6 +769,17 @@ it('saves the score when a part is saved and shows the top learners in the sideb
     $this->actingAs($user)->get(reviewUrl($lesson))->assertSee('Đối Thủ Giỏi')->assertSee('9999');
 });
 
+it('saves a part of a lesson with more than fifty words', function () {
+    signIn();
+    $lesson = reviewLesson(55);
+
+    $answers = $lesson->reviewWords()->map(fn (Word $word): array => ['word_id' => $word->id, 'selected' => $word->meaningLabels()[0]])->all();
+
+    $this->postJson(reviewUrl($lesson, 1, 'lessons.review.store'), ['duration' => 300, 'answers' => $answers])
+        ->assertCreated()
+        ->assertJson(['total' => 55, 'correct' => 55]);
+});
+
 function reviewLessonWithSentences(): Lesson
 {
     $lesson = reviewLesson(2);

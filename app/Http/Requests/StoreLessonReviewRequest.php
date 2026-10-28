@@ -15,13 +15,16 @@ class StoreLessonReviewRequest extends FormRequest
     }
 
     /**
+     * A part asks about every word (or sentence) of the lesson, so the number of answers has no small limit: the
+     * controller checks it matches the questions, the maximum only stops oversized requests.
+     *
      * @return array<string, list<string>>
      */
     public function rules(): array
     {
         return [
             'duration' => ['required', 'integer', 'min:0', 'max:86400'],
-            'answers' => ['required', 'array', 'min:1', 'max:30'],
+            'answers' => ['required', 'array', 'min:1', 'max:500'],
             'answers.*.word_id' => ['required', 'integer', 'distinct'],
             'answers.*.selected' => ['required', 'string', 'max:255'],
         ];
