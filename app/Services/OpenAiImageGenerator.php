@@ -18,11 +18,9 @@ class OpenAiImageGenerator
      */
     public function generate(string $word, int $width = 512, int $height = 512): ?string
     {
-        $prompt = "A cute, simple cartoon-style illustration representing the word \"{$word}\", for a vocabulary flashcard. ".
-            'Clean flat style with soft colors, smooth outlines and minimal detail. '.
-            'Show only the main subject, centered, with no extra props, sparkles, stars, hearts or decorative elements. '.
-            'Objects, food, plants and other inanimate things must NOT have faces, eyes, mouths or any human-like features; '.
-            'only people and animals may have faces. No borders, no texts, no letters';
+        $prompt = "A cute cartoon-style illustration representing the word \"{$word}\", for a vocabulary flashcard. ".
+            'Draw the main subject in the center of the image. '.
+            'Objects must NOT have eyes or mouths. No borders, no texts';
 
         $image = $this->request($prompt, $word, ['size' => '1024x1024', 'background' => 'transparent']);
 
