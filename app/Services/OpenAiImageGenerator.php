@@ -18,8 +18,11 @@ class OpenAiImageGenerator
      */
     public function generate(string $word, int $width = 512, int $height = 512): ?string
     {
-        $prompt = "A cute cartoon-style illustration representing the word \"{$word}\", ".
-            'for a vocabulary flashcard. Centered composition. No borders, no texts';
+        $prompt = "A cute, simple cartoon-style illustration representing the word \"{$word}\", for a vocabulary flashcard. ".
+            'Clean flat style with soft colors, smooth outlines and minimal detail. '.
+            'Show only the main subject, centered, with no extra props, sparkles, stars, hearts or decorative elements. '.
+            'Objects, food, plants and other inanimate things must NOT have faces, eyes, mouths or any human-like features; '.
+            'only people and animals may have faces. No borders, no texts, no letters';
 
         $image = $this->request($prompt, $word, ['size' => '1024x1024', 'background' => 'transparent']);
 
@@ -34,8 +37,10 @@ class OpenAiImageGenerator
      */
     public function generateForSentence(string $sentence, int $width = 600, int $height = 400): ?string
     {
-        $prompt = "A cute cartoon-style illustration of the scene \"{$sentence}\", ".
-            'for a children\'s English lesson. Full scene with a background. No borders, no texts, no letters';
+        $prompt = "A cute, simple cartoon-style illustration of the scene \"{$sentence}\", for a children's English lesson. ".
+            'Full scene with a simple background. Clean flat style with soft colors, smooth outlines and minimal decorative detail. '.
+            'Objects, food, plants and other inanimate things must NOT have faces, eyes, mouths or any human-like features; '.
+            'only people and animals may have faces. No borders, no texts, no letters';
 
         $image = $this->request($prompt, $sentence, ['size' => '1536x1024']);
 
