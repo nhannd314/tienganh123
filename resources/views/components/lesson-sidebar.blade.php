@@ -27,8 +27,8 @@
 <aside {{ $attributes->class(['flex min-w-0 max-w-full flex-[1_1_360px] flex-col gap-6']) }}>
     @if ($enrollCourse)
         <div class="flex flex-col gap-5 rounded-lg bg-surface-card p-6 shadow-card">
-            <x-course-enroll :course="$enrollCourse" />
-            <x-course-benefits :course="$enrollCourse" />
+            <x-course-enroll :course="$enrollCourse" :with-price="false" />
+            <x-course-benefits :course="$enrollCourse" :with-price="false" />
         </div>
     @endif
 

@@ -485,7 +485,7 @@ class LessonReviewController extends Controller
             'id' => $word->id,
             'prompt' => $word->word,
             'phonetic' => $word->ipa_us,
-            'audio' => $word->audio_us_url,
+            'audio' => $word->random_audio_url,
         ])->all();
     }
 }

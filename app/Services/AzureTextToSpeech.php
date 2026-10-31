@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
  *
  * To keep the audio from getting dull, the voice changes from one record to the next, by its id: the words go through women's and
  * men's voices in turn (wordVoice()), the flashcards through a woman's voice and a child's (flashcardVoice()) and the sentences
- * through a woman's, a man's and a child's (sentenceVoice()).
+ * through American and British women's and men's voices and a child's (sentenceVoice()).
  */
 class AzureTextToSpeech
 {
@@ -65,11 +65,17 @@ class AzureTextToSpeech
     }
 
     /**
-     * A woman's voice, a man's and a child's (the configured voice) in turn, by the seed (the id of the sentence).
+     * An American or British woman's voice, a man's or a child's (the configured voice) in turn, by the seed (the id of the sentence).
      */
     public function sentenceVoice(int $seed): string
     {
-        return [self::WOMAN_VOICE, self::MAN_VOICE, config('services.azure_speech.voice')][$seed % 3];
+        return [
+            self::WOMAN_VOICE,
+            'en-GB-RyanNeural',
+            config('services.azure_speech.voice'),
+            'en-GB-SoniaNeural',
+            self::MAN_VOICE,
+        ][$seed % 5];
     }
 
     /**

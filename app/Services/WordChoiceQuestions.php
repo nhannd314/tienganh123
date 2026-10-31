@@ -59,7 +59,7 @@ class WordChoiceQuestions
                 'id' => $word->id,
                 'prompt' => $word->word,
                 'phonetic' => $word->ipa_us,
-                'audio' => $word->audio_us_url,
+                'audio' => $word->random_audio_url,
                 'options' => $options->all(),
                 'answer' => $options->search($correct),
             ];

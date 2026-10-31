@@ -3,10 +3,11 @@
     'word',
     'phonetic' => null,
     'replay' => true,
+    'listen' => false,
 ])
 
 <div {{ $attributes->class(['flex items-center gap-5']) }}>
-    <x-audio-button :text="$word" lang="en-US" />
+    <x-audio-button :text="$word" lang="en-US" :data-prompt-listen="$listen ? true : null" />
 
     <div class="grid gap-2">
         <div lang="en" data-prompt-word class="type-word tracking-tight text-fg-strong">{{ $word }}</div>

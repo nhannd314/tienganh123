@@ -124,5 +124,5 @@ it('changes the voice from one record to the next so the audio is not dull', fun
         ->and(collect(range(0, 3))->map(fn (int $id): string => $speech->flashcardVoice($id))->all())
         ->toBe(['en-US-JennyNeural', 'en-US-AnaNeural', 'en-US-JennyNeural', 'en-US-AnaNeural'])
         ->and(collect(range(0, 5))->map(fn (int $id): string => $speech->sentenceVoice($id))->all())
-        ->toBe(['en-US-JennyNeural', 'en-US-GuyNeural', 'en-US-AnaNeural', 'en-US-JennyNeural', 'en-US-GuyNeural', 'en-US-AnaNeural']);
+        ->toBe(['en-US-JennyNeural', 'en-GB-RyanNeural', 'en-US-AnaNeural', 'en-GB-SoniaNeural', 'en-US-GuyNeural', 'en-US-JennyNeural']);
 });

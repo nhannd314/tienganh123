@@ -59,6 +59,8 @@ it('shows part 1 with the lesson words as questions and the restart button hidde
         ->assertOk()
         ->assertSee('Ôn tập Chào hỏi bạn mới')
         ->assertSee('Chọn nghĩa đúng cho mỗi từ nhé!')
+        ->assertSee('data-prompt-listen', false)
+        ->assertSee('"autoListen":true', false)
         ->assertSeeInOrder(['Trang chủ', 'Khóa học', 'Tiếng Anh lớp 3', 'Chào hỏi bạn mới', 'Ôn tập'])
         ->assertSee('data-review', false)
         ->assertSee('Điểm: <b data-correct-count class="font-semibold text-fg-score">0</b>', false)

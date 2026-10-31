@@ -33,7 +33,7 @@
         'csrf' => csrf_token(),
         'canSave' => $canSave,
         'optionsLang' => $step === 2 ? 'en' : null,
-        'autoListen' => in_array($step, [3, 9], true),
+        'autoListen' => in_array($step, [1, 3, 9], true),
         'mode' => match ($step) {
             4 => 'spell',
             5, 6, 10 => 'speak',
@@ -165,7 +165,7 @@
                             <div lang="en" data-prompt-word class="type-h1 text-balance tracking-tight text-fg-strong">{{ $firstQuestion['prompt'] }}</div>
                         </div>
                     @elseif (in_array($step, [1, 5], true))
-                        <x-word-prompt :word="$firstQuestion['prompt']" :phonetic="$firstQuestion['phonetic']" :replay="false" />
+                        <x-word-prompt :word="$firstQuestion['prompt']" :phonetic="$firstQuestion['phonetic']" :replay="false" :listen="$step === 1" />
                     @elseif (in_array($step, [2, 4, 6, 8], true))
                         {{-- The meaning to find the word for; no listen button, it would give the answer away --}}
                         <div data-prompt-word class="type-h1 text-center text-balance whitespace-pre-line text-fg-strong">{{ $firstQuestion['prompt'] }}</div>

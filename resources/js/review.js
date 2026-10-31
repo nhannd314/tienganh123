@@ -174,7 +174,7 @@ function startReview(root) {
                 button.dataset.src = question.audio ?? '';
             }
 
-            if (!autoListen) {
+            if (promptWord) {
                 button.setAttribute('aria-label', `Nghe phát âm ${question.prompt}`);
             }
         });

@@ -170,6 +170,20 @@ class Word extends Model
         return Attribute::get(fn (): ?string => $this->savedAudioUrl('uk'));
     }
 
+    /**
+     * Public URL of the US or the UK pronunciation file, picked at random among the saved ones; null when neither is saved.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function randomAudioUrl(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            $urls = array_values(array_filter([$this->audio_us_url, $this->audio_uk_url]));
+
+            return $urls === [] ? null : $urls[array_rand($urls)];
+        });
+    }
+
     private function savedAudioUrl(string $accent): ?string
     {
         $path = "audio/{$accent}/{$this->slug}.mp3";

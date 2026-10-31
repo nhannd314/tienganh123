@@ -122,3 +122,20 @@ describe('job', function () {
         expect(fn () => FetchWordPronunciation::dispatchSync($word))->toThrow(RuntimeException::class);
     });
 });
+
+it('picks the US or the UK pronunciation at random among the saved files', function () {
+    Storage::fake('public');
+    $word = Word::factory()->create(['word' => 'apple']);
+
+    expect($word->random_audio_url)->toBeNull();
+
+    Storage::disk('public')->put("audio/us/{$word->slug}.mp3", 'US');
+
+    expect($word->random_audio_url)->toBe($word->audio_us_url);
+
+    Storage::disk('public')->put("audio/uk/{$word->slug}.mp3", 'UK');
+
+    $picked = collect(range(1, 40))->map(fn (): ?string => $word->random_audio_url)->unique();
+
+    expect($picked->sort()->values()->all())->toBe(collect([$word->audio_us_url, $word->audio_uk_url])->sort()->values()->all());
+});
