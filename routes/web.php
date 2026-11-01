@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\ChallengeController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\CourseIndexController;
@@ -69,6 +70,17 @@ Route::put('/ho-so', [ProfileController::class, 'update'])->middleware('auth')->
 Route::put('/ho-so/gioi-thieu', [ProfileController::class, 'updateAffiliateBank'])->middleware('auth')->name('profile.affiliate.update');
 Route::post('/ho-so/gioi-thieu/rut-tien', [ProfileController::class, 'requestAffiliatePayout'])->middleware('auth')->name('profile.affiliate.payout');
 Route::put('/ho-so/mat-khau', [ProfileController::class, 'updatePassword'])->middleware('auth')->name('profile.password.update');
+Route::middleware('auth')->prefix('thach-dau')->name('challenges.')->group(function () {
+    Route::get('/bai-hoc', [ChallengeController::class, 'lessons'])->name('lessons');
+    Route::post('/', [ChallengeController::class, 'store'])->middleware('throttle:10,1')->name('store');
+    Route::post('/{challenge}/chap-nhan', [ChallengeController::class, 'accept'])->can('respond', 'challenge')->name('accept');
+    Route::post('/{challenge}/tu-choi', [ChallengeController::class, 'decline'])->can('respond', 'challenge')->name('decline');
+    Route::post('/{challenge}/huy', [ChallengeController::class, 'cancel'])->can('cancel', 'challenge')->name('cancel');
+    Route::get('/{challenge}', [ChallengeController::class, 'show'])->can('view', 'challenge')->name('show');
+    Route::get('/{challenge}/trang-thai', [ChallengeController::class, 'state'])->can('view', 'challenge')->name('state');
+    Route::post('/{challenge}/san-sang', [ChallengeController::class, 'ready'])->can('view', 'challenge')->name('ready');
+    Route::post('/{challenge}/go-chu', [ChallengeController::class, 'type'])->can('view', 'challenge')->middleware('throttle:600,1')->name('type');
+});
 Route::get('/thanh-toan/{payment}/trang-thai', PaymentStatusController::class)->middleware('auth')->name('payments.status');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}', LessonController::class)
     ->scopeBindings()

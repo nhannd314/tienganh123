@@ -254,6 +254,8 @@ class Lesson extends Model
 
     /**
      * Work out the score of the user in the lesson (see LessonScoreCalculator) and keep it when it beats their best.
+     * The review percent is always brought up to date, even when the score is not a new best: a completed part stays
+     * completed, so the progress of the learner never goes back.
      */
     public function recordScore(User $user): LessonScore
     {
@@ -265,9 +267,10 @@ class Lesson extends Model
             return $this->scores()->create(['user_id' => $user->id, 'score' => $score, 'percent' => $progress['percent']]);
         }
 
-        if ($score > $best->score) {
-            $best->update(['score' => $score, 'percent' => $progress['percent']]);
-        }
+        $best->update([
+            'score' => max($score, $best->score),
+            'percent' => $progress['percent'],
+        ]);
 
         return $best;
     }

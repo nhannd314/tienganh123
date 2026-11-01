@@ -1,6 +1,6 @@
 <x-layouts.app
     title="Tạo ô chữ tìm kiếm"
-    description="Công cụ tạo ô chữ tìm kiếm (word search) 15x15 từ danh sách từ vựng và gợi ý của bạn, xuất ra ảnh PNG."
+    description="Công cụ tạo ô chữ tìm kiếm (word search) từ danh sách từ vựng và gợi ý của bạn, xuất ra ảnh PNG."
     main-class="flex flex-col gap-6 pt-6 pb-10"
 >
     <x-slot:header>
@@ -26,6 +26,20 @@
                 ></textarea>
             </label>
 
+            <x-text-input
+                label="Kích thước ô chữ (số ô mỗi cạnh)"
+                hint="Từ 5 đến 25 ô."
+                type="number"
+                min="5"
+                max="25"
+                step="1"
+                value="11"
+                inputmode="numeric"
+                size="md"
+                class="max-w-60"
+                data-wordsearch-size
+            />
+
             <label class="flex cursor-pointer items-center gap-3 type-body text-fg-body select-none">
                 <x-checkbox data-wordsearch-answers />
                 Hiện đáp án
@@ -47,4 +61,7 @@
     <x-slot:scripts>
         @vite('resources/js/wordsearch.js')
     </x-slot:scripts>
+    <x-slot:footer>
+        <x-site-footer />
+    </x-slot:footer>
 </x-layouts.app>

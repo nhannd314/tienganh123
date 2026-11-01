@@ -53,4 +53,7 @@
             @vite('resources/js/review.js')
         @endif
     </x-slot:scripts>
+    <x-slot:footer>
+        <x-site-footer />
+    </x-slot:footer>
 </x-layouts.app>

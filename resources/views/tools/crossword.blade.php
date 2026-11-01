@@ -47,4 +47,7 @@
     <x-slot:scripts>
         @vite('resources/js/crossword.js')
     </x-slot:scripts>
+    <x-slot:footer>
+        <x-site-footer />
+    </x-slot:footer>
 </x-layouts.app>

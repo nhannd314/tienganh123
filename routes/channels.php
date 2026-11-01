@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\ChallengeStatus;
 use App\Http\Middleware\ShareLearningActivity;
+use App\Models\Challenge;
 use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -9,6 +11,9 @@ use Illuminate\Support\Facades\Broadcast;
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
+
+// The game of an accepted challenge: only its two players (see App\Events\ChallengeGameUpdated).
+Broadcast::channel('challenges.{challenge}', fn (User $user, Challenge $challenge): bool => $challenge->involves($user) && $challenge->status === ChallengeStatus::Accepted);
 
 Broadcast::channel('payments.{payment}', fn (User $user, Payment $payment): bool => $payment->user_id === $user->id);
 

@@ -733,7 +733,8 @@ document.addEventListener('fullscreenchange', () => {
  * "Đang học bài" (x-learners-now): every page of a signed-in user (`data-learners-now`) joins the `learning` presence channel
  * with what it is about (the `learning-activity` meta, see ShareLearningActivity) and lists, live, the users on the site,
  * the latest first, with their number on the button. Each tab is a member of its own (`socket`): a user is listed once,
- * with the activity of the tab they opened last (`since`), and stays while any of their tabs is open.
+ * with the activity of the tab they opened last (`since`), and stays while any of their tabs is open. The challenge button of another
+ * learner opens the challenge popup (see challenge.js).
  */
 const learnersNow = document.querySelector('[data-learners-now]');
 
@@ -744,6 +745,7 @@ if (learnersNow) {
         const template = learnersNow.querySelector('[data-learner-template]');
         const list = learnersNow.querySelector('[data-learners-list]');
         const badge = learnersNow.querySelector('[data-learners-badge]');
+        const userId = Number(learnersNow.dataset.userId);
         let members = [];
 
         const render = () => {
@@ -760,6 +762,16 @@ if (learnersNow) {
             list.replaceChildren(...learners.map((learner, index) => {
                 const item = template.content.firstElementChild.cloneNode(true);
                 const image = item.querySelector('[data-learner-image]');
+                const challengeButton = item.querySelector('[data-challenge-button]');
+
+                // Only the challenge button opens the challenge popup; the learner cannot challenge themselves.
+                if (learner.id === userId) {
+                    challengeButton.remove();
+                } else {
+                    challengeButton.dataset.opponentId = learner.id;
+                    challengeButton.dataset.opponentName = learner.name;
+                    challengeButton.ariaLabel = `Thách đấu ${learner.name}`;
+                }
 
                 item.querySelector('[data-learner-avatar]').classList.add(...avatarStyles[index % avatarStyles.length].split(' '));
                 item.querySelector('[data-learner-name]').textContent = learner.name;
@@ -782,6 +794,8 @@ if (learnersNow) {
             badge.hidden = learners.length === 0;
             learnersNow.querySelector('[data-toggle="learners-now"]').ariaLabel = `Đang học: ${learners.length} bạn`;
         };
+
+        import('./challenge').then(({ startChallenges }) => startChallenges(learnersNow));
 
         channel
             .here((current) => {

@@ -756,6 +756,23 @@ it('keeps the best lesson score of a user and ranks the learners', function () {
         ->and($lesson->standingOf(User::factory()->create()))->toBe(['score' => 0, 'rank' => null, 'learners' => 2]);
 });
 
+it('brings the review percent up to date even when the score is not a new best', function () {
+    $lesson = Lesson::factory()->create();
+    $user = User::factory()->create();
+
+    LessonReview::factory()->create(['lesson_id' => $lesson->id, 'user_id' => $user->id, 'step' => 1, 'total' => 10, 'correct' => 10, 'duration_seconds' => 0]);
+    $first = $lesson->recordScore($user);
+    $firstPercent = $first->percent;
+
+    LessonReview::factory()->create(['lesson_id' => $lesson->id, 'user_id' => $user->id, 'step' => 2, 'total' => 10, 'correct' => 8, 'duration_seconds' => 0]);
+    LessonReview::factory()->create(['lesson_id' => $lesson->id, 'user_id' => $user->id, 'step' => 1, 'total' => 10, 'correct' => 0, 'duration_seconds' => 0]);
+    $best = $lesson->recordScore($user)->refresh();
+
+    expect($best->score)->toBe($first->score)
+        ->and($best->percent)->toBeGreaterThan($firstPercent)
+        ->and($best->percent)->toBe($lesson->reviewProgress($user)['percent']);
+});
+
 it('saves the score when a part is saved and shows the top learners in the sidebar', function () {
     $lesson = reviewLesson(3);
     $user = User::factory()->create();

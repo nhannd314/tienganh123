@@ -2,6 +2,8 @@
     Floating chat button, bottom right, with the number of users learning right now; it opens their
     list, each with what they are doing. The list is live: app.js joins the `learning` presence channel from every page and
     fills it from its members (see ShareLearningActivity). A guest cannot join, so is asked to sign in.
+    The challenge button of another learner opens the challenge popup (pick a course, a unit, then a lesson); the opponent gets the
+    incoming challenge popup in every tab (see resources/js/challenge.js and ChallengeController).
 --}}
 @php
     $avatarStyles = [
@@ -12,7 +14,7 @@
     ];
 @endphp
 
-<div {{ $attributes->class(['print:hidden']) }} @auth data-learners-now data-avatar-styles='@json($avatarStyles)' @endauth>
+<div {{ $attributes->class(['print:hidden']) }} @auth data-learners-now data-avatar-styles='@json($avatarStyles)' data-user-id="{{ auth()->id() }}" data-challenge-lessons-url="{{ route('challenges.lessons') }}" data-challenge-store-url="{{ route('challenges.store') }}" data-csrf="{{ csrf_token() }}" @endauth>
     <button
         type="button"
         aria-expanded="false"
@@ -64,6 +66,7 @@
                         <span data-learner-name class="truncate type-label font-semibold text-fg-strong"></span>
                         <span data-learner-activity class="truncate type-body-sm text-fg-muted"></span>
                     </span>
+                    <button type="button" data-challenge-button title="Thách đấu" class="ml-auto flex size-9 flex-none cursor-pointer items-center justify-center rounded-full bg-danger-bg text-danger transition-interactive hover:bg-danger-bg-hover active:scale-95"><x-icon name="swords" size="sm" /></button>
                 </li>
             </template>
         @else
@@ -73,4 +76,75 @@
             </div>
         @endauth
     </section>
+    @auth
+        {{-- Send a challenge: the learner picks a course, a unit, then a lesson; then waits for the answer. --}}
+        <dialog
+            data-challenge-dialog
+            aria-labelledby="challenge-title"
+            class="m-auto w-[min(100%-2rem,28rem)] rounded-lg bg-surface-card p-6 shadow-raised backdrop:bg-black/50"
+        >
+            <form data-challenge-form class="flex flex-col gap-5" novalidate>
+                <div class="flex items-start gap-3">
+                    <span class="flex size-12 flex-none items-center justify-center rounded-full bg-primary-bg text-primary-text"><x-icon name="swords" size="lg" /></span>
+                    <div class="flex min-w-0 flex-col gap-1">
+                        <h2 id="challenge-title" class="type-h2 text-fg-strong">Thách đấu</h2>
+                        <p class="type-body text-fg-muted">Chọn bài học để thách đấu <b data-challenge-opponent class="text-fg-strong"></b></p>
+                    </div>
+                    <x-icon-button icon="x" label="Đóng" variant="ghost" size="sm" data-challenge-close class="ml-auto" />
+                </div>
+
+                <div data-challenge-pick class="flex flex-col gap-4">
+                    @foreach (['course' => 'Khóa học', 'unit' => 'Unit', 'lesson' => 'Bài học'] as $level => $label)
+                        <label class="grid gap-2">
+                            <span class="type-label text-fg-body">{{ $label }}</span>
+                            <select
+                                data-challenge-{{ $level }}
+                                required
+                                @disabled($level !== 'course')
+                                class="h-12 w-full cursor-pointer rounded-md border border-line-default bg-surface-card px-4 text-lg text-fg-strong outline-none transition-interactive hover:border-line-hover focus:shadow-focus disabled:cursor-not-allowed disabled:border-line-disabled disabled:bg-surface-disabled disabled:text-fg-disabled"
+                            ></select>
+                        </label>
+                    @endforeach
+                </div>
+
+                <p data-challenge-waiting hidden class="flex items-center gap-3 rounded-md bg-primary-bg px-4 py-3 type-body text-primary-text">
+                    <x-icon name="loader-circle" spin />
+                    <span>Đang chờ <b data-challenge-opponent></b> trả lời… (<span data-challenge-countdown></span>s)</span>
+                </p>
+
+                <p data-challenge-message hidden class="type-body-sm text-danger-text"></p>
+
+                <div class="flex flex-wrap justify-end gap-3">
+                    <x-button type="button" variant="outline" data-challenge-cancel>Hủy</x-button>
+                    <x-button type="submit" icon-left="swords" data-challenge-submit>Gửi lời thách đấu</x-button>
+                </div>
+            </form>
+        </dialog>
+
+        {{-- An incoming challenge: accept, or decline (closing it declines too). --}}
+        <dialog
+            data-challenge-incoming
+            aria-labelledby="challenge-incoming-title"
+            class="m-auto w-[min(100%-2rem,28rem)] rounded-lg bg-surface-card p-6 text-center shadow-raised backdrop:bg-black/50"
+        >
+            <div class="flex flex-col items-center gap-4">
+                <x-icon-button icon="x" label="Đóng" variant="ghost" size="sm" data-challenge-incoming-close class="self-end -mb-4" />
+                <span class="relative flex size-20 items-center justify-center rounded-full bg-primary-bg type-h2 text-primary-text">
+                    <img data-challenge-incoming-avatar alt="" class="size-full rounded-full object-cover" hidden>
+                    <x-icon name="swords" size="xl" data-challenge-incoming-icon />
+                </span>
+                <h2 id="challenge-incoming-title" class="type-h2 text-pretty text-fg-strong"><span data-challenge-incoming-name></span> thách đấu bạn!</h2>
+                <p class="type-body text-pretty text-fg-body">
+                    <span data-challenge-incoming-course></span> · <span data-challenge-incoming-unit></span><br>
+                    <b data-challenge-incoming-lesson class="text-fg-strong"></b>
+                </p>
+                <p class="type-body-sm text-fg-muted">Tự từ chối sau <b data-challenge-incoming-countdown></b> giây</p>
+                <p data-challenge-incoming-message hidden class="type-body-sm text-danger-text"></p>
+                <div class="grid w-full grid-cols-2 gap-3">
+                    <x-button type="button" variant="outline" full-width data-challenge-decline>Từ chối</x-button>
+                    <x-button type="button" icon-left="swords" full-width data-challenge-accept>Chấp nhận</x-button>
+                </div>
+            </div>
+        </dialog>
+    @endauth
 </div>

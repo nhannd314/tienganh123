@@ -64,8 +64,9 @@ const ZOMBIE_PARTS = [
 const ZOMBIE_HEIGHT = 150;
 const ZOMBIE_ANCHOR = 0.42;
 // The share of the zombies that wear the face of a player or learner (see config.avatars).
-const AVATAR_SHARE = 0.35;
-
+const AVATAR_SHARE = 0.7;
+// The radius of an avatar face, as a share of the larger side of the head picture it replaces. It grows upwards from the neck.
+const AVATAR_FACE_RADIUS = 0.56;
 // The recorded growls (public/games/zombie-defense/sounds), how loud they are, how many can sound at once, and the seconds a
 // zombie waits between one growl and the next.
 const GROWL_FILES = ['zombie-growling-1.mp3', 'zombie-growling-2.mp3', 'zombie-growling-3.mp3', 'zombie-growling-4.mp3'];
@@ -366,6 +367,7 @@ function startGame(root) {
         texts: [],
         timers: [],
         spawned: 0,
+        avatarsShown: 0,
         spawnTimer: 0,
         killed: 0,
         passed: 0,
@@ -571,6 +573,19 @@ function startGame(root) {
 
     // Zombies and shooting --------------------------------------------------------------------------------------
 
+    // The next avatar in turn for about AVATAR_SHARE of the zombies, null for the others.
+    const nextAvatar = () => {
+        if (avatarFaces.length === 0 || Math.random() >= AVATAR_SHARE) {
+            return null;
+        }
+
+        const face = avatarFaces[state.avatarsShown % avatarFaces.length];
+
+        state.avatarsShown += 1;
+
+        return face;
+    };
+
     const spawnZombie = () => {
         const index = state.spawned;
         const entry = state.order.shift();
@@ -582,7 +597,7 @@ function startGame(root) {
             health: lettersOf(entry.word).length,
             maxHealth: lettersOf(entry.word).length,
             look: index % ZOMBIE_SIZE.length,
-            avatar: avatarFaces.length > 0 && Math.random() < AVATAR_SHARE ? avatarFaces[Math.floor(Math.random() * avatarFaces.length)] : null,
+            avatar: nextAvatar(),
             phase: Math.random() * Math.PI * 2,
             growlIn: Math.random() * 0.8,
             flash: 0,
@@ -1017,8 +1032,9 @@ function startGame(root) {
         }
     };
 
-    // The avatars of the player and of other learners of the course: some zombies wear one as their face.
-    const avatarFaces = config.avatars.map(({ url, name }) => ({ image: loadImage(url), name }));
+    // The avatars of the player and of other learners of the course, in a random order: about AVATAR_SHARE of the zombies
+    // wear one as their face, each in turn, so all of them come out before any comes again.
+    const avatarFaces = shuffled(config.avatars).map(({ url, name }) => ({ image: loadImage(url), name }));
 
     const zombieImages = ZOMBIE_SIZE.map((size, look) => Object.fromEntries(['legback', 'legfront', 'body', 'head'].map((part) => [part, loadImage(`${config.images.zombies}/zombie-${look + 1}-${part}.webp`)])));
 
@@ -1130,7 +1146,11 @@ function startGame(root) {
             context.translate(-partWidth * 0.4, -partHeight * 0.9);
         }, (partWidth, partHeight) => {
             if (zombie.avatar?.image.complete && zombie.avatar.image.naturalWidth > 0) {
-                paintAvatarFace(zombie.avatar.image, partWidth * 0.5 + 3, partHeight * 0.5 + 1, Math.max(partWidth, partHeight) * 0.46 + 1);
+                const side = Math.max(partWidth, partHeight);
+                const radius = side * AVATAR_FACE_RADIUS + 1;
+
+                // Bigger than the head, so it is raised by the difference and still sits on the neck.
+                paintAvatarFace(zombie.avatar.image, partWidth * 0.5 + 3, partHeight * 0.5 + 1 - (radius - side * 0.46 - 1), radius);
             }
         });
 
@@ -1141,8 +1161,8 @@ function startGame(root) {
             const barWidth = 52;
             const share = Math.max(0, zombie.health / zombie.maxHealth);
 
-            // A zombie with a name has the name right under its bar, so the bar is higher.
-            const barY = GROUND_Y - ZOMBIE_HEIGHT - (zombie.avatar ? 30 : 20);
+            // A zombie with a name has the name right under its bar, and a bigger face (see AVATAR_FACE_RADIUS), so the bar is higher.
+            const barY = GROUND_Y - ZOMBIE_HEIGHT - (zombie.avatar ? 42 : 20);
 
             context.fillStyle = 'rgba(0,0,0,0.55)';
             context.fillRect(zombie.x - barWidth / 2 - 1, barY, barWidth + 2, 8);

@@ -1,6 +1,9 @@
-// Word search generator (/tools/wordsearch): each line is "word | clue". Hides the words in a 15x15 grid (across or down, forwards only),
-// fills the rest with random letters and draws the grid with the clue list on a canvas, which is also what gets exported to PNG.
-const SIZE = 15;
+// Word search generator (/tools/wordsearch): each line is "word | clue". Hides the words in a square grid whose side the visitor
+// picks (across or down, forwards only), fills the rest with random letters and draws the grid with the clue list on a canvas, which is
+// also what gets exported to PNG.
+const DEFAULT_SIZE = 11;
+const MIN_SIZE = 5;
+const MAX_SIZE = 25;
 const ATTEMPTS = 40;
 const TRIES_PER_WORD = 200;
 const CELL = 40;
@@ -39,11 +42,13 @@ const parseEntries = (text) => {
 };
 
 const canPlace = (grid, word, row, col, dr, dc) => {
+    const size = grid.length;
+
     for (let i = 0; i < word.length; i++) {
         const r = row + dr * i;
         const c = col + dc * i;
 
-        if (r < 0 || r >= SIZE || c < 0 || c >= SIZE || (grid[r][c] && grid[r][c] !== word[i])) {
+        if (r < 0 || r >= size || c < 0 || c >= size || (grid[r][c] && grid[r][c] !== word[i])) {
             return false;
         }
     }
@@ -51,8 +56,8 @@ const canPlace = (grid, word, row, col, dr, dc) => {
     return true;
 };
 
-const build = (words) => {
-    const grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(''));
+const build = (words, size) => {
+    const grid = Array.from({ length: size }, () => Array(size).fill(''));
     const placed = [];
     const skipped = [];
 
@@ -62,8 +67,8 @@ const build = (words) => {
 
         for (let attempt = 0; attempt < TRIES_PER_WORD && !spot; attempt++) {
             const [dr, dc] = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
-            const row = Math.floor(Math.random() * SIZE);
-            const col = Math.floor(Math.random() * SIZE);
+            const row = Math.floor(Math.random() * size);
+            const col = Math.floor(Math.random() * size);
 
             if (canPlace(grid, word, row, col, dr, dc)) {
                 spot = { row, col, dr, dc };
@@ -86,13 +91,13 @@ const build = (words) => {
     return { grid, placed, skipped };
 };
 
-const generate = (entries) => {
-    const usable = entries.filter((entry) => entry.word.length <= SIZE);
-    const tooLong = entries.filter((entry) => entry.word.length > SIZE);
+const generate = (entries, size) => {
+    const usable = entries.filter((entry) => entry.word.length <= size);
+    const tooLong = entries.filter((entry) => entry.word.length > size);
     let best = null;
 
     for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-        const result = build([...usable].sort((a, b) => b.word.length - a.word.length));
+        const result = build([...usable].sort((a, b) => b.word.length - a.word.length), size);
 
         if (!best || result.placed.length > best.placed.length) {
             best = result;
@@ -103,7 +108,7 @@ const generate = (entries) => {
         }
     }
 
-    best ??= build([]);
+    best ??= build([], size);
     best.skipped = [...best.skipped, ...tooLong];
 
     // Letters that are not part of a word are filled in last so they never change the placement.
@@ -139,7 +144,8 @@ const wrap = (ctx, text, maxWidth) => {
 const draw = (canvas, { grid, placed }, showAnswers) => {
     const ratio = window.devicePixelRatio || 1;
     const ctx = canvas.getContext('2d');
-    const gridSide = SIZE * CELL;
+    const size = grid.length;
+    const gridSide = size * CELL;
     const listX = PADDING + gridSide + COLUMN_GAP;
     const clues = [...placed].sort((a, b) => a.order - b.order).map((entry, index) => `${index + 1}. ${entry.clue || entry.word}`);
 
@@ -187,8 +193,8 @@ const draw = (canvas, { grid, placed }, showAnswers) => {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    for (let row = 0; row < SIZE; row++) {
-        for (let col = 0; col < SIZE; col++) {
+    for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
             ctx.fillText(grid[row][col], PADDING + col * CELL + CELL / 2, gridY + row * CELL + CELL / 2 + 2);
         }
     }
@@ -214,12 +220,24 @@ if (root) {
     const canvas = root.querySelector('[data-wordsearch-canvas]');
     const answers = root.querySelector('[data-wordsearch-answers]');
     const warning = root.querySelector('[data-wordsearch-warning]');
-    let result = generate([]);
+    const sizeInput = root.querySelector('[data-wordsearch-size]');
+
+    // An empty side falls back to the default; any other is kept within MIN_SIZE..MAX_SIZE.
+    const readSize = () => {
+        const value = Number.parseInt(sizeInput.value, 10);
+
+        return Number.isNaN(value) ? DEFAULT_SIZE : Math.min(MAX_SIZE, Math.max(MIN_SIZE, value));
+    };
+
+    let result = generate([], readSize());
 
     const render = () => draw(canvas, result, answers.checked);
 
     const regenerate = () => {
-        result = generate(parseEntries(textarea.value));
+        const size = readSize();
+
+        sizeInput.value = size;
+        result = generate(parseEntries(textarea.value), size);
 
         const skipped = result.skipped.map((entry) => entry.word.toLowerCase());
 
@@ -230,6 +248,7 @@ if (root) {
 
     root.querySelector('[data-wordsearch-generate]').addEventListener('click', regenerate);
     answers.addEventListener('change', render);
+    sizeInput.addEventListener('change', regenerate);
 
     root.querySelector('[data-wordsearch-export]').addEventListener('click', () => {
         const link = document.createElement('a');

@@ -11,7 +11,7 @@
     and the start and result screens are HTML on top of it, sized in container units so they scale with the scene.
 --}}
 @php
-    // Faces for some of the zombies: the player's own avatar, then those of learners of the course, each with the last word of the name.
+    // Faces for most of the zombies (each in turn): the player's own avatar, then those of learners of the course, each with the last word of the name.
     $player = auth()->user();
     $avatars = collect([$player?->avatar_url ? ['url' => $player->avatar_url, 'name' => $player->lastName()] : null, ...($learnerAvatars ?? [])])->filter()->unique('url')->values()->all();
 

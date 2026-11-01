@@ -21,6 +21,7 @@ it('remembers the referral code of a visitor and credits the affiliate when they
     $this->withCookie('ref', $affiliate->referral_code)->post(route('register.store'), [
         'name' => 'Nguyen Van A',
         'email' => 'a@example.com',
+        'phone' => '0912345678',
         'password' => 'password-123',
         'password_confirmation' => 'password-123',
         'agree' => '1',
@@ -119,6 +120,7 @@ it('shows the referral link and earnings on the affiliate tab of the profile', f
         ->get(route('profile.show', ['tab' => 'affiliate']))
         ->assertOk()
         ->assertSee($affiliate->fresh()->referralUrl())
+        ->assertSee('data-copy="'.e($affiliate->fresh()->referralUrl()).'"', false)
         ->assertSee('25.000₫');
 });
 
@@ -182,6 +184,7 @@ it('mails the owner when someone registers', function () {
     $this->post(route('register.store'), [
         'name' => 'Nguyen Van B',
         'email' => 'b@example.com',
+        'phone' => '0912345679',
         'password' => 'password-123',
         'password_confirmation' => 'password-123',
         'agree' => '1',

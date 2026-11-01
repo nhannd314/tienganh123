@@ -267,7 +267,7 @@
                     <p class="type-body text-fg-body">Gửi link này cho bạn bè. Mỗi khi người bạn đăng ký qua link của bạn thanh toán, bạn nhận {{ $commissionRate }}% số tiền đó.</p>
                     <div class="flex flex-wrap items-center gap-3">
                         <input type="text" readonly value="{{ $referralUrl }}" aria-label="Link giới thiệu" onfocus="this.select()" class="h-12 min-w-60 flex-[1_1_320px] rounded-md border border-line-subtle bg-surface-hover px-4 type-body text-fg-strong">
-                        <x-button type="button" variant="outline" icon-left="copy" onclick="navigator.clipboard.writeText(@js($referralUrl)); this.textContent = 'Đã chép'">Sao chép</x-button>
+                        <x-button type="button" variant="outline" icon-left="copy" :data-copy="$referralUrl"><span data-copy-label data-copied="Đã sao chép">Sao chép</span></x-button>
                     </div>
                 </x-card>
 

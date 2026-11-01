@@ -278,7 +278,7 @@ it('ranks the time of Galaxy Defender, which allows a minute per word instead of
     expect(GameScore::where('game', 'galaxy-defender')->count())->toBe(1);
 });
 
-it('gives some Zombie Defense zombies the avatars of the learners of the course, and of the player', function () {
+it('gives most Zombie Defense zombies the avatars of the learners of the course, and of the player', function () {
     $lesson = gamesLesson();
     $learner = User::factory()->create(['name' => 'Trần Văn Bình', 'avatar' => 'avatars/learner.jpg']);
     $player = User::factory()->create(['name' => 'Lê Thị Hoa', 'avatar' => 'avatars/player.jpg']);
