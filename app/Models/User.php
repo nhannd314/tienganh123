@@ -28,6 +28,22 @@ class User extends Authenticatable implements FilamentUser
     use HasFactory, Notifiable;
 
     /**
+     * A Vietnamese phone number as it is stored, after normalizePhone(): 0 followed by 9 or 10 digits.
+     */
+    public const PHONE_PATTERN = '/^0\d{9,10}$/';
+
+    /**
+     * The phone number as it is stored and looked up at sign-in: without spaces, dots, dashes or brackets, and with
+     * the +84 / 84 country code written as a leading 0.
+     */
+    public static function normalizePhone(string $phone): string
+    {
+        $digits = preg_replace('/[\s.\-()]/', '', trim($phone));
+
+        return preg_replace('/^\+?84(?=\d{9,10}$)/', '0', $digits);
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

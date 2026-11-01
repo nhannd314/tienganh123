@@ -9,6 +9,9 @@ const HINT_ERROR = 'text-danger-text';
 const HINT_MUTED = 'text-fg-muted';
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
+// Same as User::normalizePhone() / User::PHONE_PATTERN on the server.
+const PHONE_PATTERN = /^0\d{9,10}$/;
+const normalizePhone = (value) => value.replace(/[\s.\-()]/g, '').replace(/^\+?84(?=\d{9,10}$)/, '0');
 const MIN_PASSWORD_LENGTH = 6;
 
 const swapIcon = (button, name) => {
@@ -60,13 +63,32 @@ const emailRule = (value) => {
     return EMAIL_PATTERN.test(value) ? null : 'Email chưa đúng định dạng, bạn kiểm tra lại nhé.';
 };
 
+const phoneRule = (value) => {
+    if (value === '') {
+        return 'Bạn chưa nhập số điện thoại.';
+    }
+
+    return PHONE_PATTERN.test(normalizePhone(value)) ? null : 'Số điện thoại chưa đúng, bạn kiểm tra lại nhé.';
+};
+
+// The login field takes an email (anything with an "@") or a phone number.
+const loginRule = (value) => {
+    if (value === '') {
+        return 'Bạn chưa nhập email hoặc số điện thoại.';
+    }
+
+    const isValid = value.includes('@') ? EMAIL_PATTERN.test(value) : PHONE_PATTERN.test(normalizePhone(value));
+
+    return isValid ? null : 'Email hoặc số điện thoại chưa đúng định dạng, bạn kiểm tra lại nhé.';
+};
+
 /*
  * Rules per form: each gets the field's value (a boolean for a checkbox) and a reader for the other fields of the form,
  * and returns the error message or null. Fields without a rule are not checked.
  */
 const rules = {
     login: {
-        email: emailRule,
+        login: loginRule,
         password: (value) => (value === '' ? 'Bạn chưa nhập mật khẩu.' : null),
     },
     forgot: {
@@ -86,6 +108,7 @@ const rules = {
     register: {
         name: (value) => (value === '' ? 'Bạn chưa nhập họ và tên.' : null),
         email: emailRule,
+        phone: phoneRule,
         password: (value) => (value.length < MIN_PASSWORD_LENGTH ? 'Mật khẩu cần có ít nhất 6 ký tự.' : null),
         password_confirmation: (value, read) => {
             if (value === '') {

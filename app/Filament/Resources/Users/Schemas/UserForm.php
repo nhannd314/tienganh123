@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use App\Enums\Membership;
+use App\Models\User;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -27,7 +28,9 @@ class UserForm
                 TextInput::make('phone')
                     ->tel()
                     ->autocomplete(false)
-                    ->maxLength(20),
+                    ->maxLength(20)
+                    ->unique(ignoreRecord: true)
+                    ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? User::normalizePhone($state) : null),
                 // "new-password" keeps the browser from filling in the admin's own saved login here (and in the field before it).
                 TextInput::make('password')
                     ->password()

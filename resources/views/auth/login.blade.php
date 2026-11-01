@@ -21,7 +21,7 @@
             <form method="POST" action="{{ route('login.store') }}" novalidate data-auth-form="login" class="flex flex-col gap-5">
                 @csrf
 
-                <x-auth-field name="email" label="Email" type="email" placeholder="ten@email.com" autocomplete="email" />
+                <x-auth-field name="login" label="Email hoặc số điện thoại" placeholder="ten@email.com hoặc 09xxxxxxxx" autocomplete="username" />
 
                 <x-auth-field name="password" label="Mật khẩu" placeholder="Nhập mật khẩu" autocomplete="current-password" password toggle>
                     <x-slot:aside>
@@ -30,7 +30,7 @@
                 </x-auth-field>
 
                 <label class="flex cursor-pointer items-center gap-3 type-body text-fg-body select-none">
-                    <x-checkbox name="remember" value="1" :checked="old('remember', ! old('email'))" />
+                    <x-checkbox name="remember" value="1" :checked="old('remember', ! old('login'))" />
                     Ghi nhớ đăng nhập
                 </label>
 

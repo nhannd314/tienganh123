@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
@@ -12,6 +13,16 @@ class RegisterRequest extends FormRequest
     }
 
     /**
+     * Store the phone number in one form, so the same number typed differently is still found at sign-in.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('phone'))) {
+            $this->merge(['phone' => User::normalizePhone($this->input('phone'))]);
+        }
+    }
+
+    /**
      * @return array<string, list<string>>
      */
     public function rules(): array
@@ -19,6 +30,7 @@ class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['required', 'string', 'regex:'.User::PHONE_PATTERN, 'unique:users,phone'],
             'password' => ['required', 'string', 'min:6'],
             'password_confirmation' => ['required', 'same:password'],
             'agree' => ['accepted'],
@@ -36,6 +48,9 @@ class RegisterRequest extends FormRequest
             'email.required' => 'Bạn chưa nhập email.',
             'email.email' => 'Email chưa đúng định dạng, bạn kiểm tra lại nhé.',
             'email.unique' => 'Email này đã được đăng ký, bạn hãy đăng nhập nhé.',
+            'phone.required' => 'Bạn chưa nhập số điện thoại.',
+            'phone.regex' => 'Số điện thoại chưa đúng, bạn kiểm tra lại nhé.',
+            'phone.unique' => 'Số điện thoại này đã được đăng ký, bạn hãy đăng nhập nhé.',
             'password.required' => 'Mật khẩu cần có ít nhất 6 ký tự.',
             'password.min' => 'Mật khẩu cần có ít nhất 6 ký tự.',
             'password_confirmation.required' => 'Bạn chưa nhập lại mật khẩu.',

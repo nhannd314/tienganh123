@@ -146,6 +146,19 @@ it('saves the phone number and an uploaded avatar, replacing the old one', funct
     Storage::disk('public')->assertExists($user->refresh()->avatar);
 });
 
+it('refuses a phone number another account already uses, and keeps its own', function () {
+    User::factory()->create(['phone' => '0987654321']);
+    $user = User::factory()->create(['phone' => '0912345678']);
+
+    $this->actingAs($user)->put(route('profile.update'), ['name' => $user->name, 'phone' => '0987 654 321'])
+        ->assertSessionHasErrors(['phone' => 'Số điện thoại này đã được tài khoản khác dùng.']);
+
+    $this->actingAs($user)->put(route('profile.update'), ['name' => $user->name, 'phone' => '0912 345 678'])
+        ->assertSessionHasNoErrors();
+
+    expect($user->refresh()->phone)->toBe('0912345678');
+});
+
 it('rejects an avatar that is not an image', function () {
     Storage::fake('public');
     $user = User::factory()->create();

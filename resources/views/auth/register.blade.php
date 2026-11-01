@@ -15,6 +15,7 @@
 
                 <x-auth-field name="name" label="Họ và tên" placeholder="Nguyễn Văn An" autocomplete="name" />
                 <x-auth-field name="email" label="Email" type="email" placeholder="ten@email.com" autocomplete="email" />
+                <x-auth-field name="phone" label="Số điện thoại" type="tel" placeholder="09xxxxxxxx" autocomplete="tel" inputmode="tel" />
                 <x-auth-field name="password" label="Mật khẩu" placeholder="Ít nhất 6 ký tự" autocomplete="new-password" hint="Dùng ít nhất 6 ký tự." password toggle />
                 <x-auth-field name="password_confirmation" label="Nhập lại mật khẩu" placeholder="Nhập lại mật khẩu" autocomplete="new-password" password />
 

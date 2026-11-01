@@ -19,7 +19,8 @@ it('shows the login page with its fields and the sign-up link', function () {
     $this->get(route('login'))
         ->assertOk()
         ->assertSee('Chào mừng bạn quay lại FunEnglish!')
-        ->assertSee('name="email"', false)
+        ->assertSee('name="login"', false)
+        ->assertSee('Email hoặc số điện thoại')
         ->assertSee('name="password"', false)
         ->assertSee('data-password-toggle', false)
         ->assertSee('Quên mật khẩu?')
@@ -30,10 +31,32 @@ it('shows the login page with its fields and the sign-up link', function () {
 it('signs the visitor in and sends them to the home page', function () {
     $user = memberAccount();
 
-    $this->post(route('login.store'), ['email' => 'nhan@example.com', 'password' => 'matkhau123'])
+    $this->post(route('login.store'), ['login' => 'nhan@example.com', 'password' => 'matkhau123'])
         ->assertRedirect(route('home'));
 
     $this->assertAuthenticatedAs($user);
+});
+
+it('signs the visitor in with the phone number instead of the email', function (string $login) {
+    $user = memberAccount(['phone' => '0912345678']);
+
+    $this->post(route('login.store'), ['login' => $login, 'password' => 'matkhau123'])
+        ->assertRedirect(route('home'));
+
+    $this->assertAuthenticatedAs($user);
+})->with([
+    'as stored' => ['0912345678'],
+    'with spaces' => ['0912 345 678'],
+    'with the country code' => ['+84912345678'],
+]);
+
+it('does not sign in with the right phone number and a wrong password', function () {
+    memberAccount(['phone' => '0912345678']);
+
+    $this->post(route('login.store'), ['login' => '0912345678', 'password' => 'sai-mat-khau'])
+        ->assertSessionHasErrors('credentials');
+
+    $this->assertGuest();
 });
 
 it('sends the visitor back to the page they were going to', function () {
@@ -41,50 +64,52 @@ it('sends the visitor back to the page they were going to', function () {
 
     $this->get(route('logout'))->assertMethodNotAllowed();
     $this->withSession(['url.intended' => route('courses.index')])
-        ->post(route('login.store'), ['email' => 'nhan@example.com', 'password' => 'matkhau123'])
+        ->post(route('login.store'), ['login' => 'nhan@example.com', 'password' => 'matkhau123'])
         ->assertRedirect(route('courses.index'));
 });
 
 it('lets an admin sign in here and then open the admin panel', function () {
     memberAccount(['role' => 'admin']);
 
-    $this->post(route('login.store'), ['email' => 'nhan@example.com', 'password' => 'matkhau123']);
+    $this->post(route('login.store'), ['login' => 'nhan@example.com', 'password' => 'matkhau123']);
 
     $this->get('/admin')->assertOk();
 });
 
-it('shows one message for a wrong password or an unknown email and keeps the email', function (string $email, string $password) {
+it('shows one message for a wrong password or an unknown login', function (string $login, string $password) {
     memberAccount();
 
     $this->from(route('login'))
-        ->post(route('login.store'), ['email' => $email, 'password' => $password])
+        ->post(route('login.store'), ['login' => $login, 'password' => $password])
         ->assertRedirect(route('login'));
 
     $this->assertGuest();
 
     $this->get(route('login'))
-        ->assertSee('Email hoặc mật khẩu chưa đúng.')
+        ->assertSee('Email, số điện thoại hoặc mật khẩu chưa đúng.')
         ->assertSee('role="alert"', false);
 })->with([
     'wrong password' => ['nhan@example.com', 'sai-mat-khau'],
     'unknown email' => ['khac@example.com', 'matkhau123'],
+    'unknown phone' => ['0900000000', 'matkhau123'],
 ]);
 
-it('validates the email and password with Vietnamese messages', function (array $input, array $errors) {
+it('validates the login and password with Vietnamese messages', function (array $input, array $errors) {
     $this->from(route('login'))
         ->post(route('login.store'), $input)
         ->assertSessionHasErrors($errors);
 })->with([
-    'nothing' => [[], ['email' => 'Bạn chưa nhập email.', 'password' => 'Bạn chưa nhập mật khẩu.']],
-    'bad email' => [['email' => 'khong-hop-le', 'password' => 'x'], ['email' => 'Email chưa đúng định dạng, bạn kiểm tra lại nhé.']],
-    'no password' => [['email' => 'nhan@example.com'], ['password' => 'Bạn chưa nhập mật khẩu.']],
+    'nothing' => [[], ['login' => 'Bạn chưa nhập email hoặc số điện thoại.', 'password' => 'Bạn chưa nhập mật khẩu.']],
+    'bad phone' => [['login' => '12345', 'password' => 'x'], ['login' => 'Email hoặc số điện thoại chưa đúng định dạng, bạn kiểm tra lại nhé.']],
+    'bad email' => [['login' => 'khong-hop-le', 'password' => 'x'], ['login' => 'Email hoặc số điện thoại chưa đúng định dạng, bạn kiểm tra lại nhé.']],
+    'no password' => [['login' => 'nhan@example.com'], ['password' => 'Bạn chưa nhập mật khẩu.']],
 ]);
 
-it('shows the validation message under the field and keeps the typed email', function () {
-    $this->from(route('login'))->post(route('login.store'), ['email' => 'khong-hop-le', 'password' => '']);
+it('shows the validation message under the field and keeps the typed login', function () {
+    $this->from(route('login'))->post(route('login.store'), ['login' => 'khong-hop-le', 'password' => '']);
 
     $this->get(route('login'))
-        ->assertSee('Email chưa đúng định dạng, bạn kiểm tra lại nhé.')
+        ->assertSee('Email hoặc số điện thoại chưa đúng định dạng, bạn kiểm tra lại nhé.')
         ->assertSee('Bạn chưa nhập mật khẩu.')
         ->assertSee('value="khong-hop-le"', false)
         ->assertSee('aria-invalid="true"', false);
@@ -93,7 +118,7 @@ it('shows the validation message under the field and keeps the typed email', fun
 it('never puts the password back into the form', function () {
     memberAccount();
 
-    $this->from(route('login'))->post(route('login.store'), ['email' => 'nhan@example.com', 'password' => 'sai-mat-khau']);
+    $this->from(route('login'))->post(route('login.store'), ['login' => 'nhan@example.com', 'password' => 'sai-mat-khau']);
 
     $this->get(route('login'))->assertDontSee('sai-mat-khau');
 });
@@ -102,11 +127,11 @@ it('locks the login after five wrong attempts, even for the right password', fun
     memberAccount();
 
     foreach (range(1, 5) as $attempt) {
-        $this->post(route('login.store'), ['email' => 'nhan@example.com', 'password' => 'sai-mat-khau']);
+        $this->post(route('login.store'), ['login' => 'nhan@example.com', 'password' => 'sai-mat-khau']);
     }
 
     $this->from(route('login'))
-        ->post(route('login.store'), ['email' => 'nhan@example.com', 'password' => 'matkhau123'])
+        ->post(route('login.store'), ['login' => 'nhan@example.com', 'password' => 'matkhau123'])
         ->assertSessionHasErrors('credentials');
 
     expect(session('errors')->first('credentials'))->toContain('quá nhiều lần');

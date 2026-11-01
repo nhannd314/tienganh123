@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use Closure;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -19,12 +21,32 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * @return array<string, list<string>>
+     * A login with an "@" is an email; anything else is a phone number, looked up in the form it is stored in.
+     */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('login'))) {
+            $login = trim($this->input('login'));
+
+            $this->merge(['login' => $this->isEmail($login) ? $login : User::normalizePhone($login)]);
+        }
+    }
+
+    /**
+     * @return array<string, list<mixed>>
      */
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email'],
+            'login' => ['required', 'string', function (string $attribute, string $value, Closure $fail): void {
+                $isValid = $this->isEmail($value)
+                    ? filter_var($value, FILTER_VALIDATE_EMAIL) !== false
+                    : preg_match(User::PHONE_PATTERN, $value) === 1;
+
+                if (! $isValid) {
+                    $fail('Email hoặc số điện thoại chưa đúng định dạng, bạn kiểm tra lại nhé.');
+                }
+            }],
             'password' => ['required', 'string'],
         ];
     }
@@ -35,14 +57,13 @@ class LoginRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'email.required' => 'Bạn chưa nhập email.',
-            'email.email' => 'Email chưa đúng định dạng, bạn kiểm tra lại nhé.',
+            'login.required' => 'Bạn chưa nhập email hoặc số điện thoại.',
             'password.required' => 'Bạn chưa nhập mật khẩu.',
         ];
     }
 
     /**
-     * Sign the user in, counting failed attempts per email and IP address.
+     * Sign the user in by email or phone number, counting failed attempts per login and IP address.
      *
      * @throws ValidationException
      */
@@ -50,13 +71,21 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $login = $this->string('login')->toString();
+        $credentials = [$this->isEmail($login) ? 'email' : 'phone' => $login, 'password' => $this->string('password')->toString()];
+
+        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
-            throw ValidationException::withMessages(['credentials' => 'Email hoặc mật khẩu chưa đúng.']);
+            throw ValidationException::withMessages(['credentials' => 'Email, số điện thoại hoặc mật khẩu chưa đúng.']);
         }
 
         RateLimiter::clear($this->throttleKey());
+    }
+
+    private function isEmail(string $login): bool
+    {
+        return str_contains($login, '@');
     }
 
     /**
@@ -79,6 +108,6 @@ class LoginRequest extends FormRequest
 
     private function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')->toString()).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('login')->toString()).'|'.$this->ip());
     }
 }

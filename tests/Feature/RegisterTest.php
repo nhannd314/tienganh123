@@ -18,6 +18,7 @@ function registrationData(array $overrides = []): array
     return [
         'name' => 'Nguyễn Văn An',
         'email' => 'an@example.com',
+        'phone' => '0912 345 678',
         'password' => 'matkhau123',
         'password_confirmation' => 'matkhau123',
         'agree' => '1',
@@ -31,6 +32,7 @@ it('shows the sign-up page with its fields and the login link', function () {
         ->assertSee('Tạo tài khoản để bắt đầu học tiếng Anh cùng FunEnglish nhé!')
         ->assertSee('name="name"', false)
         ->assertSee('name="email"', false)
+        ->assertSee('name="phone"', false)
         ->assertSee('name="password"', false)
         ->assertSee('name="password_confirmation"', false)
         ->assertSee('name="agree"', false)
@@ -62,6 +64,7 @@ it('creates a learner account, signs it in and goes to the home page', function 
 
     expect($user)->not->toBeNull()
         ->and($user->name)->toBe('Nguyễn Văn An')
+        ->and($user->phone)->toBe('0912345678')
         ->and($user->fresh()->role)->toBe(UserRole::User)
         ->and(Hash::check('matkhau123', $user->password))->toBeTrue();
 
@@ -82,7 +85,7 @@ it('sends the new learner back to the page they were going to', function () {
 });
 
 it('validates every field with the messages of the design', function (array $overrides, array $errors) {
-    User::factory()->create(['email' => 'da-co@example.com']);
+    User::factory()->create(['email' => 'da-co@example.com', 'phone' => '0987654321']);
 
     $this->from(route('register'))
         ->post(route('register.store'), registrationData($overrides))
@@ -95,6 +98,9 @@ it('validates every field with the messages of the design', function (array $ove
     'no email' => [['email' => ''], ['email' => 'Bạn chưa nhập email.']],
     'bad email' => [['email' => 'khong-hop-le'], ['email' => 'Email chưa đúng định dạng, bạn kiểm tra lại nhé.']],
     'email taken' => [['email' => 'da-co@example.com'], ['email' => 'Email này đã được đăng ký, bạn hãy đăng nhập nhé.']],
+    'no phone' => [['phone' => ''], ['phone' => 'Bạn chưa nhập số điện thoại.']],
+    'bad phone' => [['phone' => '12345'], ['phone' => 'Số điện thoại chưa đúng, bạn kiểm tra lại nhé.']],
+    'phone taken, written another way' => [['phone' => '+84 987.654.321'], ['phone' => 'Số điện thoại này đã được đăng ký, bạn hãy đăng nhập nhé.']],
     'short password' => [['password' => '12345', 'password_confirmation' => '12345'], ['password' => 'Mật khẩu cần có ít nhất 6 ký tự.']],
     'no password' => [['password' => '', 'password_confirmation' => ''], ['password' => 'Mật khẩu cần có ít nhất 6 ký tự.']],
     'no repeat' => [['password_confirmation' => ''], ['password_confirmation' => 'Bạn chưa nhập lại mật khẩu.']],
@@ -132,7 +138,7 @@ it('lets the new learner sign in again with the same password', function () {
     $this->post(route('register.store'), registrationData());
     auth()->logout();
 
-    $this->post(route('login.store'), ['email' => 'an@example.com', 'password' => 'matkhau123'])
+    $this->post(route('login.store'), ['login' => 'an@example.com', 'password' => 'matkhau123'])
         ->assertRedirect(route('home'));
 });
 
@@ -140,4 +146,14 @@ it('keeps a new learner out of the admin panel', function () {
     $this->post(route('register.store'), registrationData());
 
     $this->get('/admin')->assertForbidden();
+});
+
+it('lets the new learner sign in with the phone number, written any way', function () {
+    $this->post(route('register.store'), registrationData());
+    auth()->logout();
+
+    $this->post(route('login.store'), ['login' => '+84 912.345.678', 'password' => 'matkhau123'])
+        ->assertRedirect(route('home'));
+
+    $this->assertAuthenticated();
 });
