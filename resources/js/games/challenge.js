@@ -439,16 +439,16 @@ if (root) {
         }
     };
 
-    // A wrong letter: the box of the letter to type turns red with the wrong letter in it and shakes, then is drawn again.
-    const showWrongLetter = (box, character) => {
+    // A wrong letter: the box of the letter to type turns red and shakes, then is drawn again. The wrong letter itself is
+    // not shown, so there is nothing to erase with Backspace.
+    const showWrongLetter = (box) => {
         if (!box) {
             return;
         }
 
         clearTimeout(wrongTimer);
-        box.classList.remove('border-line-default', 'bg-surface-card', 'text-fg-strong', 'border-primary', 'shadow-focus');
-        box.classList.add('border-danger', 'bg-danger-bg', 'text-danger');
-        box.textContent = character;
+        box.classList.remove('border-line-default', 'bg-surface-card', 'border-primary', 'shadow-focus');
+        box.classList.add('border-danger', 'bg-danger-bg');
 
         if (!prefersReducedMotion) {
             box.animate([
@@ -476,7 +476,7 @@ if (root) {
         }
 
         if (plainLetter(character) !== plainLetter(letters[localProgress])) {
-            showWrongLetter(lettersBox.querySelector(`[data-letter-box="${localProgress}"]`), character);
+            showWrongLetter(lettersBox.querySelector(`[data-letter-box="${localProgress}"]`));
 
             return;
         }
