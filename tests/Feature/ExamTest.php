@@ -6,6 +6,7 @@ use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\ExamGroup;
 use App\Models\ExamQuestion;
+use App\Models\Sentence;
 use App\Models\User;
 use App\Models\Word;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -224,6 +225,26 @@ describe('grading', function () {
         $this->post(route('exams.submit', $exam), ['answers' => [$group->id => [1 => 'Dog', 2 => 'walk']]]);
 
         expect($attempt->fresh()->score)->toBe(50.0);
+    });
+
+    it('plays the audio of the stored sentences, hides the words to fill in, and grades each blank', function () {
+        Queue::fake();
+        $exam = Exam::factory()->published()->create();
+        $group = ExamGroup::factory()->for($exam)->listenSentenceAndFill(['I `have` an `apple`.', 'My mother is a teacher.'])->create();
+        Sentence::query()->where('sentence', 'I have an apple.')->update(['audio' => 'lessons/sentence-audio/apple.mp3']);
+        $attempt = startExam($exam);
+
+        $this->get(route('exams.take', $exam))
+            ->assertOk()
+            ->assertSee('lessons/sentence-audio/apple.mp3', false)
+            ->assertSee('name="answers['.$group->id.'][1-2]"', false)
+            ->assertSee('name="answers['.$group->id.'][2-1]"', false)
+            ->assertDontSee('My mother is a teacher', false)
+            ->assertDontSee('apple`', false);
+
+        $this->post(route('exams.submit', $exam), ['answers' => [$group->id => ['1-1' => 'Have', '1-2' => 'pear', '2-1' => 'my  Mother is a teacher.']]]);
+
+        expect($attempt->fresh()->score)->toBe(66.67);
     });
 
     it('does not take a second submission', function () {

@@ -5,9 +5,11 @@ use App\Enums\ExamQuestionType;
 use App\Filament\Resources\Exams\Pages\CreateExam;
 use App\Filament\Resources\Exams\Pages\EditExam;
 use App\Jobs\FetchWordPronunciation;
+use App\Jobs\GenerateSentenceAudio;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamGroup;
+use App\Models\Sentence;
 use App\Models\User;
 use App\Models\Word;
 use Filament\Forms\Components\Repeater;
@@ -139,6 +141,35 @@ it('requires a passage with words in backticks for a listen and fill group', fun
         ->assertHasFormErrors(['groups.0.passage', 'groups.0.audio']);
 
     $undoRepeaterFake();
+});
+
+it('stores the sentences of a listen and fill sentences group, reusing the ones stored and voicing the new ones', function () {
+    Queue::fake();
+    $undoRepeaterFake = Repeater::fake();
+    $stored = Sentence::factory()->create(['sentence' => 'I have an apple.', 'audio' => 'lessons/sentence-audio/apple.mp3']);
+
+    Livewire::test(CreateExam::class)
+        ->fillForm([
+            'course_id' => Course::factory()->create()->id,
+            'title' => 'Kiểm tra',
+            'groups' => [
+                ['type' => ExamGroupType::ListenSentenceAndFill->value, 'title' => 'Nghe câu', 'weight' => 1, 'sentences' => 'I have an `apple`.
+My mother is a teacher.
+'],
+            ],
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $undoRepeaterFake();
+
+    expect(ExamGroup::first()->sentences)->toBe(['I have an `apple`.', 'My mother is a teacher.'])
+        ->and(Sentence::count())->toBe(2)
+        ->and($stored->fresh()->audio)->toBe('lessons/sentence-audio/apple.mp3');
+
+    $created = Sentence::firstWhere('sentence', 'My mother is a teacher.');
+    Queue::assertPushed(GenerateSentenceAudio::class, 1);
+    Queue::assertPushed(GenerateSentenceAudio::class, fn (GenerateSentenceAudio $job): bool => $job->sentence->is($created));
 });
 
 it('shows the words of a group one per line when editing', function () {

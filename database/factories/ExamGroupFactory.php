@@ -72,6 +72,19 @@ class ExamGroupFactory extends Factory
     }
 
     /**
+     * Indicate that the group lists sentences to listen to, with the words in backticks to fill in.
+     *
+     * @param  list<string>  $sentences
+     */
+    public function listenSentenceAndFill(array $sentences = ['I have an `apple`.', 'My mother is a teacher.']): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => ExamGroupType::ListenSentenceAndFill,
+            'sentences' => $sentences,
+        ]);
+    }
+
+    /**
      * Indicate that each question of the group is worth the given weight.
      */
     public function weighted(float $weight): static

@@ -33,5 +33,5 @@
         @endforeach
     </ul>
 
-    <x-button size="lg" icon-left="book-open-check" :href="$href" full-width>Ôn tập ngay</x-button>
+    <x-button size="lg" icon-left="book-open-check" :href="$href" full-width>Ôn tập nâng cao</x-button>
 </div>

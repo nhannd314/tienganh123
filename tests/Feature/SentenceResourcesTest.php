@@ -141,7 +141,7 @@ it('adds a sentence for each line of the popup with its meaning, after the exist
         ->assertNotified('The sentence audio is being generated');
 
     expect($set->sentences->map(fn (Sentence $sentence): array => [$sentence->sentence, $sentence->translation, $sentence->pivot->sort_order])->all())->toBe([
-        ['Already here.', null, 4],
+        ['Already here.', 'Bỏ qua', 4],
         ['I have an `apple`', 'Tôi có 1 quả táo.', 5],
         ['Hello there.', null, 6],
     ]);
@@ -175,6 +175,72 @@ it('queues an OpenAI image for each added sentence only when the checkbox of the
         ->assertNotified('The sentence images were not generated');
 
     Queue::assertPushed(GenerateSentenceImage::class, 2);
+});
+
+it('updates a sentence with the same words instead of adding it again, and keeps its meaning when none is typed', function () {
+    Queue::fake();
+    $set = SentenceSet::factory()->create();
+    $feed = Sentence::factory()->create(['sentence' => 'I feed the pets.', 'translation' => 'Tôi cho thú cưng ăn.']);
+    $other = Sentence::factory()->create(['sentence' => 'We `swim` fast.', 'translation' => 'Cũ']);
+
+    Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
+        ->callAction(TestAction::make('addSentences')->table(), ['sentence_lines' => 'I `feed` the pets.
+We swim fast. | Mới'])
+        ->assertHasNoFormErrors();
+
+    expect(Sentence::count())->toBe(2)
+        ->and($feed->fresh()->only(['sentence', 'translation']))->toBe(['sentence' => 'I `feed` the pets.', 'translation' => 'Tôi cho thú cưng ăn.'])
+        ->and($other->fresh()->only(['sentence', 'translation']))->toBe(['sentence' => 'We swim fast.', 'translation' => 'Mới'])
+        ->and($set->sentences()->count())->toBe(2);
+
+    Queue::assertNothingPushed();
+});
+
+it('updates a sentence with the same words from the create form instead of creating a new one', function () {
+    Queue::fake();
+    $feed = Sentence::factory()->create(['sentence' => 'I feed the pets.', 'translation' => 'Tôi cho thú cưng ăn.']);
+
+    Livewire::test(CreateSentence::class)
+        ->fillForm(['sentence' => 'I `feed` the pets.', 'translation' => ''])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Sentence::count())->toBe(1)
+        ->and($feed->fresh()->only(['sentence', 'translation']))->toBe(['sentence' => 'I `feed` the pets.', 'translation' => 'Tôi cho thú cưng ăn.']);
+});
+
+it('keeps the sets of a sentence updated from the create form, adds the chosen ones, and voices it again when its words change', function () {
+    Queue::fake();
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    Storage::fake('public');
+    Storage::disk('public')->put('lessons/sentence-audio/old.mp3', 'x');
+    [$a, $b, $c] = SentenceSet::factory()->count(3)->create();
+    $feed = Sentence::factory()->create(['sentence' => 'I feed the pets.', 'audio' => 'lessons/sentence-audio/old.mp3']);
+    $feed->sentenceSets()->attach([$a->id, $b->id]);
+
+    Livewire::test(CreateSentence::class)
+        ->fillForm(['sentence' => 'i `feed` the Pets.', 'sentenceSets' => [$c->id]])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Sentence::count())->toBe(1)
+        ->and($feed->fresh()->audio)->toBeNull()
+        ->and($feed->sentenceSets()->pluck('sentence_sets.id')->sort()->values()->all())->toBe([$a->id, $b->id, $c->id]);
+    Storage::disk('public')->assertMissing('lessons/sentence-audio/old.mp3');
+    Queue::assertPushed(GenerateSentenceAudio::class, 1);
+});
+
+it('voices a sentence of the popup again only when its words change, not when only the backticks do', function () {
+    Queue::fake();
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    $set = SentenceSet::factory()->create();
+    Sentence::factory()->create(['sentence' => 'Same words.', 'audio' => 'keep.mp3']);
+
+    Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
+        ->callAction(TestAction::make('addSentences')->table(), ['sentence_lines' => 'Same `words`.']);
+
+    expect(Sentence::first()->audio)->toBe('keep.mp3');
+    Queue::assertNothingPushed();
 });
 
 it('rejects a line without a sentence or longer than 500 characters, and an empty popup', function () {

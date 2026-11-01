@@ -7,7 +7,8 @@ use Filament\Support\Contracts\HasLabel;
 /**
  * What a group of an exam asks. `Questions` holds questions written by hand (see ExamQuestionType); the word groups ask
  * about the words listed in the group, taken from the words table; `ListenAndFill` is a passage heard from an audio file
- * with the words wrapped in backticks to fill in; `SentencePronunciation` lists English sentences to read aloud.
+ * with the words wrapped in backticks to fill in; `ListenSentenceAndFill` lists sentences, one per line, each heard from
+ * the audio of its sentence record, with the words in backticks to fill in (the whole sentence when it has none); `SentencePronunciation` lists English sentences to read aloud.
  */
 enum ExamGroupType: string implements HasLabel
 {
@@ -18,6 +19,7 @@ enum ExamGroupType: string implements HasLabel
     case Pronunciation = 'pronunciation';
     case ListenAndFill = 'listen_and_fill';
     case SentencePronunciation = 'sentence_pronunciation';
+    case ListenSentenceAndFill = 'listen_sentence_fill';
 
     public function getLabel(): string
     {
@@ -29,6 +31,7 @@ enum ExamGroupType: string implements HasLabel
             self::Pronunciation => 'Xem nghĩa tiếng Việt, đọc từ (chấm phát âm)',
             self::ListenAndFill => 'Nghe audio và điền từ',
             self::SentencePronunciation => 'Đọc câu tiếng Anh (chấm phát âm)',
+            self::ListenSentenceAndFill => 'Nghe câu và điền từ',
         };
     }
 

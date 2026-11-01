@@ -8,6 +8,7 @@ use App\Models\Exam;
 use App\Models\ExamAttempt;
 use App\Models\ExamGroup;
 use App\Models\ExamQuestion;
+use App\Models\Sentence;
 use App\Models\Word;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
@@ -44,9 +45,10 @@ class ExamPaper
      * question, the meaning itself in a word group), "text" (typed) or "speak" (read into the microphone),
      * and `accepted` lists the answers taken as right, so it must never be shown. The options of the word groups are
      * drawn at random, hence only made when `$withOptions` (grading does not need them). A "listen and fill" group also
-     * has its passage as `segments`, the words to fill in carrying the key of their question.
+     * has its passage as `segments`, the words to fill in carrying the key of their question; a "listen to the sentence and
+     * fill" group has its sentences as `lines`, each with the audio of its stored sentence and its blanks (emptied) carrying their key.
      *
-     * @return list<array{group: ExamGroup, points: float, segments: list<array{text: string, blank: int|null}>, questions: list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string}>|null}>}>
+     * @return list<array{group: ExamGroup, points: float, segments: list<array{text: string, blank: int|null}>, lines: list<array{number: int, audio: string|null, segments: list<array{text: string, blank: int|null, key: string|null}>}>, questions: list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string}>|null}>}>
      */
     public function sections(Exam $exam, bool $withOptions = true): array
     {
@@ -54,6 +56,7 @@ class ExamPaper
             ->map(fn (ExamGroup $group): array => [
                 'group' => $group,
                 'segments' => $group->type === ExamGroupType::ListenAndFill ? $group->passageSegments() : [],
+                'lines' => $group->type === ExamGroupType::ListenSentenceAndFill ? $this->listenLines($group) : [],
                 'questions' => $this->questionsOf($group, $withOptions),
             ])
             ->filter(fn (array $section): bool => $section['questions'] !== [])
@@ -194,7 +197,32 @@ class ExamPaper
                 ))
                 ->values()
                 ->all(),
+            ExamGroupType::ListenSentenceAndFill => collect($group->listenSentenceLines())
+                ->flatMap(fn (array $line): array => collect($line['segments'])
+                    ->whereNotNull('blank')
+                    ->map(fn (array $segment): array => $this->question(key: $segment['key'], kind: 'text', accepted: [$segment['text']]))
+                    ->all())
+                ->values()
+                ->all(),
         };
+    }
+
+    /**
+     * The sentences of a "listen to the sentence and fill" group with the audio of the stored sentence of each. The words
+     * to fill in are emptied, as they are the answers (kept in `accepted` of the questions, which is never shown).
+     *
+     * @return list<array{number: int, audio: string|null, segments: list<array{text: string, blank: int|null, key: string|null}>}>
+     */
+    private function listenLines(ExamGroup $group): array
+    {
+        $lines = $group->listenSentenceLines();
+        $stored = Sentence::findManyByPlainText(array_column($lines, 'plain'));
+
+        return array_map(fn (array $line): array => [
+            'number' => $line['number'],
+            'audio' => $stored->get(mb_strtolower($line['plain']))?->audio_url,
+            'segments' => array_map(fn (array $segment): array => $segment['blank'] === null ? $segment : [...$segment, 'text' => ''], $line['segments']),
+        ], $lines);
     }
 
     /**

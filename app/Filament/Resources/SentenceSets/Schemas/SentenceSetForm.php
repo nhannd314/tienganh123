@@ -72,7 +72,7 @@ class SentenceSetForm
                 ->required($isRequired)
                 ->rows(10)
                 ->placeholder('I have an `apple` | Tôi có 1 quả táo.')
-                ->helperText('One sentence per line, as "sentence | meaning" (the meaning is optional). Wrap a word in backticks to show its IPA, audio and meaning in a popover. A sentence the set already has is skipped.')
+                ->helperText('One sentence per line, as "sentence | meaning" (the meaning is optional). Wrap a word in backticks to show its IPA, audio and meaning in a popover. A sentence that already exists is updated instead of added again.')
                 ->rules([
                     fn (): Closure => function (string $attribute, mixed $value, Closure $fail): void {
                         foreach (self::parseLines(is_string($value) ? $value : null) as $index => $line) {
@@ -114,36 +114,46 @@ class SentenceSetForm
      */
     public static function addSentences(SentenceSet $set, ?string $text, bool $withImages): void
     {
-        $existing = $set->sentences()->pluck('sentences.sentence')->all();
+        $inSet = $set->sentences()->pluck('sentences.id')->all();
         $sortOrder = (int) $set->sentences()->max('sentence_sentence_set.sort_order');
 
-        $lines = collect(self::parseLines($text))
-            ->unique('sentence')
-            ->reject(fn (array $line): bool => in_array($line['sentence'], $existing, true));
+        $lines = collect(self::parseLines($text))->unique(fn (array $line): string => Sentence::plainText($line['sentence']));
 
         $added = collect();
+        $reworded = collect();
 
         foreach ($lines as $line) {
-            // A sentence is stored once: one already written in another set is reused, and only a new one gets its audio and image.
-            $sentence = Sentence::firstOrCreate(['sentence' => $line['sentence']], $line);
-            $set->sentences()->attach($sentence, ['sort_order' => ++$sortOrder]);
+            // A sentence is stored once: the same words written in another set, or with other backticks, update that sentence
+            // (its meaning only when one is typed); only a brand new sentence gets its audio and image.
+            $sentence = Sentence::findByPlainText($line['sentence']);
 
-            if ($sentence->wasRecentlyCreated) {
+            if ($sentence === null) {
+                $sentence = Sentence::create($line);
                 $added->push($sentence);
+            } else {
+                if ($sentence->updateKeepingEmpty($line)) {
+                    $reworded->push($sentence);
+                }
+            }
+
+            if (! in_array($sentence->id, $inSet, true)) {
+                $set->sentences()->attach($sentence, ['sort_order' => ++$sortOrder]);
+                $inSet[] = $sentence->id;
             }
         }
 
-        if ($added->isNotEmpty()) {
-            self::queueMedia($added, $withImages);
+        if ($added->isNotEmpty() || $reworded->isNotEmpty()) {
+            self::queueMedia($added->merge($reworded), $added, $withImages);
         }
     }
 
     /**
      * Queue the Azure voice and, when asked, the OpenAI image of the sentences; both appear on the sentences once their jobs have run.
      *
-     * @param  Collection<int, Sentence>  $sentences
+     * @param  Collection<int, Sentence>  $sentences  the ones to voice: the added and the reworded
+     * @param  Collection<int, Sentence>  $added  the ones to draw, as a reworded sentence keeps its image
      */
-    private static function queueMedia(Collection $sentences, bool $withImages): void
+    private static function queueMedia(Collection $sentences, Collection $added, bool $withImages): void
     {
         $queued = [];
 
@@ -158,7 +168,7 @@ class SentenceSetForm
             if (blank(config('services.openai.key'))) {
                 self::warn('The sentence images were not generated', 'OPENAI_API_KEY is not set.');
             } else {
-                $sentences->each(fn (Sentence $sentence) => GenerateSentenceImage::dispatch($sentence));
+                $added->each(fn (Sentence $sentence) => GenerateSentenceImage::dispatch($sentence));
                 $queued[] = 'images';
             }
         }

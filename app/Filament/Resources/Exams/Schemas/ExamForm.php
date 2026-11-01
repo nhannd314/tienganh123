@@ -222,7 +222,7 @@ class ExamForm
                         }
                     },
                 ])
-                ->visible($isType(ExamGroupType::SentencePronunciation))
+                ->visible($isType(ExamGroupType::SentencePronunciation, ExamGroupType::ListenSentenceAndFill))
                 ->columnSpanFull(),
             Textarea::make('passage')
                 ->rows(6)

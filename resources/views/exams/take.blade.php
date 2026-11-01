@@ -75,6 +75,33 @@
                     @endphp
 
                     <p class="text-lg leading-[3.75rem] whitespace-pre-line text-fg-strong">{!! $passageHtml !!}</p>
+                @elseif ($group->type === ExamGroupType::ListenSentenceAndFill)
+                    <ol class="flex flex-col gap-6">
+                        @foreach ($section['lines'] as $line)
+                            <li class="flex items-center gap-4 border-t border-line-subtle pt-5 first:border-t-0 first:pt-0">
+                                <span class="type-label-lg text-primary">{{ $line['number'] }}.</span>
+
+                                @if ($line['audio'])
+                                    <x-audio-button :src="$line['audio']" size="sm" :label="'Nghe câu số '.$line['number']" />
+                                @else
+                                    <span class="type-body-sm text-fg-muted">Chưa có audio</span>
+                                @endif
+
+                                <p class="min-w-0 flex-1 text-lg leading-[3.75rem] text-fg-strong">
+                                    @foreach ($line['segments'] as $segment)
+                                        @if ($segment['blank'] === null)
+                                            {{ $segment['text'] }}
+                                        @else
+                                            <input type="text" name="answers[{{ $group->id }}][{{ $segment['key'] }}]" aria-label="Chỗ trống câu {{ $line['number'] }}" spellcheck="false" autocapitalize="off" class="{{ count($line['segments']) === 1 ? 'h-10 w-full' : 'h-10 w-36' }} rounded-sm border border-line-default bg-surface-card px-3 text-base text-fg-strong outline-none transition-interactive hover:border-line-hover focus:shadow-focus">
+                                        @endif
+                                    @endforeach
+                                </p>
+                            </li>
+                            @php
+                                $number += collect($line['segments'])->whereNotNull('blank')->count();
+                            @endphp
+                        @endforeach
+                    </ol>
                 @else
                     <ol class="flex flex-col gap-6">
                         @foreach ($section['questions'] as $question)
