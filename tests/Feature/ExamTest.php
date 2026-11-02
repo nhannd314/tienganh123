@@ -151,6 +151,24 @@ describe('grading', function () {
             ->assertSee('1/2');
     });
 
+    it('shows the paper with the answers given and the right ones on the result page', function () {
+        $exam = Exam::factory()->published()->create();
+        $group = ExamGroup::factory()->for($exam)->create();
+        $choice = ExamQuestion::factory()->for($group, 'group')->create(['prompt' => 'Pick one', 'options' => ['cat', 'dog'], 'answer' => 'b']);
+        $fill = ExamQuestion::factory()->fill('went')->for($group, 'group')->create(['prompt' => 'I ___ home.']);
+        startExam($exam);
+
+        $this->post(route('exams.submit', $exam), ['answers' => [$group->id => [$choice->id => 'a', $fill->id => 'went']]]);
+
+        $this->get(route('exams.result', $exam))
+            ->assertOk()
+            ->assertSeeText('Bài làm của bạn')
+            ->assertSeeText('Bạn trả lời: a. cat')
+            ->assertSeeText('Đáp án đúng: b. dog')
+            ->assertSeeText('Bạn trả lời: went')
+            ->assertDontSeeText('Đáp án đúng: went');
+    });
+
     it('numbers the options of a written choice question and marks the parts in backticks', function () {
         $exam = Exam::factory()->published()->create();
         $group = ExamGroup::factory()->for($exam)->create();
@@ -247,6 +265,17 @@ describe('grading', function () {
 
         expect($attempt->fresh()->score)->toBe(66.67);
     });
+
+    it('ignores punctuation when grading a word to fill in', function (string $given) {
+        $exam = Exam::factory()->published()->create();
+        $group = ExamGroup::factory()->for($exam)->create();
+        $question = ExamQuestion::factory()->fill("What's this")->for($group, 'group')->create();
+        $attempt = startExam($exam);
+
+        $this->post(route('exams.submit', $exam), ['answers' => [$group->id => [$question->id => $given]]]);
+
+        expect($attempt->fresh()->score)->toBe(100.0);
+    })->with(["what's this", 'whats this', 'What’s this?', 'WHATS   THIS!']);
 
     it('does not take a second submission', function () {
         $exam = Exam::factory()->published()->create();

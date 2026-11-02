@@ -135,11 +135,13 @@ class ExamPaper
     }
 
     /**
-     * A typed answer as it is compared: any case, straight apostrophes, one space between the words.
+     * A typed answer as it is compared: any case, no punctuation ("What's this?" is "whats this"), one space between the words.
      */
     public static function normalize(string $text): string
     {
-        return mb_strtolower(Str::squish(str_replace(['’', '‘'], "'", $text)));
+        $withoutApostrophes = str_replace(['’', '‘', "'"], '', $text);
+
+        return mb_strtolower(Str::squish((string) preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $withoutApostrophes)));
     }
 
     /**

@@ -40,6 +40,43 @@
         <x-button :href="route('exams.show', $exam)" variant="outline" full-width>Về trang đề thi</x-button>
     </div>
 
+    {{-- The paper with the answers given --}}
+    <div class="mx-auto flex w-full max-w-200 flex-col gap-6">
+        <h2 class="type-h2 text-fg-strong">Bài làm của bạn</h2>
+
+        @foreach ($review as $group)
+            <section class="flex flex-col gap-5 rounded-lg bg-surface-card px-6 py-8 shadow-card sm:px-10">
+                <h3 class="type-h3 text-fg-strong">Phần {{ $loop->iteration }}. {{ $group['title'] }}</h3>
+
+                <ol class="flex flex-col gap-4">
+                    @foreach ($group['questions'] as $question)
+                        <li @class([
+                            'flex flex-col gap-2 rounded-md border px-5 py-4',
+                            'border-success-border bg-success-bg' => $question['correct'],
+                            'border-danger-border bg-danger-bg' => ! $question['correct'],
+                        ])>
+                            <div class="flex items-start gap-3">
+                                <span class="type-label-lg text-primary">{{ $question['number'] }}.</span>
+                                <p class="min-w-0 flex-1 type-body-lg whitespace-pre-line text-fg-strong">{{ $question['prompt'] ?? 'Chỗ trống' }}</p>
+                                <x-icon :name="$question['correct'] ? 'circle-check' : 'circle-x'" :class="$question['correct'] ? 'text-success-text' : 'text-danger-text'" :label="$question['correct'] ? 'Đúng' : 'Sai'" />
+                            </div>
+
+                            @if ($question['kind'] === 'speak')
+                                <p class="type-body text-fg-body">Điểm đọc: <strong>{{ $question['given'] }}</strong></p>
+                            @else
+                                <p class="type-body text-fg-body">Bạn trả lời: <strong>{{ $question['given'] !== '' ? $question['given'] : '(bỏ trống)' }}</strong></p>
+
+                                @unless ($question['correct'])
+                                    <p class="type-body text-fg-body">Đáp án đúng: <strong>{{ $question['expected'] }}</strong></p>
+                                @endunless
+                            @endif
+                        </li>
+                    @endforeach
+                </ol>
+            </section>
+        @endforeach
+    </div>
+
     <x-slot:footer>
         <x-site-footer />
     </x-slot:footer>

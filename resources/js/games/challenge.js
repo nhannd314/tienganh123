@@ -8,7 +8,9 @@
  */
 import '../echo';
 
-const ROUND_MESSAGE_MS = 1800;
+// How long the finished word and who won it stay on screen before the next word comes.
+const ROUND_RESULT_MS = 2000;
+const ROUND_MESSAGE_MS = ROUND_RESULT_MS;
 // How long the box of a wrong letter stays red.
 const WRONG_LETTER_MS = 450;
 // The throw: how long the arm takes, how far it winds back (per character) and swings forward (degrees), and the share
@@ -417,6 +419,39 @@ if (root) {
         }
     };
 
+    // The state that came while the result of a word is shown; it is drawn once the result has been shown.
+    let heldState = null;
+
+    // Take a state; the one that ends a word waits ROUND_RESULT_MS, the finished word shown complete meanwhile, and the
+    // latest state received during the wait is the one drawn after it.
+    const receive = (next, finishedWord = null) => {
+        if (heldState) {
+            heldState = next;
+
+            return;
+        }
+
+        if (!finishedWord || !state.word) {
+            apply(next);
+
+            return;
+        }
+
+        heldState = next;
+        state = { ...state, health: next.health };
+        pending = 0;
+        localProgress = lettersOf(state.word.word).length;
+        renderHealth();
+        renderWord();
+
+        setTimeout(() => {
+            const upcoming = heldState;
+
+            heldState = null;
+            apply(upcoming);
+        }, ROUND_RESULT_MS);
+    };
+
     const flashRound = (text) => {
         roundMessage.textContent = text;
         roundMessage.hidden = false;
@@ -465,7 +500,7 @@ if (root) {
 
     // A letter typed: a right one shows at once and goes to the server, in order; a wrong one marks the box for a moment.
     const typeLetter = (character) => {
-        if (state.status !== 'playing' || !state.word) {
+        if (state.status !== 'playing' || !state.word || heldState) {
             return;
         }
 
@@ -499,7 +534,7 @@ if (root) {
                     announce(response.event, me, response.event === 'letter' ? null : word, { throws: false });
                 }
 
-                apply(response.state);
+                receive(response.state, response.event && response.event !== 'letter' ? word : null);
             })
             .catch(() => {
                 pending = Math.max(0, pending - 1);
@@ -530,7 +565,7 @@ if (root) {
 
     const catchUp = () => fetch(config.urls.state, { headers: { Accept: 'application/json' } })
         .then((response) => response.json())
-        .then((data) => apply(data.state))
+        .then((data) => receive(data.state))
         .catch(() => {});
 
     const channel = window.Echo.private(config.channel);
@@ -541,9 +576,9 @@ if (root) {
             const finishedWord = (event === 'round' || event === 'finish') && state.word && next.wordIndex !== state.wordIndex ? state.word.word : null;
 
             announce(event, by, finishedWord);
-            apply(next);
+            receive(next, finishedWord);
         } else if (event === 'ready' || event === 'start') {
-            apply(next);
+            receive(next);
         }
     });
 

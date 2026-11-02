@@ -146,7 +146,62 @@ class ExamController extends Controller
                 'correct' => $answersByGroup->get($group->id)?->where('correct', true)->count() ?? 0,
                 'points' => round((float) $answersByGroup->get($group->id)?->sum('points'), 2),
             ])->filter(fn (array $group): bool => $group['total'] > 0)->values(),
+            'review' => $this->review($exam, $attempt),
         ]);
+    }
+
+    /**
+     * The paper with what the student answered: each question of each group with the answer given, whether it was right and,
+     * when it was not, the answer expected.
+     *
+     * @return list<array{title: string, questions: list<array{number: int, prompt: string|null, kind: string, given: string, expected: string, correct: bool, points: float}>}>
+     */
+    private function review(Exam $exam, ExamAttempt $attempt): array
+    {
+        $answers = collect($attempt->answers ?? [])->keyBy(fn (array $answer): string => $answer['group_id'].':'.$answer['key']);
+        $number = 0;
+
+        return collect($this->paper->sections($exam, withOptions: false))->map(function (array $section) use ($answers, &$number): array {
+            $group = $section['group'];
+
+            return [
+                'title' => $group->title,
+                'questions' => collect($section['questions'])->map(function (array $question) use ($answers, $group, &$number): array {
+                    $answer = $answers->get($group->id.':'.$question['key']);
+                    $number++;
+
+                    if ($question['kind'] === 'speak') {
+                        return [
+                            'number' => $number,
+                            'prompt' => $question['prompt'],
+                            'kind' => 'speak',
+                            'given' => ($answer['answer'] ?? '0').'/10',
+                            'expected' => '',
+                            'correct' => (bool) ($answer['correct'] ?? false),
+                            'points' => (float) ($answer['points'] ?? 0),
+                        ];
+                    }
+
+                    $label = function (string $value) use ($question): string {
+                        $option = collect($question['options'] ?? [])->firstWhere('value', $value);
+
+                        return str_replace('`', '', $option ? ($option['letter'] ?? '').'. '.$option['label'] : $value);
+                    };
+
+                    return [
+                        'number' => $number,
+                        'prompt' => $question['prompt'] === null ? null : str_replace('`', '', $question['prompt']),
+                        'kind' => $question['kind'],
+                        'given' => filled($answer['answer'] ?? '') ? $label($answer['answer']) : '',
+                        'expected' => $question['kind'] === 'choice' && ! isset($question['options'])
+                            ? (string) ($question['accepted'][0] ?? '')
+                            : collect($question['accepted'])->map($label)->implode(' / '),
+                        'correct' => (bool) ($answer['correct'] ?? false),
+                        'points' => (float) ($answer['points'] ?? 0),
+                    ];
+                })->all(),
+            ];
+        })->filter(fn (array $group): bool => $group['questions'] !== [])->values()->all();
     }
 
     /**

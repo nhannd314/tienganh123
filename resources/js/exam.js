@@ -100,6 +100,13 @@ if (form) {
 
         const interval = setInterval(tick, 1000);
         tick();
+
+        // A hidden tab or a locked phone freezes the timers: check the time again as soon as the paper is back.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                tick();
+            }
+        });
     }
 
     // A word to listen to may be heard a few times only; the plays left are remembered for the attempt, so reloading
