@@ -24,7 +24,7 @@ class ExamQuestionFactory extends Factory
             'type' => ExamQuestionType::Choice,
             'prompt' => fake()->sentence(),
             'options' => fake()->unique()->words(4),
-            'answer' => '1',
+            'answer' => 'a',
             'sort_order' => 0,
         ];
     }

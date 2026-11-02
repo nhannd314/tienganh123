@@ -127,7 +127,7 @@ describe('grading', function () {
         $wentQuestion = ExamQuestion::factory()->fill('went|had gone')->for($fillGroup, 'group')->create();
         $ateQuestion = ExamQuestion::factory()->fill('ate')->for($fillGroup, 'group')->create();
         $choiceGroup = ExamGroup::factory()->for($exam)->weighted(2)->create(['sort_order' => 2]);
-        $choiceQuestion = ExamQuestion::factory()->for($choiceGroup, 'group')->create(['options' => ['cat', 'dog'], 'answer' => '2']);
+        $choiceQuestion = ExamQuestion::factory()->for($choiceGroup, 'group')->create(['options' => ['cat', 'dog'], 'answer' => 'b']);
         $attempt = startExam($exam);
 
         $this->get(route('exams.take', $exam))
@@ -137,7 +137,7 @@ describe('grading', function () {
 
         $this->post(route('exams.submit', $exam), ['answers' => [
             $fillGroup->id => [$wentQuestion->id => '  Had   GONE ', $ateQuestion->id => 'eat'],
-            $choiceGroup->id => [$choiceQuestion->id => '2'],
+            $choiceGroup->id => [$choiceQuestion->id => 'b'],
         ]])->assertRedirect(route('exams.result', $exam));
 
         expect($attempt->fresh())
@@ -157,17 +157,18 @@ describe('grading', function () {
         $question = ExamQuestion::factory()->for($group, 'group')->create([
             'prompt' => 'Which `a` is pronounced <differently>?',
             'options' => ['c`a`t', 'n`a`me'],
-            'answer' => '2',
+            'answer' => 'b',
         ]);
         $attempt = startExam($exam);
 
         $this->get(route('exams.take', $exam))
             ->assertOk()
             ->assertSee('Which <strong><u>a</u></strong> is pronounced &lt;differently&gt;?', false)
-            ->assertSee('value="1"', false)
+            ->assertSee('value="a"', false)
+            ->assertSee('value="b"', false)
             ->assertSee('n<strong><u>a</u></strong>me', false);
 
-        $this->post(route('exams.submit', $exam), ['answers' => [$group->id => [$question->id => '2']]]);
+        $this->post(route('exams.submit', $exam), ['answers' => [$group->id => [$question->id => 'b']]]);
 
         expect($attempt->fresh()->score)->toBe(100.0);
     });

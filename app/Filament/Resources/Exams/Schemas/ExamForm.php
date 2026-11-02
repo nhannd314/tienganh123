@@ -294,16 +294,19 @@ class ExamForm
             TextInput::make('answer')
                 ->label('Đáp án đúng')
                 ->helperText(fn (Get $get): string => $isChoice($get)
-                    ? 'Số thứ tự của lựa chọn đúng (1, 2, 3...).'
+                    ? 'Chữ cái của lựa chọn đúng (a, b, c, d...).'
                     : 'Nhiều đáp án được chấp nhận thì ngăn cách bằng dấu '.ExamQuestion::ANSWER_SEPARATOR.' (không phân biệt hoa thường).')
                 ->required()
                 ->maxLength(255)
+                ->dehydrateStateUsing(fn (Get $get, mixed $state): mixed => $isChoice($get) ? mb_strtolower(trim((string) $state)) : $state)
                 ->rules([
                     fn (Get $get): Closure => function (string $attribute, mixed $value, Closure $fail) use ($get, $isChoice): void {
                         $optionCount = count($get('options') ?? []);
 
-                        if ($isChoice($get) && ! (ctype_digit((string) $value) && (int) $value >= 1 && (int) $value <= $optionCount)) {
-                            $fail("Đáp án đúng phải là số thứ tự của một lựa chọn, từ 1 đến {$optionCount}.");
+                        $letters = ExamQuestion::optionLetters($optionCount);
+
+                        if ($isChoice($get) && ! in_array(mb_strtolower(trim((string) $value)), $letters, true)) {
+                            $fail('Đáp án đúng phải là chữ cái của một lựa chọn, từ a đến '.end($letters).'.');
                         }
                     },
                 ]),

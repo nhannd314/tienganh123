@@ -138,6 +138,9 @@
                                         @foreach ($question['options'] ?? [] as $option)
                                             <label class="flex cursor-pointer items-center gap-4 rounded-md border border-line-default px-5 py-4 text-lg leading-snug whitespace-pre-line text-fg-strong transition-interactive hover:border-line-hover has-checked:border-primary has-checked:bg-primary-bg">
                                                 <input type="radio" name="{{ $name }}" value="{{ $option['value'] }}" class="size-4 flex-none accent-primary">
+                                                @isset($option['letter'])
+                                                    <span class="font-semibold">{{ $option['letter'] }}.</span>
+                                                @endisset
                                                 <span>{{ $isWritten ? ExamQuestion::markedHtml($option['label']) : $option['label'] }}</span>
                                             </label>
                                         @endforeach

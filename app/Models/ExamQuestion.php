@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\HtmlString;
 
 /**
- * A question written by hand: a choice among `options`, `answer` being the number of the right one (from 1), or a word
+ * A question written by hand: a choice among `options`, `answer` being the letter of the right one (a, b, c...), or a word
  * to fill in, `answer` listing the accepted answers separated by ANSWER_SEPARATOR. In the prompt and the options, the
  * part wrapped in backticks (`a`pple) is shown bold and underlined.
  */
@@ -54,7 +54,17 @@ class ExamQuestion extends Model
     }
 
     /**
-     * The answers taken as right: the number of the right option of a choice, or every accepted answer of a word to fill in.
+     * The letters (a, b, c...) naming the given number of options of a choice.
+     *
+     * @return list<string>
+     */
+    public static function optionLetters(int $count): array
+    {
+        return array_slice(range('a', 'z'), 0, max(1, min($count, 26)));
+    }
+
+    /**
+     * The answers taken as right: the letter of the right option of a choice, or every accepted answer of a word to fill in.
      *
      * @return list<string>
      */

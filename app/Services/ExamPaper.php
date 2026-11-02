@@ -48,7 +48,7 @@ class ExamPaper
      * has its passage as `segments`, the words to fill in carrying the key of their question; a "listen to the sentence and
      * fill" group has its sentences as `lines`, each with the audio of its stored sentence and its blanks (emptied) carrying their key.
      *
-     * @return list<array{group: ExamGroup, points: float, segments: list<array{text: string, blank: int|null}>, lines: list<array{number: int, audio: string|null, segments: list<array{text: string, blank: int|null, key: string|null}>}>, questions: list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string}>|null}>}>
+     * @return list<array{group: ExamGroup, points: float, segments: list<array{text: string, blank: int|null}>, lines: list<array{number: int, audio: string|null, segments: list<array{text: string, blank: int|null, key: string|null}>}>, questions: list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string, letter?: string}>|null}>}>
      */
     public function sections(Exam $exam, bool $withOptions = true): array
     {
@@ -155,7 +155,7 @@ class ExamPaper
     }
 
     /**
-     * @return list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string}>|null}>
+     * @return list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string, letter?: string}>|null}>
      */
     private function questionsOf(ExamGroup $group, bool $withOptions): array
     {
@@ -166,7 +166,7 @@ class ExamPaper
                 accepted: $question->acceptedAnswers(),
                 prompt: $question->prompt,
                 options: $question->type === ExamQuestionType::Choice
-                    ? collect($question->options ?? [])->values()->map(fn (string $option, int $index): array => ['value' => (string) ($index + 1), 'label' => $option])->all()
+                    ? collect($question->options ?? [])->values()->map(fn (string $option, int $index): array => ['value' => ExamQuestion::optionLetters($index + 1)[$index], 'label' => $option, 'letter' => ExamQuestion::optionLetters($index + 1)[$index]])->all()
                     : null,
             ))->all(),
             ExamGroupType::MeaningToWord => $group->words()->map(fn (Word $word): array => $this->question(
@@ -229,7 +229,7 @@ class ExamPaper
      * A word whose meaning is chosen, seen (WordToMeaning) or only heard (ListenToMeaning). Every meaning of the word is
      * taken, as in the lesson review.
      *
-     * @return list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string}>|null}>
+     * @return list<array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string, letter?: string}>|null}>
      */
     private function meaningQuestions(ExamGroup $group, bool $withOptions): array
     {
@@ -251,8 +251,8 @@ class ExamPaper
 
     /**
      * @param  list<string>  $accepted
-     * @param  list<array{value: string, label: string}>|null  $options
-     * @return array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string}>|null}
+     * @param  list<array{value: string, label: string, letter?: string}>|null  $options
+     * @return array{key: string, kind: string, accepted: list<string>, prompt: string|null, phonetic: string|null, audio: string|null, options: list<array{value: string, label: string, letter?: string}>|null}
      */
     private function question(string $key, string $kind, array $accepted, ?string $prompt = null, ?string $phonetic = null, ?string $audio = null, ?array $options = null): array
     {

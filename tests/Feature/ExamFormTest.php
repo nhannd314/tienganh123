@@ -43,7 +43,7 @@ it('saves an exam with its groups, questions and words in order', function () {
                     'instructions' => 'Chọn đáp án đúng.',
                     'weight' => 2,
                     'questions' => [
-                        ['type' => ExamQuestionType::Choice->value, 'prompt' => 'She ___ a cat.', 'options' => ['have', 'has'], 'answer' => '2'],
+                        ['type' => ExamQuestionType::Choice->value, 'prompt' => 'She ___ a cat.', 'options' => ['have', 'has'], 'answer' => 'b'],
                         ['type' => ExamQuestionType::Fill->value, 'prompt' => 'I ___ (go) home yesterday.', 'answer' => 'went'],
                     ],
                 ],
@@ -76,13 +76,13 @@ it('saves an exam with its groups, questions and words in order', function () {
         ->and($grammar)
         ->type->toBe(ExamGroupType::Questions)
         ->weight->toBe(2.0)
-        ->and($grammar->questions->pluck('answer')->all())->toBe(['2', 'went'])
+        ->and($grammar->questions->pluck('answer')->all())->toBe(['b', 'went'])
         ->and($grammar->questions[0]->options)->toBe(['have', 'has'])
         ->and($vocabulary->word_ids)->toBe([$cat->id, $apple->id])
         ->and($reading->sentences)->toBe(['I like football.', 'My mother is a teacher.']);
 });
 
-it('requires the answer of a choice question to be the number of one of its options', function () {
+it('requires the answer of a choice question to be the letter of one of its options', function () {
     $undoRepeaterFake = Repeater::fake();
 
     Livewire::test(CreateExam::class)
@@ -95,13 +95,13 @@ it('requires the answer of a choice question to be the number of one of its opti
                     'title' => 'Ngữ pháp',
                     'weight' => 1,
                     'questions' => [
-                        ['type' => ExamQuestionType::Choice->value, 'prompt' => 'She ___ a cat.', 'options' => ['have', 'has'], 'answer' => '3'],
+                        ['type' => ExamQuestionType::Choice->value, 'prompt' => 'She ___ a cat.', 'options' => ['have', 'has'], 'answer' => 'c'],
                     ],
                 ],
             ],
         ])
         ->call('create')
-        ->assertHasFormErrors(['groups.0.questions.0.answer' => 'Đáp án đúng phải là số thứ tự của một lựa chọn, từ 1 đến 2.']);
+        ->assertHasFormErrors(['groups.0.questions.0.answer' => 'Đáp án đúng phải là chữ cái của một lựa chọn, từ a đến b.']);
 
     $undoRepeaterFake();
 });
