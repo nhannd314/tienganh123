@@ -455,3 +455,23 @@ it('embeds a YouTube video block of the content', function () {
         ->assertOk()
         ->assertSee('<iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"', false);
 });
+
+it('shows the lesson number, its unit and links to the previous and next lessons', function () {
+    $course = Course::factory()->published()->create();
+    $unitOne = Unit::factory()->for($course)->create(['title' => 'Unit Một', 'sort_order' => 1]);
+    $unitTwo = Unit::factory()->for($course)->create(['title' => 'Unit Hai', 'sort_order' => 2]);
+    $first = Lesson::factory()->published()->for($unitOne)->create(['title' => 'Bài đầu', 'sort_order' => 1]);
+    $second = Lesson::factory()->published()->for($unitOne)->create(['title' => 'Bài giữa', 'sort_order' => 2]);
+    $third = Lesson::factory()->published()->for($unitTwo)->create(['title' => 'Bài cuối', 'sort_order' => 1]);
+
+    $this->get(lessonUrl($second))
+        ->assertOk()
+        ->assertSeeText('2. Bài giữa')
+        ->assertSee('Unit Một')
+        ->assertSee(lessonUrl($first))
+        ->assertSee(lessonUrl($third))
+        ->assertSeeText('3. Bài cuối');
+
+    $this->get(lessonUrl($first))->assertOk()->assertDontSee('Bài trước');
+    $this->get(lessonUrl($third))->assertOk()->assertDontSee('Bài sau');
+});

@@ -21,7 +21,10 @@
 
     {{-- Lesson header --}}
     <section class="flex flex-col items-start gap-4">
-        <h1 class="type-page-title tracking-tight text-balance text-fg-strong">{{ $lesson->title }}</h1>
+        <div class="flex flex-col gap-2">
+            <h1 class="type-page-title tracking-tight text-balance text-fg-strong">{{ $lessonNumber ? $lessonNumber.'. ' : '' }}{{ $lesson->title }}</h1>
+            <p class="type-label text-fg-muted">{{ $unit->title }}</p>
+        </div>
         @if ($lesson->description)
             <p class="max-w-200 type-body-lg text-pretty text-fg-body">{{ $lesson->description }}</p>
         @endif
@@ -101,6 +104,33 @@
                     <x-button size="lg" icon-left="book-open" :href="route('lessons.review.show', [$course, $unit, $lesson, 1])">Ôn tập ngay</x-button>
                 </div>
             </x-tip-card>
+
+            {{-- Previous / next lesson --}}
+            @if ($previousLesson || $nextLesson)
+                <nav aria-label="Điều hướng bài học" class="grid gap-4 sm:grid-cols-2">
+                    @if ($previousLesson)
+                        <a href="{{ route('lessons.show', [$course, $previousLesson->unit, $previousLesson]) }}" class="flex min-w-0 items-center gap-3 rounded-lg border border-line-subtle bg-surface-card p-4 text-inherit no-underline shadow-xs transition-interactive hover:border-line-hover hover:text-inherit hover:no-underline hover:shadow-card">
+                            <x-icon name="arrow-left" class="shrink-0 text-primary" />
+                            <span class="flex min-w-0 flex-col">
+                                <span class="type-label text-fg-muted">Bài trước</span>
+                                <span class="truncate type-label-lg text-fg-strong">{{ $lessonNumber - 1 }}. {{ $previousLesson->title }}</span>
+                            </span>
+                        </a>
+                    @else
+                        <span class="hidden sm:block"></span>
+                    @endif
+
+                    @if ($nextLesson)
+                        <a href="{{ route('lessons.show', [$course, $nextLesson->unit, $nextLesson]) }}" class="flex min-w-0 items-center justify-end gap-3 rounded-lg border border-line-subtle bg-surface-card p-4 text-right text-inherit no-underline shadow-xs transition-interactive hover:border-line-hover hover:text-inherit hover:no-underline hover:shadow-card">
+                            <span class="flex min-w-0 flex-col">
+                                <span class="type-label text-fg-muted">Bài sau</span>
+                                <span class="truncate type-label-lg text-fg-strong">{{ $lessonNumber + 1 }}. {{ $nextLesson->title }}</span>
+                            </span>
+                            <x-icon name="arrow-right" class="shrink-0 text-primary" />
+                        </a>
+                    @endif
+                </nav>
+            @endif
         </div>
 
         {{-- Sidebar --}}

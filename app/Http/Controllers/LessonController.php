@@ -34,11 +34,15 @@ class LessonController extends Controller
 
         $words = $lesson->words;
         $exampleSentences = $this->exampleSentences($lesson);
+        $position = $this->lessonPosition($course, $lesson);
 
         return view('lessons.show', [
             'course' => $course,
             'unit' => $unit,
             'lesson' => $lesson,
+            'lessonNumber' => $position['number'],
+            'previousLesson' => $position['previous'],
+            'nextLesson' => $position['next'],
             'words' => $words,
             'exampleSentences' => $exampleSentences,
             'flashcardSets' => $lesson->flashcardSets,
@@ -50,6 +54,33 @@ class LessonController extends Controller
             'topLearners' => $this->lessonTopLearners($lesson),
             'standing' => $request->user() ? $this->lessonStanding($lesson, $request->user()) : null,
         ]);
+    }
+
+    /**
+     * The number of the lesson in its course (counting the published lessons unit by unit, as the course page does) and
+     * the published lessons right before and after it, each with the unit it belongs to.
+     *
+     * @return array{number: ?int, previous: ?Lesson, next: ?Lesson}
+     */
+    private function lessonPosition(Course $course, Lesson $lesson): array
+    {
+        $lessons = $course->units()
+            ->with(['lessons' => fn ($query) => $query->published()])
+            ->get()
+            ->flatMap(fn (Unit $unit): Collection => $unit->lessons->each(fn (Lesson $item) => $item->setRelation('unit', $unit)))
+            ->values();
+
+        $index = $lessons->search(fn (Lesson $item): bool => $item->is($lesson));
+
+        if ($index === false) {
+            return ['number' => null, 'previous' => null, 'next' => null];
+        }
+
+        return [
+            'number' => $index + 1,
+            'previous' => $lessons->get($index - 1 >= 0 ? $index - 1 : -1),
+            'next' => $lessons->get($index + 1),
+        ];
     }
 
     /**
