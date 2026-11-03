@@ -9,6 +9,7 @@ use App\Jobs\GenerateSentenceAudio;
 use App\Models\Course;
 use App\Models\Exam;
 use App\Models\ExamGroup;
+use App\Models\ExamQuestion;
 use App\Models\Sentence;
 use App\Models\User;
 use App\Models\Word;
@@ -180,4 +181,13 @@ it('shows the words of a group one per line when editing', function () {
     $groups = Livewire::test(EditExam::class, ['record' => $group->exam->getRouteKey()])->get('data.groups');
 
     expect(collect($groups)->first()['word_ids'])->toBe("cat\napple");
+});
+
+it('downloads the blank paper of an exam as a PDF from the edit page', function () {
+    $exam = Exam::factory()->withPassword()->create(['title' => 'Kiểm tra giữa kỳ']);
+    ExamQuestion::factory()->for(ExamGroup::factory()->for($exam), 'group')->create();
+
+    Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
+        ->callAction('pdf')
+        ->assertFileDownloaded($exam->slug.'.pdf');
 });

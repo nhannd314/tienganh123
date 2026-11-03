@@ -247,7 +247,7 @@ class ExamPaper
             prompt: $word->word,
             phonetic: $isListening ? null : $word->ipa_us,
             audio: $choices[$word->id]['audio'] ?? null,
-            options: isset($choices[$word->id]) ? array_map(fn (string $option): array => ['value' => $option, 'label' => $option], $choices[$word->id]['options']) : null,
+            options: isset($choices[$word->id]) ? array_map(fn (string $option, int $index): array => ['value' => $option, 'label' => $option, 'letter' => ExamQuestion::optionLetters($index + 1)[$index]], $choices[$word->id]['options'], array_keys($choices[$word->id]['options'])) : null,
         ))->all();
     }
 
