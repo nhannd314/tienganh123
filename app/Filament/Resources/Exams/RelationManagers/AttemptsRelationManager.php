@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Exams\RelationManagers;
 
+use App\Models\ExamAttempt;
+use App\Models\ExamGroup;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -55,6 +58,16 @@ class AttemptsRelationManager extends RelationManager
                     ->options(fn (): array => $this->getOwnerRecord()->attempts()->distinct()->orderBy('class_name')->pluck('class_name', 'class_name')->all()),
             ])
             ->recordActions([
+                Action::make('details')
+                    ->label('Chi tiết điểm')
+                    ->icon('heroicon-o-list-bullet')
+                    ->modalHeading(fn (ExamAttempt $record): string => 'Chi tiết điểm: '.$record->student_name)
+                    ->modalContent(fn (ExamAttempt $record) => view('filament.exams.attempt-details', [
+                        'attempt' => $record,
+                        'groups' => $this->groupScores($record),
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Đóng'),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
@@ -62,5 +75,26 @@ class AttemptsRelationManager extends RelationManager
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * The score of the attempt group by group, from its graded answers.
+     *
+     * @return list<array{title: string, total: int, correct: int, points: float}>
+     */
+    private function groupScores(ExamAttempt $attempt): array
+    {
+        $answersByGroup = collect($attempt->answers ?? [])->groupBy('group_id');
+
+        return $this->getOwnerRecord()->groups()->get()
+            ->map(fn (ExamGroup $group): array => [
+                'title' => $group->title,
+                'total' => $answersByGroup->get($group->id)?->count() ?? 0,
+                'correct' => $answersByGroup->get($group->id)?->where('correct', true)->count() ?? 0,
+                'points' => round((float) $answersByGroup->get($group->id)?->sum('points'), 2),
+            ])
+            ->filter(fn (array $group): bool => $group['total'] > 0)
+            ->values()
+            ->all();
     }
 }
