@@ -7,20 +7,20 @@
     @if ($groups === [])
         <p class="text-sm text-gray-500">Chưa có kết quả chi tiết.</p>
     @else
-        <table class="w-full text-sm">
+        <table class="w-full border-collapse border border-gray-300 text-sm dark:border-white/20">
             <thead>
-                <tr class="border-b text-left text-gray-500">
-                    <th class="py-2 pe-2">Phần</th>
-                    <th class="py-2 pe-2 text-right">Đúng</th>
-                    <th class="py-2 text-right">Điểm</th>
+                <tr class="bg-gray-50 text-left dark:bg-white/5">
+                    <th class="border border-gray-300 px-3 py-2 dark:border-white/20">Phần</th>
+                    <th class="border border-gray-300 px-3 py-2 text-right dark:border-white/20">Đúng</th>
+                    <th class="border border-gray-300 px-3 py-2 text-right dark:border-white/20">Điểm</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($groups as $group)
-                    <tr class="border-b">
-                        <td class="py-2 pe-2">{{ $group['title'] }}</td>
-                        <td class="py-2 pe-2 text-right">{{ $group['correct'] }}/{{ $group['total'] }}</td>
-                        <td class="py-2 text-right">{{ number_format($group['points'], 2) }}</td>
+                    <tr>
+                        <td class="border border-gray-300 px-3 py-2 dark:border-white/20">{{ $group['title'] }}</td>
+                        <td class="border border-gray-300 px-3 py-2 text-right dark:border-white/20">{{ $group['correct'] }}/{{ $group['total'] }}</td>
+                        <td class="border border-gray-300 px-3 py-2 text-right dark:border-white/20">{{ number_format($group['points'], 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>

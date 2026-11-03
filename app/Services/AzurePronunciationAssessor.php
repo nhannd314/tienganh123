@@ -16,6 +16,14 @@ class AzurePronunciationAssessor
     private const TIMEOUT_SECONDS = 15;
 
     /**
+     * The accuracy (out of 100) that earns 0 out of 10; Azure rarely scores real speech lower than this, so the scale
+     * starts here rather than at 0. Each ACCURACY_STEP above it earns one more point (82 and above gives 7, 100 gives 10).
+     */
+    public const ACCURACY_FLOOR = 40;
+
+    public const ACCURACY_STEP = 6;
+
+    /**
      * Whether a Speech key and a region (or an endpoint) are set.
      */
     public function isConfigured(): bool
@@ -25,8 +33,10 @@ class AzurePronunciationAssessor
     }
 
     /**
-     * The pronunciation of `$referenceText` in the recording, from 0 to 10 (Azure's overall PronScore out of 100,
-     * rounded to a whole point). Speech that could not be recognised scores 0.
+     * The pronunciation of `$referenceText` in the recording, from 0 to 10. It is the accuracy of the sounds Azure heard,
+     * lowered by the part of the text that was left out, on a scale that starts at ACCURACY_FLOOR (Azure's overall PronScore
+     * is not used: it is lifted by the fluency and completeness a short text almost always gets). Speech that could not be
+     * recognised scores 0.
      *
      * @throws RequestException when Azure answers with an error (bad key, bad audio, outage)
      */
@@ -37,6 +47,7 @@ class AzurePronunciationAssessor
             'GradingSystem' => 'HundredMark',
             'Granularity' => 'Word',
             'Dimension' => 'Comprehensive',
+            'EnableMiscue' => true,
         ]);
 
         $result = Http::withHeaders([
@@ -55,9 +66,11 @@ class AzurePronunciationAssessor
         }
 
         $best = $result['NBest'][0] ?? [];
-        $score = $best['PronScore'] ?? $best['PronunciationAssessment']['PronScore'] ?? $best['AccuracyScore'] ?? 0;
+        $assessment = $best['PronunciationAssessment'] ?? $best;
+        $accuracy = (float) ($assessment['AccuracyScore'] ?? $assessment['PronScore'] ?? 0);
+        $completeness = (float) ($assessment['CompletenessScore'] ?? 100);
 
-        return (int) max(0, min(10, round($score / 10)));
+        return (int) max(0, min(10, round(($accuracy * $completeness / 100 - self::ACCURACY_FLOOR) / self::ACCURACY_STEP)));
     }
 
     private function endpoint(): string

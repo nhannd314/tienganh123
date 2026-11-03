@@ -4,10 +4,12 @@ use App\Enums\ExamGroupType;
 use App\Enums\ExamQuestionType;
 use App\Filament\Resources\Exams\Pages\CreateExam;
 use App\Filament\Resources\Exams\Pages\EditExam;
+use App\Filament\Resources\Exams\RelationManagers\AttemptsRelationManager;
 use App\Jobs\FetchWordPronunciation;
 use App\Jobs\GenerateSentenceAudio;
 use App\Models\Course;
 use App\Models\Exam;
+use App\Models\ExamAttempt;
 use App\Models\ExamGroup;
 use App\Models\ExamQuestion;
 use App\Models\Sentence;
@@ -190,4 +192,25 @@ it('downloads the blank paper of an exam as a PDF from the edit page', function 
     Livewire::test(EditExam::class, ['record' => $exam->getRouteKey()])
         ->callAction('pdf')
         ->assertFileDownloaded($exam->slug.'.pdf');
+});
+
+it('exports the selected results to Excel and shows the points of each group in a modal', function () {
+    $exam = Exam::factory()->create();
+    $group = ExamGroup::factory()->for($exam)->create(['title' => 'Phần nghe']);
+    $attempt = ExamAttempt::factory()->for($exam)->create([
+        'score' => 50,
+        'submitted_at' => now(),
+        'answers' => [['group_id' => $group->id, 'key' => '1', 'answer' => 'a', 'correct' => true, 'points' => 50]],
+    ]);
+
+    Livewire::test(AttemptsRelationManager::class, ['ownerRecord' => $exam, 'pageClass' => EditExam::class])
+        ->callTableBulkAction('exportExcel', [$attempt])
+        ->assertFileDownloaded();
+
+    $html = view('filament.exams.attempt-details', [
+        'attempt' => $attempt,
+        'groups' => [['title' => 'Phần nghe', 'total' => 1, 'correct' => 1, 'points' => 50.0]],
+    ])->render();
+
+    expect($html)->toContain('Phần nghe')->toContain('border-collapse')->toContain('border border-gray-300');
 });

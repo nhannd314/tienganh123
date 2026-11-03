@@ -403,7 +403,7 @@ it('grades part 6 from the scores Azure gave this session', function () {
     [$first, $second] = $lesson->words;
 
     $this->get(reviewUrl($lesson, 6));
-    pronounce($lesson, $first)->assertJson(['score' => 9, 'passed' => true]);
+    pronounce($lesson, $first)->assertJson(['score' => 8, 'passed' => true]);
 
     $this->postJson(reviewUrl($lesson, 6, 'lessons.review.store'), ['duration' => 20, 'answers' => [
         ['word_id' => $first->id, 'selected' => '0'],
@@ -574,7 +574,7 @@ describe('part 5: pronunciation', function () {
 
         pronounce($lesson, $word)
             ->assertOk()
-            ->assertExactJson(['score' => 9, 'best' => 9, 'passed' => true, 'attemptsLeft' => 2]);
+            ->assertExactJson(['score' => 8, 'best' => 8, 'passed' => true, 'attemptsLeft' => 2]);
 
         Http::assertSent(function (Request $request) use ($word): bool {
             $assessment = json_decode(base64_decode($request->header('Pronunciation-Assessment')[0]), true);
@@ -586,6 +586,15 @@ describe('part 5: pronunciation', function () {
                 && $assessment['ReferenceText'] === $word->word
                 && $assessment['GradingSystem'] === 'HundredMark';
         });
+    });
+
+    it('lowers the score by the part of the text that was left out', function () {
+        $response = azureAssessment(95);
+        $response['NBest'][0]['CompletenessScore'] = 50;
+        Http::fake(['*' => Http::response($response)]);
+        $lesson = reviewLesson(1);
+
+        pronounce($lesson, $lesson->words->first())->assertJson(['score' => 1, 'passed' => false]);
     });
 
     it('gives 0 when Azure hears no word', function () {
@@ -600,9 +609,9 @@ describe('part 5: pronunciation', function () {
         $lesson = reviewLesson(1);
         $word = $lesson->words->first();
 
-        pronounce($lesson, $word)->assertJson(['score' => 5, 'best' => 5, 'passed' => false, 'attemptsLeft' => 2]);
-        pronounce($lesson, $word)->assertJson(['score' => 6, 'best' => 6, 'attemptsLeft' => 1]);
-        pronounce($lesson, $word)->assertJson(['score' => 3, 'best' => 6, 'passed' => false, 'attemptsLeft' => 0]);
+        pronounce($lesson, $word)->assertJson(['score' => 2, 'best' => 2, 'passed' => false, 'attemptsLeft' => 2]);
+        pronounce($lesson, $word)->assertJson(['score' => 4, 'best' => 4, 'attemptsLeft' => 1]);
+        pronounce($lesson, $word)->assertJson(['score' => 0, 'best' => 4, 'passed' => false, 'attemptsLeft' => 0]);
         pronounce($lesson, $word)->assertUnprocessable();
 
         Http::assertSentCount(3);
@@ -636,7 +645,7 @@ describe('part 5: pronunciation', function () {
 
     it('saves part 5 with the best scores Azure gave, right from 7 out of 10, whatever the page sends', function () {
         signIn();
-        Http::fake(['*' => Http::sequence()->push(azureAssessment(72))->push(azureAssessment(55))]);
+        Http::fake(['*' => Http::sequence()->push(azureAssessment(82))->push(azureAssessment(55))]);
         $lesson = reviewLesson(3);
         [$first, $second, $third] = $lesson->words;
 
@@ -655,7 +664,7 @@ describe('part 5: pronunciation', function () {
         expect(LessonReview::sole())->step->toBe(5)
             ->and(collect(LessonReview::sole()->answers)->map(fn (array $answer): array => ['selected' => $answer['selected'], 'correct' => $answer['correct']])->all())->toBe([
                 ['selected' => '7', 'correct' => true],
-                ['selected' => '6', 'correct' => false],
+                ['selected' => '3', 'correct' => false],
                 ['selected' => '0', 'correct' => false],
             ])
             ->and(session('lesson-review.pronunciation.'.$lesson->id))->toBeNull();
@@ -1007,12 +1016,12 @@ it('has Azure score a whole sentence in part 10 and grades the part from those s
         route('lessons.review.pronounce', [$lesson->unit->course, $lesson->unit, $lesson]),
         ['word_id' => $sentences[0], 'step' => 10, 'audio' => fakeWav()],
         ['Accept' => 'application/json'],
-    )->assertJson(['score' => 9, 'passed' => true]);
+    )->assertJson(['score' => 8, 'passed' => true]);
 
     Http::assertSent(fn (Request $request): bool => str_contains($request->header('Pronunciation-Assessment')[0] ?? '', base64_encode('I have an apple and a pear.')) || str_contains(base64_decode($request->header('Pronunciation-Assessment')[0] ?? ''), 'I have an apple and a pear.'));
 
     $this->postJson(reviewUrl($lesson, 10, 'lessons.review.store'), ['duration' => 20, 'answers' => [
-        ['word_id' => $sentences[0], 'selected' => '9'],
+        ['word_id' => $sentences[0], 'selected' => '8'],
         ['word_id' => $sentences[1], 'selected' => '0'],
     ]])
         ->assertCreated()

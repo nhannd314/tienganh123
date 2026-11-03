@@ -360,7 +360,7 @@ describe('pronunciation', function () {
         $group = ExamGroup::factory()->for($exam)->forWords(ExamGroupType::Pronunciation, [$apple, $cat])->create();
         $attempt = startExam($exam);
 
-        foreach ([6, 8, 3] as $score) {
+        foreach ([3, 7, 0] as $score) {
             $this->post(route('exams.pronounce', $exam), ['group_id' => $group->id, 'key' => $apple->id, 'audio' => UploadedFile::fake()->create('word.wav', 10, 'audio/wav')])
                 ->assertOk()
                 ->assertJson(['score' => $score]);
@@ -372,7 +372,7 @@ describe('pronunciation', function () {
 
         $this->post(route('exams.submit', $exam), ['answers' => [$group->id => [$apple->id => '10', $cat->id => '10']]]);
 
-        expect($attempt->fresh()->score)->toBe(40.0);
+        expect($attempt->fresh()->score)->toBe(35.0);
         Http::assertSentCount(3);
     });
 
@@ -401,11 +401,11 @@ describe('pronunciation', function () {
 
         $this->post(route('exams.pronounce', $exam), ['group_id' => $group->id, 'key' => 2, 'audio' => UploadedFile::fake()->create('reading.wav', 10, 'audio/wav')])
             ->assertOk()
-            ->assertJson(['score' => 9, 'best' => 9, 'attemptsLeft' => 2]);
+            ->assertJson(['score' => 8, 'best' => 8, 'attemptsLeft' => 2]);
 
         $this->post(route('exams.submit', $exam));
 
-        expect($attempt->fresh()->score)->toBe(45.0);
+        expect($attempt->fresh()->score)->toBe(40.0);
         Http::assertSent(fn ($request): bool => json_decode(base64_decode($request->header('Pronunciation-Assessment')[0]), true)['ReferenceText'] === 'My mother is a teacher.');
     });
 

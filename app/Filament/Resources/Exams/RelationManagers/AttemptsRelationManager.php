@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Exams\RelationManagers;
 use App\Models\ExamAttempt;
 use App\Models\ExamGroup;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -12,6 +13,10 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Collection;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Writer\XLSX\Writer;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The results of the exam: who sat it, their class and their score. Attempts are only made by the students.
@@ -72,9 +77,52 @@ class AttemptsRelationManager extends RelationManager
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    BulkAction::make('exportExcel')
+                        ->label('Xuất Excel')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->deselectRecordsAfterCompletion()
+                        ->action(fn (Collection $records): StreamedResponse => $this->exportToExcel($records)),
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * An Excel file with a row for each selected attempt: the student, the class, the score, the points of each group and the dates.
+     *
+     * @param  Collection<int, ExamAttempt>  $records
+     */
+    private function exportToExcel(Collection $records): StreamedResponse
+    {
+        $exam = $this->getOwnerRecord();
+        $groups = $exam->groups()->get();
+        $path = tempnam(sys_get_temp_dir(), 'exam-results');
+
+        $writer = new Writer;
+        $writer->openToFile($path);
+        $writer->addRow(Row::fromValues([
+            'Student', 'Class', 'Score', ...$groups->map(fn (ExamGroup $group): string => $group->title)->all(), 'Started at', 'Submitted at',
+        ]));
+
+        foreach ($records->sortBy('student_name') as $attempt) {
+            $pointsByGroup = collect($attempt->answers ?? [])->groupBy('group_id')->map(fn ($answers): float => round((float) $answers->sum('points'), 2));
+
+            $writer->addRow(Row::fromValues([
+                $attempt->student_name,
+                $attempt->class_name,
+                $attempt->score,
+                ...$groups->map(fn (ExamGroup $group): ?float => $pointsByGroup->get($group->id))->all(),
+                $attempt->started_at?->format('Y-m-d H:i'),
+                $attempt->submitted_at?->format('Y-m-d H:i'),
+            ]));
+        }
+
+        $writer->close();
+
+        return response()->streamDownload(function () use ($path): void {
+            readfile($path);
+            unlink($path);
+        }, str($exam->title)->slug()->append('-results.xlsx')->toString());
     }
 
     /**
