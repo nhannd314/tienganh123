@@ -5,8 +5,10 @@ namespace App\Filament\Resources\Lessons\Pages;
 use App\Filament\Resources\Lessons\LessonResource;
 use App\Filament\Resources\Lessons\Schemas\LessonForm;
 use App\Models\Lesson;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 
@@ -22,6 +24,12 @@ class EditLesson extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('open')
+                ->label('Open lesson page')
+                ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                ->color('gray')
+                ->visible(fn (Lesson $record): bool => $record->is_published && $record->unit->course->is_published)
+                ->url(fn (Lesson $record): string => route('lessons.show', [$record->unit->course, $record->unit, $record]), shouldOpenInNewTab: true),
             DeleteAction::make(),
         ];
     }

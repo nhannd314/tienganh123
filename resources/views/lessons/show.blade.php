@@ -28,6 +28,9 @@
         @if ($lesson->description)
             <p class="max-w-200 type-body-lg text-pretty text-fg-body">{{ $lesson->description }}</p>
         @endif
+        @if (auth()->user()?->isAdmin())
+            <x-button variant="outline" size="sm" icon-left="pencil" :href="route('filament.admin.resources.lessons.edit', $lesson)">Sửa bài học</x-button>
+        @endif
     </section>
 
     <div data-sidebar-layout class="group/layout flex flex-wrap items-start gap-10">

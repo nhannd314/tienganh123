@@ -29,6 +29,28 @@ beforeEach(function () {
     $this->actingAs(User::factory()->create());
 });
 
+it('links a published lesson to its page on the website', function () {
+    $course = Course::factory()->published()->create();
+    $unit = Unit::factory()->for($course)->create();
+    $lesson = Lesson::factory()->published()->for($unit)->create();
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->assertActionVisible('open')
+        ->assertActionHasUrl('open', route('lessons.show', [$course, $unit, $lesson]))
+        ->assertActionShouldOpenUrlInNewTab('open');
+});
+
+it('hides the website link while the lesson or its course is unpublished', function () {
+    $publishedCourseUnit = Unit::factory()->for(Course::factory()->published())->create();
+    $draftCourseUnit = Unit::factory()->for(Course::factory()->state(['is_published' => false]))->create();
+
+    $draftLesson = Lesson::factory()->for($publishedCourseUnit)->create(['is_published' => false]);
+    $lessonOfDraftCourse = Lesson::factory()->published()->for($draftCourseUnit)->create();
+
+    Livewire::test(EditLesson::class, ['record' => $draftLesson->getRouteKey()])->assertActionHidden('open');
+    Livewire::test(EditLesson::class, ['record' => $lessonOfDraftCourse->getRouteKey()])->assertActionHidden('open');
+});
+
 it('generates the slug from the title and saves the passage and the rich content', function () {
     $unit = Unit::factory()->create();
 

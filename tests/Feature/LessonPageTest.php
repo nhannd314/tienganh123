@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Resources\Lessons\LessonResource;
 use App\Models\Course;
 use App\Models\Flashcard;
 use App\Models\FlashcardSet;
@@ -7,6 +8,7 @@ use App\Models\Lesson;
 use App\Models\Sentence;
 use App\Models\SentenceSet;
 use App\Models\Unit;
+use App\Models\User;
 use App\Models\Word;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -51,6 +53,23 @@ it('shows a published lesson with breadcrumbs back to its course', function () {
         ->assertSee('Làm quen với lời chào đầu tiên.')
         ->assertSeeInOrder(['Trang chủ', 'Khóa học', 'Tiếng Anh lớp 3', 'Chào hỏi bạn mới'])
         ->assertSee(route('courses.show', $lesson->unit->course), false);
+});
+
+it('shows the edit lesson button to admins only', function () {
+    $lesson = publishedLesson(['is_free' => true]);
+    $editUrl = LessonResource::getUrl('edit', ['record' => $lesson]);
+
+    $this->get(lessonUrl($lesson))->assertOk()->assertDontSee($editUrl, false);
+
+    $this->actingAs(User::factory()->create())
+        ->get(lessonUrl($lesson))
+        ->assertOk()
+        ->assertDontSee($editUrl, false);
+
+    $this->actingAs(User::factory()->admin()->create())
+        ->get(lessonUrl($lesson))
+        ->assertOk()
+        ->assertSee($editUrl, false);
 });
 
 it('returns not found when the lesson or course is unpublished', function () {
