@@ -92,7 +92,7 @@ class Payment extends Model
                 return null;
             }
 
-            $months = max(1, (int) ($payment->meta['months'] ?? 1));
+            $months = $payment->monthsBought();
 
             $currentEnd = $payment->user->subscriptions()
                 ->active()
@@ -115,6 +115,14 @@ class Payment extends Model
 
             return $subscription;
         });
+    }
+
+    /**
+     * How many months of the course the payment buys (meta `months`, one by default).
+     */
+    public function monthsBought(): int
+    {
+        return max(1, (int) ($this->meta['months'] ?? 1));
     }
 
     /**

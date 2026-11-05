@@ -1,7 +1,6 @@
 <?php
 
 use App\Filament\Resources\Flashcards\Pages\CreateFlashcard;
-use App\Filament\Resources\Sentences\Pages\CreateSentence;
 use App\Filament\Resources\SentenceSets\Pages\EditSentenceSet;
 use App\Filament\Resources\SentenceSets\RelationManagers\SentencesRelationManager;
 use App\Filament\Resources\Tags\Pages\CreateTag;
@@ -36,19 +35,18 @@ it('still allows many flashcards without a title', function () {
     expect(Flashcard::count())->toBe(2);
 });
 
-it('rejects an existing flashcard title, sentence or tag name in the forms', function () {
+it('rejects an existing flashcard title or tag name in the forms', function () {
     Flashcard::factory()->create(['title' => 'apple']);
-    Sentence::factory()->create(['sentence' => 'I eat an apple.']);
     Tag::factory()->create(['name' => 'Animals']);
 
     Livewire::test(CreateFlashcard::class)->fillForm(['title' => 'apple'])->call('create')->assertHasFormErrors(['title' => 'unique']);
-    Livewire::test(CreateSentence::class)->fillForm(['sentence' => 'I eat an apple.'])->call('create')->assertHasFormErrors(['sentence' => 'unique']);
     Livewire::test(CreateTag::class)->fillForm(['name' => 'Animals', 'slug' => 'other'])->call('create')->assertHasFormErrors(['name' => 'unique']);
 });
 
 it('reuses a sentence already written in another set when it is added by text, and generates nothing for it', function () {
     Queue::fake();
-    $existing = Sentence::factory()->create(['sentence' => 'I eat an apple.']);
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    $existing = Sentence::factory()->create(['sentence' => 'I eat an apple.', 'audio' => 'apple.mp3']);
     $set = SentenceSet::factory()->create();
 
     Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])

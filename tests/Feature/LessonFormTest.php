@@ -12,6 +12,7 @@ use App\Jobs\GenerateSentenceImage;
 use App\Models\Course;
 use App\Models\FlashcardSet;
 use App\Models\Lesson;
+use App\Models\Sentence;
 use App\Models\SentenceSet;
 use App\Models\Unit;
 use App\Models\User;
@@ -250,6 +251,50 @@ it('creates the missing sets when editing a lesson without them, then reloads th
     expect($lesson->vocabularies->pluck('title')->all())->toBe(['Animals'])
         ->and($lesson->flashcardSets->pluck('title')->all())->toBe(['Animals'])
         ->and($lesson->sentenceSet->title)->toBe('Animals');
+});
+
+it('leaves the lesson and every set as they were when saving its lines fails', function () {
+    Queue::fake();
+    Sentence::creating(function (Sentence $sentence): void {
+        if ($sentence->sentence === 'Fails here.') {
+            throw new RuntimeException('The sentence could not be saved.');
+        }
+    });
+    $lesson = Lesson::factory()->create(['title' => 'Animals', 'sentence_set_id' => null]);
+
+    expect(fn () => Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->fillForm([
+            'title' => 'Changed',
+            'vocabulary_lines' => 'cat [n] con mèo',
+            'sentence_lines' => "Saved first.\nFails here.",
+        ])
+        ->call('save'))->toThrow(RuntimeException::class, 'The sentence could not be saved.');
+
+    expect($lesson->refresh())
+        ->title->toBe('Animals')
+        ->sentence_set_id->toBeNull()
+        ->and(SentenceSet::count())->toBe(0)
+        ->and(Sentence::count())->toBe(0)
+        ->and(Vocabulary::count())->toBe(0);
+});
+
+it('leaves no lesson or set behind when creating a lesson fails on its lines', function () {
+    Queue::fake();
+    Sentence::creating(function (Sentence $sentence): void {
+        throw new RuntimeException('The sentence could not be saved.');
+    });
+
+    expect(fn () => Livewire::test(CreateLesson::class)
+        ->fillForm([
+            'unit_id' => Unit::factory()->create()->id,
+            'title' => 'Animals',
+            'sort_order' => 1,
+            'sentence_lines' => 'Fails here.',
+        ])
+        ->call('create'))->toThrow(RuntimeException::class, 'The sentence could not be saved.');
+
+    expect(Lesson::count())->toBe(0)
+        ->and(SentenceSet::count())->toBe(0);
 });
 
 it('saves a heading made from a line deep inside the rich content, such as a table cell', function () {

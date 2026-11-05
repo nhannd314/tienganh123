@@ -33,7 +33,13 @@ class SentenceForm
                 TextInput::make('sentence')
                     ->required()
                     ->maxLength(500)
-                    ->unique(ignoreRecord: true)
+                    ->rules([
+                        fn (?Sentence $record): Closure => function (string $attribute, mixed $value, Closure $fail) use ($record): void {
+                            if ($record?->wouldDuplicateAnother((string) $value)) {
+                                $fail('A sentence with the same words already exists.');
+                            }
+                        },
+                    ])
                     ->placeholder('I have an `apple`.')
                     ->helperText('Wrap a word in backticks to show its IPA, audio and meaning in a popover when the word exists.'),
                 TextInput::make('translation')

@@ -14,6 +14,9 @@ class EditSentence extends EditRecord
 
     protected function afterSave(): void
     {
+        // Rewording drops the audio, so the form must not save the deleted file back on the next save.
+        $this->refreshFormData(['audio']);
+
         SentenceForm::queueMissingAudio($this->getRecord());
     }
 

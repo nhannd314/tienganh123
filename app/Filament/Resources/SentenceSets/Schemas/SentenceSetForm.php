@@ -120,19 +120,21 @@ class SentenceSetForm
         $lines = collect(self::parseLines($text))->unique(fn (array $line): string => Sentence::plainText($line['sentence']));
 
         $added = collect();
-        $reworded = collect();
+        $storedWithoutAudio = collect();
 
         foreach ($lines as $line) {
             // A sentence is stored once: the same words written in another set, or with other backticks, update that sentence
-            // (its meaning only when one is typed); only a brand new sentence gets its audio and image.
+            // (its meaning only when one is typed). It is voiced when it has no audio; only a brand new sentence gets an image.
             $sentence = Sentence::findByPlainText($line['sentence']);
 
             if ($sentence === null) {
                 $sentence = Sentence::create($line);
                 $added->push($sentence);
             } else {
-                if ($sentence->updateKeepingEmpty($line)) {
-                    $reworded->push($sentence);
+                $sentence->updateKeepingEmpty($line);
+
+                if (blank($sentence->audio)) {
+                    $storedWithoutAudio->push($sentence);
                 }
             }
 
@@ -142,16 +144,16 @@ class SentenceSetForm
             }
         }
 
-        if ($added->isNotEmpty() || $reworded->isNotEmpty()) {
-            self::queueMedia($added->merge($reworded), $added, $withImages);
+        if ($added->isNotEmpty() || $storedWithoutAudio->isNotEmpty()) {
+            self::queueMedia($added->merge($storedWithoutAudio), $added, $withImages);
         }
     }
 
     /**
      * Queue the Azure voice and, when asked, the OpenAI image of the sentences; both appear on the sentences once their jobs have run.
      *
-     * @param  Collection<int, Sentence>  $sentences  the ones to voice: the added and the reworded
-     * @param  Collection<int, Sentence>  $added  the ones to draw, as a reworded sentence keeps its image
+     * @param  Collection<int, Sentence>  $sentences  the ones to voice: the added and the stored ones without audio
+     * @param  Collection<int, Sentence>  $added  the ones to draw, as a stored sentence keeps its image
      */
     private static function queueMedia(Collection $sentences, Collection $added, bool $withImages): void
     {

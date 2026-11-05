@@ -17,6 +17,11 @@ class EditLesson extends EditRecord
     protected static string $resource = LessonResource::class;
 
     /**
+     * Saving the lesson and the sets made from its lines stands or falls together, so a failure leaves no set behind.
+     */
+    protected ?bool $hasDatabaseTransactions = true;
+
+    /**
      * Whether saving created a vocabulary, flashcard set or sentence set, which the page reloads to list.
      */
     private bool $hasCreatedContentSets = false;

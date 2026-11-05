@@ -23,6 +23,9 @@ class PaymentInfolist
                         TextEntry::make('payable')
                             ->label('Mua')
                             ->state(fn (Payment $record): string => PaymentsTable::payableLabel($record)),
+                        TextEntry::make('months')
+                            ->label('Số tháng')
+                            ->state(fn (Payment $record): string => PaymentsTable::monthsLabel($record)),
                         TextEntry::make('amount')
                             ->label('Số tiền')
                             ->formatStateUsing(fn (int $state): string => number_format($state, 0, ',', '.').' ₫'),

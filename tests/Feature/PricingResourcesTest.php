@@ -27,6 +27,20 @@ it('lists the payments of customers with who paid for what', function () {
         ->assertCanNotSeeTableRecords([$payment]);
 });
 
+it('shows how many months of the course a payment buys, one when it does not say, in the list and on its page', function () {
+    $course = Course::factory()->priced()->create();
+    $threeMonths = Payment::factory()->create(['payable_type' => $course->getMorphClass(), 'payable_id' => $course->id, 'meta' => ['months' => 3]]);
+    $unsaid = Payment::factory()->create(['payable_type' => $course->getMorphClass(), 'payable_id' => $course->id, 'meta' => null]);
+
+    Livewire::test(ListPayments::class)
+        ->assertTableColumnStateSet('months', '3 tháng', $threeMonths)
+        ->assertTableColumnStateSet('months', '1 tháng', $unsaid);
+
+    Livewire::test(ViewPayment::class, ['record' => $threeMonths->getRouteKey()])
+        ->assertSee('Số tháng')
+        ->assertSee('3 tháng');
+});
+
 it('confirms a pending payment by hand and opens what it bought', function () {
     $course = Course::factory()->priced()->create();
     $payment = Payment::factory()->create(['payable_type' => $course->getMorphClass(), 'payable_id' => $course->id]);

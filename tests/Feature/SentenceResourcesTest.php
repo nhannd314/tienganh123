@@ -133,7 +133,7 @@ it('adds a sentence for each line of the popup with its meaning, after the exist
     Queue::fake();
     config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
     $set = SentenceSet::factory()->create();
-    $set->sentences()->attach(Sentence::factory()->create(['sentence' => 'Already here.', 'translation' => null]), ['sort_order' => 4]);
+    $set->sentences()->attach(Sentence::factory()->create(['sentence' => 'Already here.', 'translation' => null, 'audio' => 'here.mp3']), ['sort_order' => 4]);
 
     Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
         ->callAction(TestAction::make('addSentences')->table(), ['sentence_lines' => "I have an `apple` | Tôi có 1 quả táo.\n\nHello there.\nAlready here. | Bỏ qua\nI have an `apple` | Lặp"])
@@ -241,6 +241,151 @@ it('voices a sentence of the popup again only when its words change, not when on
 
     expect(Sentence::first()->audio)->toBe('keep.mp3');
     Queue::assertNothingPushed();
+});
+
+it('uses the sentence written exactly as typed when stored sentences differ only by their backticks', function () {
+    Queue::fake();
+    $set = SentenceSet::factory()->create();
+    $plain = Sentence::factory()->create(['sentence' => "What's this?"]);
+    $marked = Sentence::factory()->create(['sentence' => "What's `this`?", 'translation' => null]);
+
+    Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
+        ->callAction(TestAction::make('addSentences')->table(), ['sentence_lines' => "What's `this`? | Đây là gì?"])
+        ->assertHasNoFormErrors();
+
+    expect($set->sentences()->pluck('sentences.id')->all())->toBe([$marked->id])
+        ->and($marked->refresh()->translation)->toBe('Đây là gì?')
+        ->and($plain->refresh()->sentence)->toBe("What's this?");
+});
+
+it('voices a sentence of the popup that is already stored without audio, but draws no image for it', function () {
+    Queue::fake();
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia', 'services.openai.key' => 'openai-key']);
+    $set = SentenceSet::factory()->create();
+    $sentence = Sentence::factory()->create(['sentence' => 'No audio yet.', 'audio' => null]);
+
+    Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
+        ->callAction(TestAction::make('addSentences')->table(), ['sentence_lines' => 'No audio yet.', 'generate_sentence_images' => true]);
+
+    Queue::assertPushed(GenerateSentenceAudio::class, fn (GenerateSentenceAudio $job): bool => $job->sentence->is($sentence));
+    Queue::assertNotPushed(GenerateSentenceImage::class);
+});
+
+it('drops the old audio and voices the sentence again when the edit page changes its words, not when only the backticks change', function () {
+    Queue::fake();
+    Storage::fake('public');
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    Storage::disk('public')->put('old.mp3', 'audio');
+    $sentence = Sentence::factory()->create(['sentence' => 'Old words.', 'audio' => 'old.mp3']);
+
+    $page = Livewire::test(EditSentence::class, ['record' => $sentence->getRouteKey()])
+        ->fillForm(['sentence' => 'Old `words`.'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($sentence->refresh()->audio)->toBe('old.mp3');
+    Queue::assertNothingPushed();
+
+    $page->fillForm(['sentence' => 'New words.'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($sentence->refresh()->audio)->toBeNull();
+    Storage::disk('public')->assertMissing('old.mp3');
+    Queue::assertPushed(GenerateSentenceAudio::class, 1);
+
+    $page->call('save')->assertHasNoFormErrors();
+
+    expect($sentence->refresh()->audio)->toBeNull();
+});
+
+it('voices the sentence again when the edit modal of a set changes its words', function () {
+    Queue::fake();
+    Storage::fake('public');
+    config(['services.azure_speech.key' => 'speech-key', 'services.azure_speech.region' => 'southeastasia']);
+    Storage::disk('public')->put('old.mp3', 'audio');
+    $set = SentenceSet::factory()->create();
+    $sentence = Sentence::factory()->hasAttached($set, ['sort_order' => 1], 'sentenceSets')->create(['sentence' => 'Old words.', 'audio' => 'old.mp3']);
+
+    Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
+        ->callAction(TestAction::make('edit')->table($sentence), ['sentence' => 'New words.'])
+        ->assertHasNoFormErrors();
+
+    expect($sentence->refresh()->audio)->toBeNull();
+    Storage::disk('public')->assertMissing('old.mp3');
+    Queue::assertPushed(GenerateSentenceAudio::class, 1);
+});
+
+it('keeps an audio saved along with the changed words', function () {
+    $sentence = Sentence::factory()->create(['sentence' => 'Hello there', 'audio' => 'old.mp3']);
+
+    $sentence->updateKeepingEmpty(['sentence' => 'hello there', 'audio' => 'new.mp3']);
+
+    expect($sentence->refresh()->audio)->toBe('new.mp3');
+});
+
+it('refuses to edit a sentence into another one that differs only by backticks or capitals', function (string $typed) {
+    Sentence::factory()->create(['sentence' => "What's `this`?"]);
+    $other = Sentence::factory()->create(['sentence' => 'Other.']);
+
+    Livewire::test(EditSentence::class, ['record' => $other->getRouteKey()])
+        ->fillForm(['sentence' => $typed])
+        ->call('save')
+        ->assertHasFormErrors(['sentence']);
+
+    expect($other->refresh()->sentence)->toBe('Other.');
+})->with(["What's `this`?", "What's this?", "WHAT'S this?"]);
+
+it('saves a sentence with its own words again, even when it already has a twin, unless it becomes that twin', function () {
+    $plain = Sentence::factory()->create(['sentence' => "What's this?", 'translation' => null]);
+    Sentence::factory()->create(['sentence' => "What's `this`?"]);
+
+    $page = Livewire::test(EditSentence::class, ['record' => $plain->getRouteKey()])
+        ->fillForm(['translation' => 'Đây là gì?'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($plain->refresh()->translation)->toBe('Đây là gì?');
+
+    $page->fillForm(['sentence' => "What's `this`?"])
+        ->call('save')
+        ->assertHasFormErrors(['sentence']);
+});
+
+it('updates a sentence written exactly the same from the create form instead of refusing it', function () {
+    $sentence = Sentence::factory()->create(['sentence' => 'Same `words`.', 'translation' => null]);
+
+    Livewire::test(CreateSentence::class)
+        ->fillForm(['sentence' => 'Same `words`.', 'translation' => 'Cùng từ'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Sentence::count())->toBe(1)
+        ->and($sentence->refresh()->translation)->toBe('Cùng từ');
+});
+
+it('puts a sentence at the end of the set when it is attached, chosen on the create form or chosen on the edit form', function () {
+    $set = SentenceSet::factory()->create();
+    $set->sentences()->attach(Sentence::factory()->create(), ['sort_order' => 4]);
+    $attached = Sentence::factory()->create();
+    $edited = Sentence::factory()->create();
+
+    Livewire::test(SentencesRelationManager::class, ['ownerRecord' => $set, 'pageClass' => EditSentenceSet::class])
+        ->callAction(TestAction::make('attach')->table(), ['recordId' => $attached->id])
+        ->assertHasNoFormErrors();
+
+    Livewire::test(CreateSentence::class)
+        ->fillForm(['sentence' => 'Brand new.', 'sentenceSets' => [$set->id]])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    Livewire::test(EditSentence::class, ['record' => $edited->getRouteKey()])
+        ->fillForm(['sentenceSets' => [$set->id]])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($set->sentences()->get()->map(fn (Sentence $sentence): int => $sentence->pivot->sort_order)->all())->toBe([4, 5, 6, 7])
+        ->and($set->sentences()->pluck('sentences.id')->slice(1)->values()->all())->toBe([$attached->id, Sentence::firstWhere('sentence', 'Brand new.')->id, $edited->id]);
 });
 
 it('rejects a line without a sentence or longer than 500 characters, and an empty popup', function () {

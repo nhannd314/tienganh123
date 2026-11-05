@@ -13,6 +13,11 @@ class CreateLesson extends CreateRecord
     protected static string $resource = LessonResource::class;
 
     /**
+     * Saving the lesson and the sets made from its lines stands or falls together, so a failure leaves no set behind.
+     */
+    protected ?bool $hasDatabaseTransactions = true;
+
+    /**
      * @param  array<string, mixed>  $data
      */
     protected function handleRecordCreation(array $data): Model

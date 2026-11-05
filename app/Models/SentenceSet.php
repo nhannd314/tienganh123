@@ -42,6 +42,7 @@ class SentenceSet extends Model
     public function sentences(): BelongsToMany
     {
         return $this->belongsToMany(Sentence::class)
+            ->using(SentenceSentenceSet::class)
             ->withPivot('sort_order')
             ->withTimestamps()
             ->orderByPivot('sort_order')

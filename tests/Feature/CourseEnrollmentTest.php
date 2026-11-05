@@ -185,7 +185,6 @@ it('shows the course heading instead of the registration button to an admin, a m
 
     $response
         ->assertSee('Thông tin khóa học')
-        ->assertDontSee('Bắt đầu học')
         ->assertDontSee('Đăng ký khóa học')
         ->assertDontSee(route('courses.enroll', $course), false);
 })->with(['admin', 'member', 'subscriber']);

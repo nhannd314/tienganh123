@@ -31,6 +31,9 @@ class PaymentsTable
                 TextColumn::make('payable')
                     ->label('Mua')
                     ->state(fn (Payment $record): string => self::payableLabel($record)),
+                TextColumn::make('months')
+                    ->label('Số tháng')
+                    ->state(fn (Payment $record): string => self::monthsLabel($record)),
                 TextColumn::make('amount')
                     ->label('Số tiền')
                     ->formatStateUsing(fn (int $state): string => number_format($state, 0, ',', '.').' ₫')
@@ -82,5 +85,10 @@ class PaymentsTable
             $payment->payable instanceof Course => 'Khóa học: '.$payment->payable->title,
             default => '—',
         };
+    }
+
+    public static function monthsLabel(Payment $payment): string
+    {
+        return $payment->payable instanceof Course ? $payment->monthsBought().' tháng' : '—';
     }
 }

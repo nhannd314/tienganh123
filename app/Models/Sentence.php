@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Jobs\GenerateSentenceAudio;
 use Database\Factories\SentenceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,34 +21,68 @@ class Sentence extends Model
     use HasFactory;
 
     /**
+     * When the words of a sentence change (backticks aside), its audio reads the old words: it is dropped so a new voice can
+     * be generated, unless a new audio is saved along with the words.
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (self $sentence): void {
+            $isReworded = $sentence->isDirty('sentence')
+                && self::plainText($sentence->sentence) !== self::plainText($sentence->getOriginal('sentence'));
+
+            if ($isReworded && ! $sentence->isDirty('audio') && filled($sentence->audio)) {
+                Storage::disk('public')->delete($sentence->audio);
+                $sentence->audio = null;
+            }
+        });
+    }
+
+    /**
      * The sentence already stored with the same words as the text, whatever backticks or capitals either has, or null.
+     * Among stored sentences that differ only by their backticks, the one written exactly as the text comes first, as
+     * rewriting another one to the text would break the unique index on the sentence.
      */
     public static function findByPlainText(string $text): ?self
     {
-        return self::query()
-            ->whereRaw("LOWER(REPLACE(sentence, '`', '')) = ?", [mb_strtolower(self::plainText($text))])
+        return self::withSameWordsAs($text)
+            ->orderByRaw('CASE WHEN sentence = ? THEN 0 ELSE 1 END', [$text])
+            ->orderBy('id')
             ->first();
     }
 
     /**
-     * Update the sentence from the typed fields, leaving the ones left empty as they are. When its words change (backticks
-     * aside) the old audio is dropped, as it reads the old words, so a new voice can be generated. Returns whether it did.
+     * Whether rewriting this sentence as the text would make it another stored sentence, backticks and capitals aside.
+     * While its own words stay the same, only a sentence written exactly as the text is in the way, so a sentence that
+     * already has such a twin can still be edited.
+     */
+    public function wouldDuplicateAnother(string $text): bool
+    {
+        $hasSameWords = mb_strtolower(self::plainText($text)) === mb_strtolower(self::plainText($this->sentence));
+
+        return self::withSameWordsAs($text)
+            ->whereKeyNot($this->getKey())
+            ->when($hasSameWords, fn (Builder $query): Builder => $query->where('sentence', $text))
+            ->exists();
+    }
+
+    /**
+     * The stored sentences with the same words as the text, whatever backticks or capitals either has.
+     *
+     * @return Builder<self>
+     */
+    private static function withSameWordsAs(string $text): Builder
+    {
+        return self::query()->whereRaw("LOWER(REPLACE(sentence, '`', '')) = ?", [mb_strtolower(self::plainText($text))]);
+    }
+
+    /**
+     * Update the sentence from the typed fields, leaving the ones left empty as they are.
      *
      * @param  array<string, mixed>  $data
      */
-    public function updateKeepingEmpty(array $data): bool
+    public function updateKeepingEmpty(array $data): void
     {
-        $data = array_filter($data, fn (mixed $value): bool => filled($value));
-        $reworded = isset($data['sentence']) && self::plainText($data['sentence']) !== self::plainText($this->sentence);
-
-        if ($reworded && filled($this->audio)) {
-            Storage::disk('public')->delete($this->audio);
-            $data['audio'] = null;
-        }
-
-        $this->update($data);
-
-        return $reworded;
+        $this->update(array_filter($data, fn (mixed $value): bool => filled($value)));
     }
 
     /**
@@ -108,6 +143,7 @@ class Sentence extends Model
     public function sentenceSets(): BelongsToMany
     {
         return $this->belongsToMany(SentenceSet::class)
+            ->using(SentenceSentenceSet::class)
             ->withPivot('sort_order')
             ->withTimestamps();
     }
