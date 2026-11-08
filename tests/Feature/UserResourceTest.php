@@ -96,3 +96,35 @@ it('does not let the email of a learner be changed', function () {
 
     expect($learner->fresh())->email->toBe('old@example.com')->name->toBe('Tên mới');
 });
+
+it('imports a learner for each line with the default password, skipping invalid and already used ones', function () {
+    User::factory()->create(['email' => 'old@example.com']);
+
+    Livewire::test(ListUsers::class)
+        ->callAction('importUsers', [
+            'user_lines' => "Nguyễn Văn An | AN@example.com | +84 912 345 678\n\nTrần Bình | binh@example.com\nCũ | old@example.com | 0900000000\n | none@example.com\nSai | not-an-email",
+        ])
+        ->assertHasNoFormErrors()
+        ->assertNotified('Imported 2 users');
+
+    $an = User::firstWhere('email', 'an@example.com');
+
+    expect($an)
+        ->name->toBe('Nguyễn Văn An')
+        ->phone->toBe('0912345678')
+        ->membership->toBeNull()
+        ->and(Hash::check('12345678', $an->password))->toBeTrue()
+        ->and($an->isAdmin())->toBeFalse()
+        ->and(User::firstWhere('email', 'binh@example.com')->phone)->toBeNull()
+        ->and(User::count())->toBe(4);
+});
+
+it('gives the imported learners a membership that never expires when the box is ticked', function () {
+    Livewire::test(ListUsers::class)
+        ->callAction('importUsers', ['user_lines' => 'Lê Chi | chi@example.com | 0987654321', 'is_member' => true])
+        ->assertHasNoFormErrors();
+
+    expect(User::firstWhere('email', 'chi@example.com'))
+        ->membership->toBe(Membership::Member)
+        ->membership_expires_on->toBeNull();
+});
