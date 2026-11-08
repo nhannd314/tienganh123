@@ -150,7 +150,9 @@ class ExamPaper
     private function isAccepted(array $question, string $given): bool
     {
         if ($question['kind'] === 'choice') {
-            return in_array($given, $question['accepted'], true);
+            $unifyLineBreaks = fn (string $text): string => str_replace(["\r\n", "\r"], "\n", $text);
+
+            return in_array($unifyLineBreaks($given), array_map($unifyLineBreaks, $question['accepted']), true);
         }
 
         return in_array(self::normalize($given), array_map(self::normalize(...), $question['accepted']), true);

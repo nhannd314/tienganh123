@@ -36,16 +36,14 @@
             class="flex-[999_1_600px]"
         />
 
-        @if ($firstQuestion)
-            <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5">
-                <x-slot:after-progress>
-                    @if ($advancedUrl)
-                        <x-advanced-review-promo :href="$advancedUrl" />
-                    @endif
-                    <x-game-promo :href="route('lessons.games', [$course, $unit, $lesson])" />
-                </x-slot:after-progress>
-            </x-lesson-sidebar>
-        @endif
+        <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5">
+            <x-slot:after-progress>
+                @if ($advancedUrl)
+                    <x-advanced-review-promo :href="$advancedUrl" />
+                @endif
+                <x-game-promo :href="route('lessons.games', [$course, $unit, $lesson])" />
+            </x-slot:after-progress>
+        </x-lesson-sidebar>
     </div>
 
     <x-slot:scripts>

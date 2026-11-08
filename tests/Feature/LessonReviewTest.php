@@ -283,12 +283,13 @@ it('asks about every word that has a meaning', function () {
     expect(reviewQuestions($this->get(reviewUrl($lesson))->getContent()))->toHaveCount(11);
 });
 
-it('shows an empty state when the lesson has no words', function () {
+it('shows an empty state and still shows the sidebar when the lesson has no words', function () {
     $lesson = reviewLesson(0);
 
     $this->get(reviewUrl($lesson))
         ->assertOk()
         ->assertSee('Bài học này chưa có từ vựng để ôn tập.')
+        ->assertSee('Chơi game giải trí')
         ->assertDontSee('data-review-config', false);
 });
 
