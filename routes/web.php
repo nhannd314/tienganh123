@@ -15,6 +15,7 @@ use App\Http\Controllers\FlashcardSetIndexController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LessonGameController;
+use App\Http\Controllers\LessonLearnersController;
 use App\Http\Controllers\LessonReviewController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PaymentStatusController;
@@ -86,6 +87,10 @@ Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}', LessonController
     ->scopeBindings()
     ->middleware(EnsureLessonAccess::class)
     ->name('lessons.show');
+Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/thanh-tich', LessonLearnersController::class)
+    ->scopeBindings()
+    ->middleware(EnsureLessonAccess::class)
+    ->name('lessons.learners');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/tro-choi', [LessonGameController::class, 'index'])
     ->scopeBindings()
     ->middleware(EnsureLessonAccess::class)

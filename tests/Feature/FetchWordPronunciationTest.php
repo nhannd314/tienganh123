@@ -1,11 +1,14 @@
 <?php
 
+use App\Filament\Resources\Words\Pages\EditWord;
 use App\Jobs\FetchWordPronunciation;
+use App\Models\User;
 use App\Models\Word;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -138,4 +141,16 @@ it('picks the US or the UK pronunciation at random among the saved files', funct
     $picked = collect(range(1, 40))->map(fn (): ?string => $word->random_audio_url)->unique();
 
     expect($picked->sort()->values()->all())->toBe(collect([$word->audio_us_url, $word->audio_uk_url])->sort()->values()->all());
+});
+
+it('regenerates the audio from the word page without touching the IPA', function () {
+    Queue::fake();
+    $word = Word::factory()->create(['ipa_us' => '/x/']);
+
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(EditWord::class, ['record' => $word->getKey()])
+        ->callAction('regenerateAudio');
+
+    Queue::assertPushed(FetchWordPronunciation::class, fn (FetchWordPronunciation $job): bool => $job->word->is($word) && $job->overwrite && $job->audioOnly);
 });

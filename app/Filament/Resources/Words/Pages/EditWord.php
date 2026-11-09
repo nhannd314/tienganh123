@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Words\Pages;
 
+use App\Filament\Resources\Words\Actions\RegenerateWordAudioAction;
 use App\Filament\Resources\Words\WordResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
@@ -13,6 +14,7 @@ class EditWord extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            RegenerateWordAudioAction::make(),
             DeleteAction::make(),
         ];
     }

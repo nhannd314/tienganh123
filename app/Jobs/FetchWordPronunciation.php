@@ -18,8 +18,9 @@ class FetchWordPronunciation implements ShouldQueue
 
     /**
      * @param  bool  $overwrite  Replace the IPA and the audio already there; otherwise only the missing ones are fetched.
+     * @param  bool  $audioOnly  Leave the IPA alone and only make the audio.
      */
-    public function __construct(public Word $word, public bool $overwrite = false) {}
+    public function __construct(public Word $word, public bool $overwrite = false, public bool $audioOnly = false) {}
 
     /**
      * @return list<int>
@@ -36,7 +37,10 @@ class FetchWordPronunciation implements ShouldQueue
      */
     public function handle(OxfordLearnersPronunciation $dictionary, AzureTextToSpeech $speech): void
     {
-        $this->fetchIpa($dictionary);
+        if (! $this->audioOnly) {
+            $this->fetchIpa($dictionary);
+        }
+
         $this->generateAudio($speech);
     }
 

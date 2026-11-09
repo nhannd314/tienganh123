@@ -1,7 +1,8 @@
-{{-- Top 10 card, titled by `title`. `learners` is a ranked list of ['name' => ..., 'points' => ..., 'progress' => ...]. --}}
+{{-- Top 10 card, titled by `title`. `learners` is a ranked list of ['name' => ..., 'points' => ..., 'progress' => ...]. With `detailUrl`, a button leads to the full results. --}}
 @props([
     'title' => 'Top 10 học tốt nhất',
     'learners' => [],
+    'detailUrl' => null,
 ])
 
 @php
@@ -35,4 +36,8 @@
             </li>
         @endforeach
     </ol>
+
+    @if ($detailUrl)
+        <x-button :href="$detailUrl" variant="outline" size="sm">Xem chi tiết</x-button>
+    @endif
 </div>

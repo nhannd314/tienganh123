@@ -12,6 +12,7 @@
     'enrollCourse' => null,
     'progress' => null,
     'topLearners' => [],
+    'learnersUrl' => null,
     'rank' => '—',
     'score' => 0,
 ])
@@ -97,5 +98,5 @@
 
     {{ $afterProgress ?? '' }}
 
-    <x-top-learners title="Top 10 bài học này" :learners="$topLearners" />
+    <x-top-learners title="Top 10 bài học này" :learners="$topLearners" :detail-url="$learnersUrl" />
 </aside>

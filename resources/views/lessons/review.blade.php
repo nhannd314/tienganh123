@@ -36,7 +36,7 @@
             class="flex-[999_1_600px]"
         />
 
-        <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5">
+        <x-lesson-sidebar :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :learners-url="route('lessons.learners', [$course, $unit, $lesson])" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'" class="flex-[1_1_340px] gap-5">
             <x-slot:after-progress>
                 @if ($advancedUrl)
                     <x-advanced-review-promo :href="$advancedUrl" />

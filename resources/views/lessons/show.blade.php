@@ -137,7 +137,7 @@
         </div>
 
         {{-- Sidebar --}}
-        <x-lesson-sidebar class="group-data-[sidebar-hidden]/layout:hidden" :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'">
+        <x-lesson-sidebar class="group-data-[sidebar-hidden]/layout:hidden" :enroll-course="$enrollCourse" :progress="$progress" :top-learners="$topLearners" :learners-url="route('lessons.learners', [$course, $unit, $lesson])" :score="$standing['score'] ?? 0" :rank="$standing['rank'] ?? '—'">
             <x-button size="lg" icon-left="book-open" full-width :href="route('lessons.review.show', [$course, $unit, $lesson, 1])">Ôn tập ngay</x-button>
 
             <x-slot:after-progress>

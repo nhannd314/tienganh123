@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Words\Tables;
 
+use App\Filament\Resources\Words\Actions\RegenerateWordAudioAction;
 use App\Models\Word;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -47,6 +48,7 @@ class WordsTable
                 //
             ])
             ->recordActions([
+                RegenerateWordAudioAction::make()->iconButton(),
                 EditAction::make(),
             ])
             ->toolbarActions([
