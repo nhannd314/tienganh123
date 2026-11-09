@@ -32,7 +32,7 @@ class BulkAddWordsAction extends Action
                     ->required()
                     ->rows(12)
                     ->placeholder("apple [noun] quả táo, táo | I have an apple = Tôi có một quả táo\nwork [noun] công việc [verb] làm việc")
-                    ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác [từ loại] nghĩa | câu ví dụ = bản dịch | câu ví dụ khác. Mỗi [từ loại] là một nghĩa: "[n] táo, quả táo" lưu chung một nghĩa, "[n] quả táo [n] táo" lưu hai nghĩa. Từ loại có thể viết tắt (n, v, a, adv, pron, prep, conj, interj, det) và được lưu thành dạng đầy đủ. Gõ một từ đã có rồi bấm Tab hoặc click ra ngoài ô để tự nạp nghĩa của từ đó. Từ mới sẽ được tạo; từ đã có chỉ được thêm các nghĩa và ví dụ còn thiếu.')
+                    ->helperText('Mỗi dòng một từ: từ [từ loại] nghĩa, nghĩa khác [từ loại] nghĩa | câu ví dụ = bản dịch | câu ví dụ khác. Mỗi từ loại chỉ có một nghĩa: "[n] quả táo [n] táo" được gộp thành "[n] quả táo, táo". Từ loại có thể viết tắt (n, v, a, adv, pron, prep, conj, interj, det) và được lưu thành dạng đầy đủ. Gõ một từ đã có rồi bấm Tab hoặc click ra ngoài ô để tự nạp nghĩa của từ đó. Từ mới sẽ được tạo; từ đã có chỉ được thêm vào đúng từ loại các nghĩa và ví dụ còn thiếu.')
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (Set $set, ?string $state) => $set('words', self::loadKnownWords((string) $state))),
             ])
@@ -49,8 +49,9 @@ class BulkAddWordsAction extends Action
 
     /**
      * Parse one word per line: `word [pos] meaning, meaning [pos] meaning | example = translation | example = translation`.
-     * Each `[pos]` makes one meaning, its comma separated words kept together ("[n] táo, quả táo" is one meaning, "[n] táo
-     * [n] quả táo" two). The part of speech may be abbreviated (`[n]`); it is stored in full (`noun`).
+     * Each part of speech makes one meaning, of its comma separated words: "[n] táo, quả táo" and "[n] táo [n] quả táo"
+     * both give "[n] táo, quả táo" (see Word::mergeMeanings). The part of speech may be abbreviated (`[n]`); it is stored in
+     * full (`noun`).
      * An example is a sentence and its translation, e.g. "I have an apple = Tôi có một quả táo". A comma inside round brackets, a
      * note on a meaning, does not split it.
      *
@@ -76,10 +77,9 @@ class BulkAddWordsAction extends Action
 
                 foreach ($matches as [, $pos, $meaningList]) {
                     $pos = Word::expandPartOfSpeech($pos);
-                    $meaning = implode(', ', collect(self::meaningPieces($meaningList))->unique(fn (string $piece): string => mb_strtolower($piece))->all());
 
-                    if ($meaning !== '' && $pos !== '') {
-                        $meanings[mb_strtolower($pos.'|'.$meaning)] ??= ['pos' => $pos, 'meaning' => $meaning];
+                    if ($pos !== '') {
+                        $meanings[] = ['pos' => $pos, 'meaning' => $meaningList];
                     }
                 }
             }
@@ -95,24 +95,10 @@ class BulkAddWordsAction extends Action
                 }
             }
 
-            $entries[] = ['word' => $word, 'meanings' => array_values($meanings), 'examples' => array_values($examples)];
+            $entries[] = ['word' => $word, 'meanings' => Word::mergeMeanings($meanings), 'examples' => array_values($examples)];
         }
 
         return $entries;
-    }
-
-    /**
-     * The words of a meaning separated by commas, e.g. "táo, quả táo" gives "táo" and "quả táo". A comma inside round
-     * brackets, a note on the meaning, does not split it.
-     *
-     * @return list<string>
-     */
-    public static function meaningPieces(string $meaning): array
-    {
-        return array_values(array_filter(
-            array_map(fn (string $piece): string => trim($piece), preg_split('/,(?![^()]*\))/u', $meaning)),
-            fn (string $piece): bool => $piece !== '',
-        ));
     }
 
     /**
@@ -157,42 +143,6 @@ class BulkAddWordsAction extends Action
     }
 
     /**
-     * The typed meanings with only their words (separated by commas) that the stored meanings of the same part of speech
-     * do not have yet, in any case; a meaning whose words are all stored is left out. With "[n] quả táo" stored, "[n]
-     * táo, quả táo" adds "[n] táo".
-     *
-     * @param  list<array{pos?: string, meaning?: string}>  $stored
-     * @param  list<array{pos: string, meaning: string}>  $typed
-     * @return list<array{pos: string, meaning: string}>
-     */
-    private static function missingMeanings(array $stored, array $typed): array
-    {
-        $known = [];
-
-        foreach ($stored as $meaning) {
-            foreach (self::meaningPieces($meaning['meaning'] ?? '') as $piece) {
-                $known[mb_strtolower(($meaning['pos'] ?? '').'|'.$piece)] = true;
-            }
-        }
-
-        $missing = [];
-
-        foreach ($typed as $meaning) {
-            $pieces = array_values(array_filter(self::meaningPieces($meaning['meaning']), fn (string $piece): bool => ! isset($known[mb_strtolower($meaning['pos'].'|'.$piece)])));
-
-            foreach ($pieces as $piece) {
-                $known[mb_strtolower($meaning['pos'].'|'.$piece)] = true;
-            }
-
-            if ($pieces !== []) {
-                $missing[] = ['pos' => $meaning['pos'], 'meaning' => implode(', ', $pieces)];
-            }
-        }
-
-        return $missing;
-    }
-
-    /**
      * Create the missing words, add the missing meanings and examples to existing words and attach them all to the vocabulary.
      *
      * @param  list<array{word: string, meanings: list<array{pos: string, meaning: string}>, examples: list<array{sentence: string, translation: string|null}>}>  $entries
@@ -214,8 +164,10 @@ class BulkAddWordsAction extends Action
                     $word = Word::create(['word' => $entry['word'], 'meanings' => $entry['meanings'], 'examples' => $examples]);
                     $result['created']++;
                 } else {
-                    $meanings = $word->meanings ?? [];
-                    $missing = self::missingMeanings($meanings, $entry['meanings']);
+                    // The typed words of a part of speech the word already has are added to its meaning, each once in any
+                    // case: with "[n] quả táo" stored, "[n] táo, quả táo" makes it "[n] quả táo, táo".
+                    $storedMeanings = Word::mergeMeanings($word->meanings ?? []);
+                    $meanings = Word::mergeMeanings([...$storedMeanings, ...$entry['meanings']]);
 
                     $storedExamples = $word->examples ?? [];
                     $knownSentences = collect($storedExamples)->map(fn (array $example): string => mb_strtolower(trim($example['sentence'] ?? '')))->all();
@@ -224,8 +176,8 @@ class BulkAddWordsAction extends Action
                         fn (array $example): bool => ! in_array(mb_strtolower($example['sentence']), $knownSentences, true),
                     ));
 
-                    if ($missing !== [] || $missingExamples !== []) {
-                        $word->update(['meanings' => [...$meanings, ...$missing], 'examples' => [...$storedExamples, ...$missingExamples]]);
+                    if ($meanings !== $storedMeanings || $missingExamples !== []) {
+                        $word->update(['meanings' => $meanings, 'examples' => [...$storedExamples, ...$missingExamples]]);
                         $result['updated']++;
                     }
                 }

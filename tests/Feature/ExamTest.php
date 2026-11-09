@@ -111,6 +111,24 @@ describe('starting', function () {
             ->and(ExamAttempt::sole()->is($attempt))->toBeTrue();
     });
 
+    it('shows no achievement toasts and no challenges on the exam paper', function () {
+        $this->actingAs(User::factory()->create());
+        $exam = Exam::factory()->published()->create();
+        ExamQuestion::factory()->for(ExamGroup::factory()->for($exam), 'group')->create();
+        startExam($exam);
+
+        $this->get(route('exams.take', $exam))
+            ->assertOk()
+            ->assertDontSee('data-learners-now', false)
+            ->assertDontSee('data-challenge-incoming', false)
+            ->assertDontSee('data-achievement-toasts', false);
+
+        $this->get(route('exams.show', $exam))
+            ->assertOk()
+            ->assertSee('data-learners-now', false)
+            ->assertSee('data-achievement-toasts', false);
+    });
+
     it('sends to the start page when no attempt was started', function () {
         $exam = Exam::factory()->published()->create();
 

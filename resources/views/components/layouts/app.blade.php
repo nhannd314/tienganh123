@@ -6,6 +6,9 @@
     'image' => null,
     'type' => 'website',
     'noindex' => false,
+    // A page that needs the learner's full attention (the exam paper): no achievement toasts, and no "Đang học bài" list,
+    // so the learner is neither listed there nor challenged.
+    'focusMode' => false,
 ])
 
 @php
@@ -67,8 +70,10 @@
         {{ $footer ?? '' }}
 
         <x-leaderboard />
-        <x-learners-now />
-        <x-achievement-toast />
+        @unless ($focusMode)
+            <x-learners-now />
+            <x-achievement-toast />
+        @endunless
 
         {{ $scripts ?? '' }}
     </body>

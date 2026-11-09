@@ -65,6 +65,27 @@ it('allows keeping the own word when editing', function () {
     expect($word->refresh()->ipa_us)->toBe('/æp/');
 });
 
+it('keeps one meaning for each part of speech, adding the new words of a part of speech already there to its meaning', function () {
+    $word = Word::factory()->create(['word' => 'cook', 'meanings' => [
+        ['pos' => 'noun', 'meaning' => 'đầu bếp, người nấu ăn'],
+        ['pos' => 'verb', 'meaning' => 'nấu ăn'],
+    ]]);
+
+    Livewire::test(EditWord::class, ['record' => $word->getRouteKey()])
+        ->fillForm(['meanings' => [
+            ['pos' => 'noun', 'meaning' => 'đầu bếp, người nấu ăn'],
+            ['pos' => 'verb', 'meaning' => 'nấu ăn'],
+            ['pos' => 'noun', 'meaning' => 'Người nấu ăn, bếp trưởng'],
+        ]])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($word->refresh()->meanings)->toBe([
+        ['pos' => 'noun', 'meaning' => 'đầu bếp, người nấu ăn, bếp trưởng'],
+        ['pos' => 'verb', 'meaning' => 'nấu ăn'],
+    ]);
+});
+
 it('stores the uploaded image on the public disk', function () {
     Storage::fake('public');
 

@@ -39,6 +39,18 @@ class Word extends Model
     ];
 
     /**
+     * Each part of speech is stored once, however the meanings were given (the word form, the bulk add of a vocabulary...).
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Word $word): void {
+            if ($word->isDirty('meanings')) {
+                $word->meanings = self::mergeMeanings($word->meanings ?? []);
+            }
+        });
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -96,6 +108,51 @@ class Word extends Model
         $partOfSpeech = trim((string) $partOfSpeech);
 
         return self::PART_OF_SPEECH_ABBREVIATIONS[mb_strtolower($partOfSpeech)] ?? $partOfSpeech;
+    }
+
+    /**
+     * The words of a meaning separated by commas, e.g. "táo, quả táo" gives "táo" and "quả táo". A comma inside round
+     * brackets, a note on the meaning, does not split it.
+     *
+     * @return list<string>
+     */
+    public static function meaningPieces(string $meaning): array
+    {
+        return array_values(array_filter(
+            array_map(fn (string $piece): string => trim($piece), preg_split('/,(?![^()]*\))/u', $meaning)),
+            fn (string $piece): bool => $piece !== '',
+        ));
+    }
+
+    /**
+     * One meaning for each part of speech, in the order they first come: the words (separated by commas) of the meanings
+     * of a same part of speech are put together, each once in any case. "[n] đầu bếp, người nấu ăn" and "[n] người nấu ăn,
+     * bếp trưởng" give "[n] đầu bếp, người nấu ăn, bếp trưởng". "n" and "noun" are the same part of speech; the first one
+     * given is kept.
+     *
+     * @param  array<int, array{pos?: string|null, meaning?: string|null}>  $meanings
+     * @return list<array{pos: string, meaning: string}>
+     */
+    public static function mergeMeanings(array $meanings): array
+    {
+        $merged = [];
+
+        foreach ($meanings as $meaning) {
+            $pos = trim((string) ($meaning['pos'] ?? ''));
+            $key = self::expandPartOfSpeech($pos);
+
+            $merged[$key] ??= ['pos' => $pos, 'pieces' => []];
+
+            foreach (self::meaningPieces((string) ($meaning['meaning'] ?? '')) as $piece) {
+                $merged[$key]['pieces'][mb_strtolower($piece)] ??= $piece;
+            }
+        }
+
+        return collect($merged)
+            ->filter(fn (array $meaning): bool => $meaning['pieces'] !== [])
+            ->map(fn (array $meaning): array => ['pos' => $meaning['pos'], 'meaning' => implode(', ', $meaning['pieces'])])
+            ->values()
+            ->all();
     }
 
     /**

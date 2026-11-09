@@ -13,7 +13,7 @@
     $number = 0;
 @endphp
 
-<x-layouts.app :title="$exam->title" noindex main-class="flex flex-col gap-6 pt-6 pb-10">
+<x-layouts.app :title="$exam->title" noindex focus-mode main-class="flex flex-col gap-6 pt-6 pb-10">
     <form
         method="POST"
         action="{{ route('exams.submit', $exam) }}"
