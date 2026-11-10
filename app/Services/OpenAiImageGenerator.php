@@ -46,6 +46,29 @@ class OpenAiImageGenerator
     }
 
     /**
+     * Generate a cute cartoon-style PNG illustration of one scene that shows every one of the given words as a separate object,
+     * in landscape, resized to the requested dimensions.
+     *
+     * Returns the raw PNG file content, or null when the API key is missing or the request fails (the failure is logged).
+     *
+     * @param  list<string>  $words
+     */
+    public function generateForWords(array $words, int $width = 1200, int $height = 800): ?string
+    {
+        $list = implode(', ', $words);
+
+        $prompt = "A cute, simple cartoon-style illustration for a children's English lesson that shows each of these objects exactly once: {$list}. ".
+            'Spread the objects out on a plain, light background so that every object is clearly separated, fully visible and does not overlap another one. '.
+            'Clean flat style with soft colors and smooth outlines. '.
+            'Objects, food, plants and other inanimate things must NOT have faces, eyes, mouths or any human-like features; '.
+            'only people and animals may have faces. No borders, no texts, no letters, no numbers';
+
+        $image = $this->request($prompt, $list, ['size' => '1536x1024']);
+
+        return $image === null ? null : $this->resize($image, $width, $height);
+    }
+
+    /**
      * Ask OpenAI for one PNG and return its decoded content, or null when the API key is missing or the request fails.
      *
      * @param  array<string, string>  $options

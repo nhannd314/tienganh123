@@ -12,6 +12,17 @@
     $headerCell = 'border-l border-line-default bg-surface-hover px-2 py-3 first:border-l-0 md:px-4 text-left text-[length:calc(var(--text-lg)*var(--vs,1))] font-medium whitespace-nowrap text-fg-body';
     $bodyCell = 'border-t border-l border-line-default px-2 py-3 first:border-l-0 md:px-4 align-middle';
 
+    $repeatSlides = $words
+        ->map(fn ($word): array => [
+            'title' => $word->word,
+            'ipaUk' => $word->ipa_uk,
+            'ipaUs' => $word->ipa_us,
+            'meaning' => $word->firstPlainMeaning(),
+            'image' => $word->image_url,
+        ])
+        ->values()
+        ->all();
+
     $copyText = $words
         ->map(fn ($word) => $word->word.' '.collect($word->meanings)
             ->map(fn (array $meaning): string => '('.\App\Models\Word::abbreviatePartOfSpeech($meaning['pos'] ?? '').') '.($meaning['meaning'] ?? ''))
@@ -32,6 +43,9 @@
                 data-vocab-action="expand"
                 class="md:hidden"
             />
+            @unless ($words->isEmpty())
+                <x-icon-button icon="headphones" label="Nghe và đọc theo" size="sm" data-vocab-action="listen-repeat" />
+            @endunless
             <x-icon-button icon="printer" label="In bảng từ vựng" size="sm" data-vocab-action="print" />
             <x-icon-button icon="copy" label="Sao chép từ vựng" size="sm" data-vocab-action="copy" />
             <x-icon-button icon="a-arrow-down" label="Giảm cỡ chữ" size="sm" data-vocab-action="zoom-out" />
@@ -39,6 +53,44 @@
             <x-sidebar-toggle />
         </div>
     </div>
+
+    @unless ($words->isEmpty())
+        <dialog
+            data-repeat-dialog
+            data-slides="{{ \Illuminate\Support\Js::encode($repeatSlides) }}"
+            aria-label="Nghe và đọc theo"
+            class="m-0 size-full max-h-none max-w-none overflow-hidden bg-fg-strong p-0 text-white backdrop:bg-black open:flex"
+        >
+            <div class="relative flex size-full flex-col">
+                <div class="flex flex-none items-center justify-between gap-4 px-4 py-3 md:px-8">
+                    <span data-repeat-counter class="type-body tabular-nums text-white/70"></span>
+
+                    <button type="button" data-repeat-close aria-label="Đóng" title="Đóng" class="inline-flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/25">
+                        <x-icon name="x" size="lg" />
+                    </button>
+                </div>
+
+                <div data-repeat-stage class="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 px-6 pb-10 text-center md:gap-8">
+                    <p data-repeat-intro lang="en" class="text-5xl leading-tight font-bold md:text-7xl">Listen and repeat</p>
+
+                    <div data-repeat-word hidden class="flex flex-col items-center gap-6 md:gap-8">
+                        <div data-repeat-picture hidden class="rounded-xl bg-white p-6 md:p-8">
+                            <img data-repeat-image alt="" class="max-h-[40dvh] w-auto max-w-[min(100%,64rem)] rounded-lg object-contain">
+                        </div>
+
+                        <div class="flex max-w-5xl flex-col items-center gap-3">
+                            <p data-repeat-title lang="en" class="text-5xl leading-tight font-bold text-balance md:text-7xl"></p>
+                            <div class="flex items-center justify-center gap-3">
+                                <span data-repeat-accent class="rounded-full bg-secondary px-2.5 py-0.5 text-sm font-semibold text-white"></span>
+                                <p data-repeat-ipa class="font-ipa text-2xl text-white/80 md:text-4xl" style="font-family: var(--font-ipa)" hidden></p>
+                            </div>
+                            <p data-repeat-meaning class="text-2xl text-balance text-white/90 md:text-4xl" hidden></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </dialog>
+    @endunless
 
     @if ($words->isEmpty())
         <p class="type-body text-fg-muted">{{ $emptyMessage }}</p>

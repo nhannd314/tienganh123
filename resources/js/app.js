@@ -334,6 +334,162 @@ document.addEventListener('click', (event) => {
 
 syncZoomButtons(1);
 
+/*
+ * Listen and repeat (vocabulary table): `[data-vocab-action="listen-repeat"]` opens the full screen `[data-repeat-dialog]` (like the
+ * chant). It says "Listen and repeat", then shows every word of the table, one at a time, and reads it once in UK and once in US,
+ * pausing after each reading so the student can repeat. The readings use the audio buttons of the table row.
+ * `data-repeat-close` or Escape closes it and stops everything.
+ */
+const REPEAT_PAUSE_MS = 2200;
+const repeatSessions = new WeakMap();
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+// Play the recorded file of an audio button, or speak its text when there is no file or it cannot be played.
+const playAudioButton = (button) => new Promise((resolve) => {
+    const speakText = () => speak(button.dataset.text, button.dataset.lang, resolve);
+
+    if (!button.dataset.src) {
+        speakText();
+
+        return;
+    }
+
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+    window.playingAudio = new Audio(button.dataset.src);
+    window.playingAudio.onended = resolve;
+    window.playingAudio.onerror = speakText;
+    window.playingAudio.play().catch(speakText);
+});
+
+const showRepeatWord = (dialog, slide, lang, index, total) => {
+    const isUk = lang === 'en-GB';
+    const image = dialog.querySelector('[data-repeat-image]');
+
+    image.closest('[data-repeat-picture]').hidden = !slide.image;
+    image.src = slide.image ?? '';
+    dialog.querySelector('[data-repeat-intro]').hidden = true;
+    dialog.querySelector('[data-repeat-word]').hidden = false;
+    dialog.querySelector('[data-repeat-title]').textContent = slide.title;
+    const accent = dialog.querySelector('[data-repeat-accent]');
+
+    accent.textContent = isUk ? 'UK' : 'US';
+    accent.classList.toggle('bg-primary', isUk);
+    accent.classList.toggle('bg-secondary', !isUk);
+
+    const ipa = dialog.querySelector('[data-repeat-ipa]');
+    const meaning = dialog.querySelector('[data-repeat-meaning]');
+
+    ipa.textContent = (isUk ? slide.ipaUk : slide.ipaUs) ?? '';
+    ipa.hidden = !ipa.textContent;
+    meaning.textContent = slide.meaning ?? '';
+    meaning.hidden = !slide.meaning;
+    dialog.querySelector('[data-repeat-counter]').textContent = `${index + 1} / ${total}`;
+
+    const stage = dialog.querySelector('[data-repeat-stage]');
+
+    stage.classList.remove('chant-in');
+    void stage.offsetWidth;
+    stage.classList.add('chant-in');
+};
+
+const runListenAndRepeat = async (dialog, table, session) => {
+    const slides = JSON.parse(dialog.dataset.slides);
+    const rows = [...table.querySelectorAll('tbody tr')];
+
+    dialog.querySelector('[data-repeat-intro]').hidden = false;
+    dialog.querySelector('[data-repeat-word]').hidden = true;
+    dialog.querySelector('[data-repeat-counter]').textContent = '';
+
+    await new Promise((resolve) => speak('Listen and repeat', 'en-US', resolve));
+    await wait(1000);
+
+    for (const [index, row] of rows.entries()) {
+        for (const lang of ['en-GB', 'en-US']) {
+            const audioButton = row.querySelector(`[data-audio-button][data-lang="${lang}"]`);
+
+            if (session.cancelled) {
+                return;
+            }
+
+            if (!audioButton || !slides[index]) {
+                continue;
+            }
+
+            showRepeatWord(dialog, slides[index], lang, index, rows.length);
+            await playAudioButton(audioButton);
+
+            if (session.cancelled) {
+                return;
+            }
+
+            await wait(REPEAT_PAUSE_MS);
+        }
+    }
+
+    if (!session.cancelled) {
+        dialog.close();
+    }
+};
+
+document.addEventListener('click', (event) => {
+    const open = event.target.closest('[data-vocab-action="listen-repeat"]');
+    const close = event.target.closest('[data-repeat-close]');
+
+    if (close) {
+        close.closest('[data-repeat-dialog]').close();
+
+        return;
+    }
+
+    const table = document.querySelector('[data-vocab-table]');
+    const dialog = open?.closest('section')?.querySelector('[data-repeat-dialog]');
+
+    if (!dialog || !table) {
+        return;
+    }
+
+    const session = { cancelled: false };
+
+    repeatSessions.set(dialog, session);
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+    dialog.showModal();
+    dialog.requestFullscreen?.().catch(() => {});
+    runListenAndRepeat(dialog, table, session);
+});
+
+// `close` does not bubble: stop the readings when the dialog is closed (Escape, the close button, the end).
+document.addEventListener('close', (event) => {
+    const dialog = event.target;
+
+    if (!dialog.matches?.('[data-repeat-dialog]')) {
+        return;
+    }
+
+    const session = repeatSessions.get(dialog);
+
+    if (session) {
+        session.cancelled = true;
+        repeatSessions.delete(dialog);
+    }
+
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+    }
+}, true);
+
+// Leaving full screen (Escape) closes the popup.
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        document.querySelectorAll('[data-repeat-dialog][open]').forEach((dialog) => dialog.close());
+    }
+});
+
 // Example sentence picture (lesson page): a click on the picture plays the sentence through the audio button beside the sentence.
 document.addEventListener('click', (event) => {
     const picture = event.target.closest('[data-example-image]');
