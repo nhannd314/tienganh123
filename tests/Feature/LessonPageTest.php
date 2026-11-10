@@ -198,14 +198,15 @@ it('puts the part of speech next to each meaning and offers a full view on mobil
         ->assertSee('data-vocab-action="print"', false);
 });
 
-it('offers a copy of the words with their meanings, one word per line', function () {
+it('offers a copy dialog of the words with optional meanings', function () {
     $lesson = publishedLesson();
     attachWords($lesson, Word::factory()->create(['word' => 'apple', 'meanings' => [['pos' => 'noun', 'meaning' => 'quả táo']]]));
-    attachWords($lesson, Word::factory()->create(['word' => 'work', 'meanings' => [['pos' => 'verb', 'meaning' => 'làm việc'], ['pos' => 'noun', 'meaning' => 'công việc']]]));
 
     $this->get(lessonUrl($lesson))
         ->assertSee('data-vocab-action="copy"', false)
-        ->assertSee("data-copy-text=\"apple (n) quả táo\nwork (v) làm việc (n) công việc\"", false);
+        ->assertSee('data-copy-dialog', false)
+        ->assertSee('Hiển thị nghĩa')
+        ->assertSee('data-items="[{&quot;word&quot;:&quot;apple&quot;,&quot;meaning&quot;:&quot;[n] qu', false);
 });
 
 it('shows an empty state when the lesson has no new words', function () {

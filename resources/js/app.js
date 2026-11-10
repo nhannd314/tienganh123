@@ -205,26 +205,6 @@ const syncZoomButtons = (scale) => {
     });
 };
 
-// Copy text to the clipboard; the async API needs a secure context, so fall back to a temporary textarea.
-const copyText = (text) => {
-    if (navigator.clipboard) {
-        navigator.clipboard.writeText(text).catch(() => {});
-
-        return;
-    }
-
-    const field = document.createElement('textarea');
-
-    field.value = text;
-    field.setAttribute('readonly', '');
-    field.style.position = 'fixed';
-    field.style.opacity = '0';
-    document.body.append(field);
-    field.select();
-    document.execCommand('copy');
-    field.remove();
-};
-
 // Print only one element: print a clone of it and hide everything else (see app.css).
 const printElement = (element) => {
     const heading = element.closest('section')?.querySelector('h2');
@@ -315,6 +295,35 @@ document.addEventListener('click', (event) => {
     });
 });
 
+// Copy dialog of the vocabulary table: one "word [n] meaning" line per word, meanings optional. The dialog's copy button
+// is handled by the generic `[data-copy]` listener, so its text is kept in `data-copy`.
+const renderCopyList = (dialog) => {
+    const withMeaning = dialog.querySelector('[data-copy-meaning-toggle]').checked;
+    const text = JSON.parse(dialog.dataset.items)
+        .map((item) => (withMeaning && item.meaning ? `${item.word} ${item.meaning}` : item.word))
+        .join('\n');
+
+    dialog.querySelector('[data-copy-output]').value = text;
+    dialog.querySelector('[data-copy]').dataset.copy = text;
+};
+
+document.addEventListener('change', (event) => {
+    const dialog = event.target.closest('[data-copy-dialog]');
+
+    if (dialog && event.target.matches('[data-copy-meaning-toggle]')) {
+        renderCopyList(dialog);
+    }
+});
+
+document.addEventListener('click', (event) => {
+    const dialog = event.target.closest('[data-copy-dialog]');
+
+    // Closes with the X button or a click on the backdrop (the dialog element itself).
+    if (dialog && (event.target === dialog || event.target.closest('[data-copy-close]'))) {
+        dialog.close();
+    }
+});
+
 document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-vocab-action]');
     const table = document.querySelector('[data-vocab-table]');
@@ -335,10 +344,12 @@ document.addEventListener('click', (event) => {
         button.title = button.ariaLabel = label;
         swapIcon(button, expanded ? 'eye-off' : 'eye');
     } else if (action === 'copy') {
-        copyText(table.dataset.copyText ?? '');
-        swapIcon(button, 'check');
-        clearTimeout(button.copyTimer);
-        button.copyTimer = setTimeout(() => swapIcon(button, 'copy'), 1500);
+        const dialog = button.closest('section')?.querySelector('[data-copy-dialog]');
+
+        if (dialog) {
+            renderCopyList(dialog);
+            dialog.showModal();
+        }
     } else if (action === 'zoom-in' || action === 'zoom-out') {
         const current = Number(table.style.getPropertyValue('--vs') || 1);
         const next = current + (action === 'zoom-in' ? ZOOM_STEP : -ZOOM_STEP);

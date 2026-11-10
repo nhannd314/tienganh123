@@ -23,11 +23,15 @@
         ->values()
         ->all();
 
-    $copyText = $words
-        ->map(fn ($word) => $word->word.' '.collect($word->meanings)
-            ->map(fn (array $meaning): string => '('.\App\Models\Word::abbreviatePartOfSpeech($meaning['pos'] ?? '').') '.($meaning['meaning'] ?? ''))
-            ->implode(' '))
-        ->implode("\n");
+    $copyItems = $words
+        ->map(fn ($word): array => [
+            'word' => $word->word,
+            'meaning' => collect($word->meanings)
+                ->map(fn (array $meaning): string => '['.\App\Models\Word::abbreviatePartOfSpeech($meaning['pos'] ?? '').'] '.($meaning['meaning'] ?? ''))
+                ->implode(' '),
+        ])
+        ->values()
+        ->all();
 @endphp
 
 <section {{ $attributes->class(['flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card']) }}>
@@ -93,12 +97,38 @@
         </dialog>
     @endunless
 
+    @unless ($words->isEmpty())
+        <dialog
+            data-copy-dialog
+            data-items="{{ \Illuminate\Support\Js::encode($copyItems) }}"
+            aria-label="Sao chép từ vựng"
+            class="m-auto w-[min(92vw,36rem)] rounded-lg bg-surface-card p-6 text-fg-body shadow-card backdrop:bg-black/50"
+        >
+            <div class="flex flex-col gap-4">
+                <div class="flex items-center justify-between gap-4">
+                    <h3 class="type-h3 text-fg-strong">Sao chép từ vựng</h3>
+                    <x-icon-button icon="x" label="Đóng" size="sm" data-copy-close />
+                </div>
+
+                <label class="flex cursor-pointer items-center gap-2 type-body">
+                    <x-checkbox size="sm" checked data-copy-meaning-toggle />
+                    Hiển thị nghĩa
+                </label>
+
+                <textarea data-copy-output readonly rows="12" aria-label="Danh sách từ vựng" class="w-full resize-y rounded-md border border-line-subtle bg-surface-hover p-3 type-body text-fg-strong"></textarea>
+
+                <div class="flex justify-end">
+                    <x-button type="button" icon-left="copy" data-copy=""><span data-copy-label data-copied="Đã sao chép">Sao chép</span></x-button>
+                </div>
+            </div>
+        </dialog>
+    @endunless
+
     @if ($words->isEmpty())
         <p class="type-body text-fg-muted">{{ $emptyMessage }}</p>
     @else
         <div
             data-vocab-table
-            data-copy-text="{{ $copyText }}"
             class="group/vocab overflow-x-auto rounded-sm border border-line-default"
         >
             <table class="w-full border-collapse max-md:group-data-[expanded]/vocab:min-w-190 md:min-w-190">
