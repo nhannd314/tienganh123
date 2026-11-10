@@ -10,6 +10,8 @@ use App\Models\SentenceSet;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Word;
+use App\Models\WordScene;
+use App\Models\WordSceneItem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 
@@ -231,6 +233,30 @@ it('hides the flashcard section when the lesson has no flashcard set or the set 
 
     $this->get(lessonUrl($lesson))->assertDontSee('Bộ thẻ trống')->assertDontSee('data-flashcards', false);
     $this->get(lessonUrl(publishedLesson()))->assertDontSee('data-flashcards', false);
+});
+
+it('shows the word scenes of the lesson under the flashcards, with a button to hide the words', function () {
+    $flashcardSet = FlashcardSet::factory()->create(['title' => 'Đồ dùng học tập']);
+    Flashcard::factory()->hasAttached($flashcardSet, ['sort_order' => 1])->create(['title' => 'Custom card']);
+    $scene = WordScene::factory()->create(['title' => 'Trong lớp học', 'image' => 'word-scenes/classroom.png']);
+    WordSceneItem::factory()->for($scene)->for(Word::factory()->create(['word' => 'desk']))->create();
+    $lesson = publishedLesson();
+    $lesson->flashcardSets()->attach($flashcardSet, ['sort_order' => 1]);
+    $lesson->wordScenes()->attach($scene);
+
+    $this->get(lessonUrl($lesson))
+        ->assertSeeInOrder(['Đồ dùng học tập', 'Trong lớp học', 'data-word-scene-read="repeat"', 'data-word-scene-read="find"', 'data-word-scene-toggle', 'data-text="desk"', 'Nội dung bài học'], false);
+});
+
+it('leaves out the word scenes that have no picture or no drawn word', function () {
+    $withoutPicture = WordScene::factory()->create(['title' => 'Chưa có ảnh', 'image' => null]);
+    WordSceneItem::factory()->for($withoutPicture)->create();
+    $withoutRectangle = WordScene::factory()->create(['title' => 'Chưa vẽ vùng', 'image' => 'word-scenes/a.png']);
+    WordSceneItem::factory()->for($withoutRectangle)->undrawn()->create();
+    $lesson = publishedLesson();
+    $lesson->wordScenes()->attach([$withoutPicture->id, $withoutRectangle->id]);
+
+    $this->get(lessonUrl($lesson))->assertDontSee('Chưa có ảnh')->assertDontSee('Chưa vẽ vùng')->assertDontSee('data-word-scene', false);
 });
 
 it('renders the lesson content as rich text and strips scripts', function () {

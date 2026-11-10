@@ -272,6 +272,23 @@ document.addEventListener('click', (event) => {
     swapIcon(button, hidden ? 'eye' : 'eye-off');
 });
 
+// Word scene card: hide or show the words written under the objects of the picture.
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-word-scene-toggle]');
+
+    if (!button) {
+        return;
+    }
+
+    const hidden = button.getAttribute('aria-pressed') !== 'true';
+    const label = hidden ? 'Hiện từ' : 'Ẩn từ';
+
+    button.closest('section').querySelector('[data-word-scene]')?.toggleAttribute('data-words-hidden', hidden);
+    button.setAttribute('aria-pressed', String(hidden));
+    button.title = button.ariaLabel = label;
+    swapIcon(button, hidden ? 'eye' : 'eye-off');
+});
+
 document.addEventListener('click', (event) => {
     const printButton = event.target.closest('[data-print-flashcards]');
 
@@ -363,6 +380,24 @@ const playAudioButton = (button) => new Promise((resolve) => {
     window.playingAudio.play().catch(speakText);
 });
 
+// Say a short instruction ("Listen and repeat"): play its recorded file (made with Azure), or speak the text when there is no file or it cannot be played.
+const playIntro = (src, text) => new Promise((resolve) => {
+    const speakText = () => speak(text, 'en-US', resolve);
+
+    if (!src) {
+        speakText();
+
+        return;
+    }
+
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+    window.playingAudio = new Audio(src);
+    window.playingAudio.onended = resolve;
+    window.playingAudio.onerror = speakText;
+    window.playingAudio.play().catch(speakText);
+});
+
 const showRepeatWord = (dialog, slide, lang, index, total) => {
     const isUk = lang === 'en-GB';
     const image = dialog.querySelector('[data-repeat-image]');
@@ -402,7 +437,7 @@ const runListenAndRepeat = async (dialog, table, session) => {
     dialog.querySelector('[data-repeat-word]').hidden = true;
     dialog.querySelector('[data-repeat-counter]').textContent = '';
 
-    await new Promise((resolve) => speak('Listen and repeat', 'en-US', resolve));
+    await playIntro(dialog.dataset.introSrc, 'Listen and repeat');
     await wait(1000);
 
     for (const [index, row] of rows.entries()) {
@@ -487,6 +522,122 @@ document.addEventListener('close', (event) => {
 document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
         document.querySelectorAll('[data-repeat-dialog][open]').forEach((dialog) => dialog.close());
+    }
+});
+
+/*
+ * Word scene card: `[data-word-scene-read]` reads the words of the picture one after another after a spoken intro, pausing after
+ * each word for the student: "repeat" goes in the order of the picture and lights up the word being read ("Listen and repeat"),
+ * "find" goes in random order and lights up nothing, so the student has to find the object ("Listen and find"), with the beat of
+ * `data-music-src` playing quietly underneath. The same button stops it. The words are read through the audio buttons over the picture.
+ */
+const SCENE_PAUSE_MS = 2200;
+const SCENE_MUSIC_VOLUME = 0.15;
+let sceneReading = null;
+
+const shuffled = (list) => {
+    const copy = [...list];
+
+    for (let index = copy.length - 1; index > 0; index--) {
+        const other = Math.floor(Math.random() * (index + 1));
+
+        [copy[index], copy[other]] = [copy[other], copy[index]];
+    }
+
+    return copy;
+};
+
+const stopSceneReading = () => {
+    if (!sceneReading) {
+        return;
+    }
+
+    const { button, wordButtons } = sceneReading;
+
+    sceneReading.cancelled = true;
+    sceneReading.music?.pause();
+    sceneReading = null;
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+    wordButtons.forEach((wordButton) => delete wordButton.dataset.playing);
+    button.setAttribute('aria-pressed', 'false');
+    button.title = button.ariaLabel = button.dataset.label;
+    swapIcon(button, button.dataset.icon);
+};
+
+const startSceneReading = async (button) => {
+    const mode = button.dataset.wordSceneRead;
+    const wordButtons = [...button.closest('section').querySelectorAll('[data-word-scene] [data-audio-button]')];
+
+    if (wordButtons.length === 0) {
+        return;
+    }
+
+    button.dataset.label ??= button.ariaLabel;
+    button.dataset.icon ??= button.querySelector('i[class*="icon-"]')?.className.match(/icon-([\w-]+)/)?.[1];
+
+    const session = { button, wordButtons, cancelled: false };
+
+    sceneReading = session;
+    button.setAttribute('aria-pressed', 'true');
+    button.title = button.ariaLabel = 'Dừng đọc';
+    swapIcon(button, 'square');
+    window.speechSynthesis?.cancel();
+    window.playingAudio?.pause();
+
+    await playIntro(button.dataset.introSrc, mode === 'find' ? 'Listen and find' : 'Listen and repeat');
+
+    if (session.cancelled) {
+        return;
+    }
+
+    // The background music (a beat) plays under the words, quietly so that they can be heard, until the reading ends or is stopped.
+    if (button.dataset.musicSrc) {
+        session.music = new Audio(button.dataset.musicSrc);
+        session.music.loop = true;
+        session.music.volume = SCENE_MUSIC_VOLUME;
+        session.music.play().catch(() => {});
+    }
+
+    await wait(1000);
+
+    for (const wordButton of mode === 'find' ? shuffled(wordButtons) : wordButtons) {
+        if (session.cancelled) {
+            return;
+        }
+
+        if (mode === 'repeat') {
+            wordButton.dataset.playing = '';
+        }
+
+        await playAudioButton(wordButton);
+        delete wordButton.dataset.playing;
+
+        if (session.cancelled) {
+            return;
+        }
+
+        await wait(SCENE_PAUSE_MS);
+    }
+
+    if (!session.cancelled) {
+        stopSceneReading();
+    }
+};
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-word-scene-read]');
+
+    if (!button) {
+        return;
+    }
+
+    const wasReading = sceneReading?.button === button;
+
+    stopSceneReading();
+
+    if (!wasReading) {
+        startSceneReading(button);
     }
 });
 

@@ -59,6 +59,11 @@
             @endif
             @endforeach
 
+            {{-- Word scenes: pictures whose objects play their word when clicked --}}
+            @foreach ($wordScenes as $wordScene)
+                <x-word-scene-card :scene="$wordScene" />
+            @endforeach
+
             {{-- Example sentences of the lesson; a word in backticks that matches a stored word gets its popover --}}
             @if ($exampleSentences->isNotEmpty())
                 <x-example-sentences :examples="$exampleSentences" />

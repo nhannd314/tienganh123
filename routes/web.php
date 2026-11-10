@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\WordScenesController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\SepayWebhookController;
 use App\Http\Controllers\VocabularyController;
 use App\Http\Controllers\VocabularyIndexController;
 use App\Http\Controllers\VocabularyReviewController;
+use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureLessonAccess;
 use App\Http\Middleware\VerifySepayWebhook;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -136,3 +138,13 @@ Route::post('/webhooks/sepay', SepayWebhookController::class)
     ->middleware(VerifySepayWebhook::class)
     ->name('webhooks.sepay');
 Route::view('/demo', 'demo')->name('demo');
+
+// Word scenes (a picture whose objects are tied to words): the list is in the Filament panel, the pages to make one are here.
+Route::middleware(['auth', EnsureAdmin::class])->prefix('quan-tri/word-scenes')->name('admin.word-scenes.')->group(function () {
+    Route::get('/create', [WordScenesController::class, 'create'])->name('create');
+    Route::post('/', [WordScenesController::class, 'store'])->name('store');
+    Route::get('/{wordScene}/edit', [WordScenesController::class, 'edit'])->name('edit');
+    Route::put('/{wordScene}', [WordScenesController::class, 'update'])->name('update');
+    Route::post('/{wordScene}/items', [WordScenesController::class, 'storeItem'])->name('items.store');
+    Route::delete('/{wordScene}/items/{item}', [WordScenesController::class, 'destroyItem'])->scopeBindings()->name('items.destroy');
+});

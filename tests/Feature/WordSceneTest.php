@@ -1,15 +1,12 @@
 <?php
 
-use App\Filament\Resources\WordScenes\Pages\CreateWordScene;
-use App\Filament\Resources\WordScenes\Pages\EditWordScene;
-use App\Jobs\GenerateWordSceneImage;
+use App\Filament\Resources\WordScenes\Pages\ListWordScenes;
 use App\Models\User;
 use App\Models\Word;
 use App\Models\WordScene;
 use App\Models\WordSceneItem;
-use App\Services\OpenAiImageGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Queue;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -25,53 +22,133 @@ it('keeps the words of a scene with the rectangle around each object', function 
         ->and($drawn->fresh())->hasRectangle()->toBeTrue()->x->toBe(0.1)->height->toBe(0.4);
 });
 
-it('creates a scene with its words and queues a picture when none is given', function () {
-    Queue::fake();
-    config(['services.openai.key' => 'test-key']);
-    $this->actingAs(User::factory()->create());
-    $word = Word::factory()->create();
+it('reuses the stored word and redraws a word the scene already has', function () {
+    $scene = WordScene::factory()->create();
+    $apple = Word::factory()->create(['word' => 'apple']);
 
-    Livewire::test(CreateWordScene::class)
-        ->fillForm(['title' => 'Fruits', 'items' => [['word_id' => $word->id]]])
-        ->call('create')
-        ->assertHasNoFormErrors();
+    $first = $scene->placeWord(' Apple ', ['x' => 0.1, 'y' => 0.2, 'width' => 0.3, 'height' => 0.4]);
+    $again = $scene->placeWord('APPLE', ['x' => 0.5, 'y' => 0.5, 'width' => 0.2, 'height' => 0.2]);
+    $banana = $scene->placeWord('banana', ['x' => 0, 'y' => 0, 'width' => 1, 'height' => 1]);
 
-    $scene = WordScene::firstWhere('title', 'Fruits');
-
-    expect($scene->items->pluck('word_id')->all())->toBe([$word->id]);
-    Queue::assertPushed(GenerateWordSceneImage::class, fn (GenerateWordSceneImage $job): bool => $job->wordScene->is($scene));
+    expect($first->word_id)->toBe($apple->id)
+        ->and($again->is($first))->toBeTrue()
+        ->and($again->fresh())->x->toBe(0.5)
+        ->and($banana->word->word)->toBe('banana')
+        ->and($scene->items()->count())->toBe(2);
 });
 
-it('saves the rectangle of a word from the edit form', function () {
-    $this->actingAs(User::factory()->create());
-    $item = WordSceneItem::factory()->undrawn()->create();
+it('lists the word scenes in the panel, linking to the controller pages', function () {
+    $this->actingAs(User::factory()->admin()->create());
+    $scene = WordScene::factory()->create();
 
-    Livewire::test(EditWordScene::class, ['record' => $item->word_scene_id])
-        ->fillForm(['items' => ["record-{$item->id}" => ['word_id' => $item->word_id, 'x' => 0.25, 'y' => 0.5, 'width' => 0.1, 'height' => 0.2]]])
-        ->call('save')
-        ->assertHasNoFormErrors();
-
-    expect($item->fresh())->hasRectangle()->toBeTrue()->x->toBe(0.25)->width->toBe(0.1);
+    Livewire::test(ListWordScenes::class)
+        ->assertCanSeeTableRecords([$scene])
+        ->assertSee(route('admin.word-scenes.create'))
+        ->assertSee(route('admin.word-scenes.edit', $scene));
 });
 
-it('replaces the picture of a scene with a generated one and clears the old rectangles', function () {
-    Storage::fake('public');
-    config(['services.openai.key' => 'test-key']);
-    Storage::disk('public')->put('word-scenes/old.png', 'old');
-    $scene = WordScene::factory()->create(['image' => 'word-scenes/old.png']);
-    $item = WordSceneItem::factory()->for($scene)->create();
+it('keeps the admin pages for admins', function () {
+    $scene = WordScene::factory()->create();
 
-    $generator = Mockery::mock(OpenAiImageGenerator::class);
-    $generator->shouldReceive('generateForWords')->once()->with([$item->word->word])->andReturn('png-bytes');
+    $this->get(route('admin.word-scenes.create'))->assertRedirect(route('login'));
 
-    (new GenerateWordSceneImage($scene))->handle($generator);
+    $this->actingAs(User::factory()->create());
 
-    $scene->refresh();
+    $this->get(route('admin.word-scenes.create'))->assertForbidden();
+    $this->get(route('admin.word-scenes.edit', $scene))->assertForbidden();
+    $this->postJson(route('admin.word-scenes.items.store', $scene), ['word' => 'apple', 'x' => 0, 'y' => 0, 'width' => 1, 'height' => 1])->assertForbidden();
+});
 
-    expect($scene->image)->not->toBe('word-scenes/old.png');
-    Storage::disk('public')->assertExists($scene->image);
-    Storage::disk('public')->assertMissing('word-scenes/old.png');
-    expect($item->fresh()->hasRectangle())->toBeFalse();
+describe('as an admin', function () {
+    beforeEach(function () {
+        Storage::fake('public');
+        $this->actingAs(User::factory()->admin()->create());
+    });
+
+    it('creates a scene from a title and a picture, then opens its editor', function () {
+        $this->get(route('admin.word-scenes.create'))->assertOk();
+
+        $this->post(route('admin.word-scenes.store'), ['title' => 'Fruits', 'image' => UploadedFile::fake()->image('fruits.png')])
+            ->assertRedirect();
+
+        $scene = WordScene::firstWhere('title', 'Fruits');
+
+        Storage::disk('public')->assertExists($scene->image);
+        $this->get(route('admin.word-scenes.edit', $scene))->assertOk()->assertSee('data-word-scene-editor', false)->assertSee($scene->image_url);
+    });
+
+    it('requires a title and a picture to create a scene', function () {
+        $this->post(route('admin.word-scenes.store'), ['title' => ''])->assertSessionHasErrors(['title', 'image']);
+    });
+
+    it('hands the words of the scene to the editor', function () {
+        $item = WordSceneItem::factory()->create();
+
+        $this->get(route('admin.word-scenes.edit', $item->word_scene_id))
+            ->assertOk()
+            ->assertSee(e(json_encode($item->word->word)), false);
+    });
+
+    it('renames a scene and replaces its picture, clearing the rectangles drawn on the old one', function () {
+        Storage::disk('public')->put('word-scenes/old.png', 'old');
+        $scene = WordScene::factory()->create(['image' => 'word-scenes/old.png']);
+        $item = WordSceneItem::factory()->for($scene)->create();
+
+        $this->put(route('admin.word-scenes.update', $scene), ['title' => 'New', 'image' => UploadedFile::fake()->image('new.png')])
+            ->assertRedirect(route('admin.word-scenes.edit', $scene));
+
+        $scene->refresh();
+
+        expect($scene->title)->toBe('New')
+            ->and($scene->image)->not->toBe('word-scenes/old.png')
+            ->and($item->fresh()->hasRectangle())->toBeFalse();
+        Storage::disk('public')->assertExists($scene->image);
+        Storage::disk('public')->assertMissing('word-scenes/old.png');
+    });
+
+    it('keeps the picture and the rectangles when only the title changes', function () {
+        $scene = WordScene::factory()->create(['image' => 'word-scenes/old.png']);
+        $item = WordSceneItem::factory()->for($scene)->create();
+
+        $this->put(route('admin.word-scenes.update', $scene), ['title' => 'New'])->assertRedirect();
+
+        expect($scene->fresh())->title->toBe('New')->image->toBe('word-scenes/old.png')
+            ->and($item->fresh()->hasRectangle())->toBeTrue();
+    });
+
+    it('saves a typed word with the rectangle drawn on the picture', function () {
+        $scene = WordScene::factory()->create();
+        $apple = Word::factory()->create(['word' => 'apple']);
+
+        $this->postJson(route('admin.word-scenes.items.store', $scene), ['word' => ' Apple ', 'x' => 0.1, 'y' => 0.2, 'width' => 0.3, 'height' => 0.4])
+            ->assertOk()
+            ->assertJsonPath('word', 'apple')
+            ->assertJsonPath('x', 0.1)
+            ->assertJsonPath('height', 0.4);
+
+        expect($scene->items->pluck('word_id')->all())->toBe([$apple->id]);
+    });
+
+    it('rejects a blank word and a rectangle outside the picture', function () {
+        $scene = WordScene::factory()->create();
+
+        $this->postJson(route('admin.word-scenes.items.store', $scene), ['word' => '  ', 'x' => 0.1, 'y' => 0.2, 'width' => 0.3, 'height' => 0.4])
+            ->assertJsonValidationErrors('word');
+        $this->postJson(route('admin.word-scenes.items.store', $scene), ['word' => 'apple', 'x' => 1.2, 'y' => 0.2, 'width' => 0, 'height' => 0.4])
+            ->assertJsonValidationErrors(['x', 'width']);
+
+        expect($scene->items)->toBeEmpty();
+    });
+
+    it('removes a word of the scene and only of that scene', function () {
+        $item = WordSceneItem::factory()->create();
+        $other = WordScene::factory()->create();
+
+        $this->deleteJson(route('admin.word-scenes.items.destroy', [$other, $item]))->assertNotFound();
+        $this->deleteJson(route('admin.word-scenes.items.destroy', [$item->word_scene_id, $item]))->assertNoContent();
+
+        expect(WordSceneItem::count())->toBe(0);
+    });
 });
 
 it('renders a clickable audio button over each drawn object', function () {

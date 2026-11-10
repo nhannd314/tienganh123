@@ -122,6 +122,17 @@ class Lesson extends Model
     }
 
     /**
+     * The word scenes (pictures whose objects play their word when clicked) shown under the flashcards. The relationship is left
+     * unordered as the form's select queries it without the pivot table; the lesson page orders them by when they were added.
+     *
+     * @return BelongsToMany<WordScene, $this>
+     */
+    public function wordScenes(): BelongsToMany
+    {
+        return $this->belongsToMany(WordScene::class)->withTimestamps();
+    }
+
+    /**
      * New words of the lesson: the words of its vocabularies, in vocabulary order then word order, without repeats.
      *
      * @return Attribute<Collection<int, Word>, never>

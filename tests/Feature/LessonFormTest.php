@@ -18,6 +18,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\Vocabulary;
 use App\Models\Word;
+use App\Models\WordScene;
 use Filament\Actions\AttachAction;
 use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -128,6 +129,19 @@ it('attaches flashcard sets to the lesson with a sort order', function () {
     expect($lesson->flashcardSets()->pluck('flashcard_sets.id')->all())->toBe([$first->id, $second->id]);
 });
 
+it('links word scenes to the lesson from its form', function () {
+    $lesson = Lesson::factory()->create();
+    [$first, $second] = WordScene::factory()->count(2)->create();
+
+    Livewire::test(EditLesson::class, ['record' => $lesson->getRouteKey()])
+        ->fillForm(['wordScenes' => [$first->id, $second->id]])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    expect($lesson->wordScenes->pluck('id')->all())->toBe([$first->id, $second->id])
+        ->and($first->lessons->pluck('id')->all())->toBe([$lesson->id]);
+});
+
 it('attaches vocabularies to the lesson', function () {
     $lesson = Lesson::factory()->create();
     $vocabulary = Vocabulary::factory()->create();
@@ -155,7 +169,7 @@ it('lays the form out in pairs: unit with title, slug with sort order, toggles t
 
     expect($names)->toBe([
         'unit_id', 'title', 'slug', 'sort_order', 'is_free', 'is_published', 'description',
-        'passage', 'passage_audio', 'sentence_set_id',
+        'passage', 'passage_audio', 'sentence_set_id', 'wordScenes',
         'vocabulary_lines', 'flashcard_lines', 'sentence_lines', 'generate_sentence_images',
         'content', 'attachments',
     ])

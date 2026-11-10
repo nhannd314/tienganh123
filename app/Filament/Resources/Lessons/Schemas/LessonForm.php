@@ -105,6 +105,14 @@ class LessonForm
                     ->helperText('The sentences shown in the example sentences section of the lesson.')
                     ->live()
                     ->columnSpanFull(),
+                Select::make('wordScenes')
+                    ->label('Word scenes')
+                    ->relationship('wordScenes', 'title')
+                    ->multiple()
+                    ->searchable()
+                    ->preload()
+                    ->helperText('Pictures whose objects play their word when clicked, shown under the flashcards of the lesson. Make them in the Word Scenes menu.')
+                    ->columnSpanFull(),
                 ...self::contentLinesFields(),
                 self::richContentEditor('content'),
                 FileUpload::make('attachments')

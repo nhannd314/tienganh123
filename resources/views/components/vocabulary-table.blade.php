@@ -57,6 +57,7 @@
     @unless ($words->isEmpty())
         <dialog
             data-repeat-dialog
+            data-intro-src="{{ asset('audio/prompts/listen-and-repeat.mp3') }}"
             data-slides="{{ \Illuminate\Support\Js::encode($repeatSlides) }}"
             aria-label="Nghe và đọc theo"
             class="m-0 size-full max-h-none max-w-none overflow-hidden bg-fg-strong p-0 text-white backdrop:bg-black open:flex"

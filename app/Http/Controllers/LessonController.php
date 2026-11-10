@@ -10,6 +10,8 @@ use App\Models\Lesson;
 use App\Models\Sentence;
 use App\Models\Unit;
 use App\Models\Word;
+use App\Models\WordScene;
+use App\Models\WordSceneItem;
 use App\Services\ExampleSentences;
 use DOMDocument;
 use DOMElement;
@@ -30,7 +32,7 @@ class LessonController extends Controller
     {
         abort_unless($course->is_published && $lesson->is_published, 404);
 
-        $lesson->load(['flashcardSets.flashcards.word', 'sentenceSet.sentences']);
+        $lesson->load(['flashcardSets.flashcards.word', 'sentenceSet.sentences', 'wordScenes' => fn ($query) => $query->orderByPivot('id'), 'wordScenes.items.word']);
 
         $words = $lesson->words;
         $exampleSentences = $this->exampleSentences($lesson);
@@ -46,6 +48,7 @@ class LessonController extends Controller
             'words' => $words,
             'exampleSentences' => $exampleSentences,
             'flashcardSets' => $lesson->flashcardSets,
+            'wordScenes' => $lesson->wordScenes->filter(fn (WordScene $scene): bool => filled($scene->image) && $scene->items->contains(fn (WordSceneItem $item): bool => $item->hasRectangle())),
             'passageHtml' => $this->richContentHtml($lesson->passage, 'passage-word-'),
             'contentHtml' => $this->richContentHtml($lesson->content, 'word-'),
             'attachments' => $this->attachments($lesson),
