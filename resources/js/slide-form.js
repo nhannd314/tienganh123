@@ -1,5 +1,10 @@
+import { shrinkInputImage } from './image-resize';
+
 // The form that makes or edits a slideshow (resources/views/slides/index.blade.php and edit.blade.php): adds and removes slide rows, numbers them,
-// and previews the chosen image.
+// previews the chosen image and shrinks it to fit a full HD screen before upload (the slideshow shows it whole, so it is not cropped).
+const SLIDE_MAX_WIDTH = 1920;
+const SLIDE_MAX_HEIGHT = 1080;
+
 const form = document.querySelector('[data-slide-form]');
 
 if (form) {
@@ -22,10 +27,22 @@ if (form) {
         const input = row.querySelector('[data-slide-image]');
         const preview = row.querySelector('[data-slide-preview]');
         const savedSrc = preview.getAttribute('src');
-        input.addEventListener('change', () => {
-            const file = input.files[0];
+        let previewUrl = null;
+        const showPreview = (file) => {
+            if (previewUrl) {
+                URL.revokeObjectURL(previewUrl);
+            }
+            previewUrl = file ? URL.createObjectURL(file) : null;
             preview.hidden = !file && !savedSrc;
-            preview.src = file ? URL.createObjectURL(file) : savedSrc;
+            preview.src = previewUrl ?? savedSrc ?? '';
+        };
+
+        input.addEventListener('change', async () => {
+            showPreview(input.files[0]);
+            const resized = await shrinkInputImage(input, { maxWidth: SLIDE_MAX_WIDTH, maxHeight: SLIDE_MAX_HEIGHT, quality: 0.82 });
+            if (resized) {
+                showPreview(resized);
+            }
         });
 
         row.querySelector('[data-slide-remove]').addEventListener('click', () => {

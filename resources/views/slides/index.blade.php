@@ -39,7 +39,7 @@
             <div data-slide-list class="flex flex-col gap-4"></div>
 
             <template data-slide-template>
-                @include('slides.row', ['index' => '__INDEX__'])
+                @include('slides.row', ['index' => '__INDEX__', 'slide' => null])
             </template>
 
             <div class="flex flex-wrap items-center justify-between gap-4">

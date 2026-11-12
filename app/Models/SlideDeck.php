@@ -20,7 +20,7 @@ class SlideDeck extends Model
     /** @use HasFactory<SlideDeckFactory> */
     use HasFactory;
 
-    public const MAX_SLIDES = 50;
+    public const MAX_SLIDES = 20;
 
     /**
      * Delete the images of the slides with the deck (the rows go with it).

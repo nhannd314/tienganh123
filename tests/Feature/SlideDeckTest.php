@@ -61,7 +61,7 @@ it('saves the slides in order and gives a short link', function () {
     Storage::disk('public')->assertExists($deck->slides->pluck('image')->all());
 });
 
-it('rejects a deck without slides, a slide without an image and a file that is not an image', function (array $data) {
+it('rejects a deck without slides, with too many slides, a slide without an image and a file that is not an image', function (array $data) {
     $this->actingAs(User::factory()->member()->create())
         ->post(route('slides.store'), ['title' => 'Gia đình', ...$data])
         ->assertSessionHasErrors();
@@ -69,6 +69,7 @@ it('rejects a deck without slides, a slide without an image and a file that is n
     expect(SlideDeck::count())->toBe(0);
 })->with([
     'no slides' => [[]],
+    'more than 20 slides' => fn (): array => [['slides' => array_map(fn (int $index): array => ['image' => UploadedFile::fake()->image("{$index}.jpg")], range(1, 21))]],
     'no image' => [['slides' => [['text' => 'Mother']]]],
     'not an image' => [['slides' => [['image' => UploadedFile::fake()->create('a.pdf', 10, 'application/pdf')]]]],
 ]);
@@ -108,6 +109,16 @@ it('lets only the maker edit a slideshow', function () {
     $this->actingAs($other)->put(route('slides.update', $deck), ['title' => 'x'])->assertForbidden();
 
     $this->actingAs($deck->user)->get(route('slides.edit', $deck))->assertOk()->assertSee($deck->title);
+});
+
+it('renders the new slide template of the edit form without the id of a saved slide', function () {
+    $deck = SlideDeck::factory()->for(User::factory()->member())->create();
+    $slide = Slide::factory()->for($deck, 'deck')->create(['position' => 1]);
+
+    $this->actingAs($deck->user)->get(route('slides.edit', $deck))
+        ->assertOk()
+        ->assertSee('name="slides[0][id]" value="'.$slide->id.'"', false)
+        ->assertDontSee('name="slides[__INDEX__][id]"', false);
 });
 
 it('updates the title, text and order, replaces an image, removes a slide and adds a new one', function () {
