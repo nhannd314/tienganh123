@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PaymentStatus;
 use App\Events\PaymentPaid;
 use App\Events\PaymentSettled;
+use App\Services\MembershipPlan;
 use Database\Factories\PaymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -18,7 +19,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
- * Money a user paid through a payment provider, for a subscription (`payable`).
+ * Money a user paid through a payment provider, for a course (`payable`) or for the membership, which has no model: its
+ * payments have no `payable` and carry the meta `type` "membership" and the `months` bought.
  */
 #[Fillable(['user_id', 'payable_type', 'payable_id', 'amount', 'currency', 'provider', 'provider_reference', 'status', 'paid_at', 'meta'])]
 class Payment extends Model
@@ -57,11 +59,14 @@ class Payment extends Model
         return $this->morphTo();
     }
 
+    public const TYPE_MEMBERSHIP = 'membership';
+
     /**
-     * Record that the payment went through and give the user the course months it bought.
+     * Record that the payment went through and give the user what it bought: the course months, or the membership months.
      *
      * The months it paid for (meta `months`, one by default) start now, or when the current subscription to the same
-     * course ends, so renewing early loses nothing. Returns the new subscription, or null when the payment was already paid or bought nothing subscribable.
+     * course (or the membership) ends, so renewing early loses nothing. Returns the new course subscription, or null
+     * when the payment was already paid, bought the membership or bought nothing subscribable.
      *
      * Once committed, PaymentPaid tells the payment page; a broadcast that fails (Reverb down) is only reported, as the
      * payment itself went through.
@@ -83,6 +88,14 @@ class Payment extends Model
 
             DB::afterCommit(fn () => rescue(fn () => PaymentSettled::dispatch($payment)));
             DB::afterCommit(fn () => rescue(fn () => PaymentPaid::dispatch($payment)));
+
+            if ($payment->isForMembership()) {
+                $payment->user->extendMembership($payment->monthsBought());
+                $payment->update(['meta' => [...$payment->meta, 'membership_expires_on' => $payment->user->membership_expires_on?->toDateString()]]);
+                $this->refresh();
+
+                return null;
+            }
 
             $subscribable = $payment->payable;
 
@@ -118,7 +131,15 @@ class Payment extends Model
     }
 
     /**
-     * How many months of the course the payment buys (meta `months`, one by default).
+     * Whether the payment buys the membership rather than a course.
+     */
+    public function isForMembership(): bool
+    {
+        return ($this->meta['type'] ?? null) === self::TYPE_MEMBERSHIP;
+    }
+
+    /**
+     * How many months of the course or the membership the payment buys (meta `months`, one by default).
      */
     public function monthsBought(): int
     {
@@ -142,6 +163,34 @@ class Payment extends Model
             ],
             ['provider_reference' => static::newTransferReference(), 'meta' => ['months' => $months]],
         );
+    }
+
+    /**
+     * The user's pending bank transfer for the months of membership at their current price, opened the first time and
+     * reused after.
+     */
+    public static function pendingMembershipBankTransfer(User $user, int $months): static
+    {
+        $amount = MembershipPlan::priceForMonths($months);
+
+        $payment = static::query()
+            ->where('user_id', $user->id)
+            ->whereNull('payable_type')
+            ->where('provider', 'bank_transfer')
+            ->where('status', PaymentStatus::Pending)
+            ->where('amount', $amount)
+            ->where('meta->type', self::TYPE_MEMBERSHIP)
+            ->where('meta->months', $months)
+            ->first();
+
+        return $payment ?? static::create([
+            'user_id' => $user->id,
+            'amount' => $amount,
+            'provider' => 'bank_transfer',
+            'provider_reference' => static::newTransferReference(),
+            'status' => PaymentStatus::Pending,
+            'meta' => ['type' => self::TYPE_MEMBERSHIP, 'months' => $months],
+        ]);
     }
 
     /**

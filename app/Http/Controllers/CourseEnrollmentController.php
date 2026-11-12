@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Payment;
+use App\Services\MembershipPlan;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ class CourseEnrollmentController extends Controller
             ])->all(),
             'activeUntil' => $activeUntil ? now()->parse($activeUntil) : null,
             'qrUrl' => $payment->qrUrl($bank),
+            'isMember' => $user->isMember(),
+            'membershipPrice' => MembershipPlan::format(MembershipPlan::monthlyPrice()),
         ]);
     }
 

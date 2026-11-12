@@ -57,4 +57,26 @@ return [
         6 => 10,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Membership
+    |--------------------------------------------------------------------------
+    |
+    | The membership opens every course and the members-only features. It is bought by the month at `monthly_price`
+    | (`regular_price` is the crossed-out price before the sale); `cycles` maps the months it can be bought for to the
+    | percentage taken off the monthly price times the months. The first cycle is the one chosen by default.
+    |
+    */
+
+    'membership' => [
+        'monthly_price' => 99000,
+        'regular_price' => 198000,
+        'cycles' => [
+            1 => 0,
+            3 => 5,
+            6 => 10,
+            12 => 20,
+        ],
+    ],
+
 ];

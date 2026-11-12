@@ -82,6 +82,7 @@ class PaymentsTable
     public static function payableLabel(Payment $payment): string
     {
         return match (true) {
+            $payment->isForMembership() => 'Membership',
             $payment->payable instanceof Course => 'Khóa học: '.$payment->payable->title,
             default => '—',
         };
@@ -89,6 +90,6 @@ class PaymentsTable
 
     public static function monthsLabel(Payment $payment): string
     {
-        return $payment->payable instanceof Course ? $payment->monthsBought().' tháng' : '—';
+        return $payment->payable instanceof Course || $payment->isForMembership() ? $payment->monthsBought().' tháng' : '—';
     }
 }

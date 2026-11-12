@@ -71,6 +71,14 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * @return HasMany<SlideDeck, $this>
+     */
+    public function slideDecks(): HasMany
+    {
+        return $this->hasMany(SlideDeck::class);
+    }
+
+    /**
      * @return HasMany<Payment, $this>
      */
     public function payments(): HasMany
@@ -202,6 +210,26 @@ class User extends Authenticatable implements FilamentUser
         }
 
         return $this->membership;
+    }
+
+    /**
+     * Add the months to the membership: from today, or from the day the running membership ends so renewing early loses
+     * nothing. A membership that never expires stays so.
+     */
+    public function extendMembership(int $months): void
+    {
+        $running = $this->activeMembership();
+
+        if ($running !== null && $this->membership_expires_on === null) {
+            return;
+        }
+
+        $from = $running !== null && $this->membership_expires_on->gt(today()) ? $this->membership_expires_on : today();
+
+        $this->forceFill([
+            'membership' => $running ?? Membership::Member,
+            'membership_expires_on' => $from->copy()->addMonthsNoOverflow($months),
+        ])->save();
     }
 
     /**

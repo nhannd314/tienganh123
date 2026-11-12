@@ -82,6 +82,19 @@
         </div>
     </section>
 
+    @unless ($isMember)
+        <section class="mx-auto flex w-full max-w-240 flex-wrap items-center justify-between gap-6 rounded-lg border-2 border-secondary bg-surface-card p-6 shadow-card sm:p-8">
+            <div class="flex min-w-0 flex-[1_1_320px] flex-col gap-2">
+                <h2 class="flex items-center gap-2 type-h3 text-fg-strong">
+                    <x-icon name="crown" size="lg" class="text-secondary" />
+                    Gói thành viên Membership
+                </h2>
+                <p class="type-body text-fg-body">Học miễn phí toàn bộ các khóa học, không giới hạn. Chỉ từ <b class="text-danger-text">{{ $membershipPrice }}/tháng</b>, mua càng lâu càng được giảm nhiều.</p>
+            </div>
+            <x-button variant="secondary" size="lg" icon-left="crown" :href="route('membership.enroll')">Mua gói thành viên</x-button>
+        </section>
+    @endunless
+
     <x-slot:footer>
         <x-site-footer />
     </x-slot:footer>
