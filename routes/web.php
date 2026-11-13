@@ -101,6 +101,11 @@ Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}', LessonController
     ->scopeBindings()
     ->middleware(EnsureLessonAccess::class)
     ->name('lessons.show');
+Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/passage/{format}', [LessonController::class, 'exportPassage'])
+    ->whereIn('format', ['pdf', 'word'])
+    ->scopeBindings()
+    ->middleware(EnsureLessonAccess::class)
+    ->name('lessons.passage.export');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/thanh-tich', LessonLearnersController::class)
     ->scopeBindings()
     ->middleware(EnsureLessonAccess::class)

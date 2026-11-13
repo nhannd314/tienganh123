@@ -254,6 +254,58 @@ document.addEventListener('click', (event) => {
     swapIcon(button, hidden ? 'eye' : 'eye-off');
 });
 
+// Passage: hide or show the marked words (labels), so they can be recalled before checking.
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-passage-labels-toggle]');
+    const passage = button?.closest('section')?.querySelector('[data-passage]');
+
+    if (!passage) {
+        return;
+    }
+
+    const hidden = button.getAttribute('aria-pressed') !== 'true';
+
+    passage.toggleAttribute('data-labels-hidden', hidden);
+    button.setAttribute('aria-pressed', String(hidden));
+    button.querySelector('[data-toggle-text]').textContent = hidden ? 'Hiện từ' : 'Ẩn từ';
+    swapIcon(button, hidden ? 'eye' : 'eye-off');
+});
+
+// Passage audio: the play button opens a player fixed to the bottom of the page and starts the audio; closing stops it.
+document.addEventListener('click', (event) => {
+    const play = event.target.closest('[data-passage-play]');
+    const close = event.target.closest('[data-passage-player-close]');
+    const player = document.querySelector('[data-passage-player]');
+    const audio = player?.querySelector('audio');
+
+    if (!audio || (!play && !close)) {
+        return;
+    }
+
+    if (close) {
+        audio.pause();
+        player.hidden = true;
+
+        return;
+    }
+
+    player.hidden = false;
+    audio.paused ? audio.play().catch(() => {}) : audio.pause();
+});
+
+document.querySelectorAll('[data-passage-player] audio').forEach((audio) => {
+    const sync = () => {
+        const button = document.querySelector('[data-passage-play]');
+        const playing = !audio.paused;
+
+        button.querySelector('[data-toggle-text]').textContent = playing ? 'Pause' : 'Play';
+        swapIcon(button, playing ? 'pause' : 'play');
+    };
+
+    audio.addEventListener('play', sync);
+    audio.addEventListener('pause', sync);
+});
+
 // Word scene card: hide or show the words written under the objects of the picture.
 document.addEventListener('click', (event) => {
     const button = event.target.closest('[data-word-scene-toggle]');

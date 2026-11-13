@@ -11,10 +11,11 @@
 ])
 
 @if ($word === null)
-    <span {{ $attributes->class('inline rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text') }}>{{ $label }}</span>@else<span class="inline">
+    <span data-passage-label {{ $attributes->class('inline rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text') }}>{{ $label }}</span>@else<span class="inline">
     <button
         type="button"
         popovertarget="{{ $popoverId }}"
+        data-passage-label
         {{ $attributes->class('inline cursor-pointer rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text transition-interactive hover:bg-primary-bg-hover') }}
     >{{ $label ?? $word->word }}</button>
 

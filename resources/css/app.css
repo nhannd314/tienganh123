@@ -396,3 +396,10 @@
 .achievement-toast {
     animation: achievement-in 0.3s ease-out;
 }
+
+/* Lesson passage: hidden marked words keep their width but show no text and open no popover. */
+[data-passage][data-labels-hidden] [data-passage-label] {
+    color: transparent;
+    pointer-events: none;
+    user-select: none;
+}

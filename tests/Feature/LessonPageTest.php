@@ -169,7 +169,7 @@ it('labels the words in backticks of an example sentence, with a popover for the
         ->assertSee('I have an <span class="inline">', false)
         ->assertSeeInOrder(['>Apple</button>', '</span> and a <span class="inline">', '>pear</button>', '</span>.'], false)
         ->assertSee('quả táo')
-        ->assertSee('A <span class="inline rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text">pineapple</span> is not a word here.', false)
+        ->assertSee('A <span data-passage-label class="inline rounded-xs bg-primary-bg px-1.5 font-medium text-primary-text">pineapple</span> is not a word here.', false)
         ->assertSee('data-text="I have an Apple and a pear."', false)
         ->getContent();
 
@@ -520,4 +520,19 @@ it('shows the lesson number, its unit and links to the previous and next lessons
 
     $this->get(lessonUrl($first))->assertOk()->assertDontSee('Bài trước');
     $this->get(lessonUrl($third))->assertOk()->assertDontSee('Bài sau');
+});
+
+it('exports the passage as a worksheet with the marked words blanked out', function () {
+    $lesson = publishedLesson(['passage' => '<p>An <code>apple</code> a day.</p>']);
+
+    $response = $this->get(route('lessons.passage.export', [$lesson->unit->course, $lesson->unit, $lesson, 'word']));
+
+    $response->assertOk()->assertSee('An ___________ a day.', false)->assertDontSee('apple');
+    $this->get(route('lessons.passage.export', [$lesson->unit->course, $lesson->unit, $lesson, 'pdf']))->assertOk();
+});
+
+it('has nothing to export when the lesson has no passage', function () {
+    $lesson = publishedLesson(['passage' => null]);
+
+    $this->get(route('lessons.passage.export', [$lesson->unit->course, $lesson->unit, $lesson, 'pdf']))->assertNotFound();
 });

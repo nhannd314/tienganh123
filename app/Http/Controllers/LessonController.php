@@ -13,11 +13,13 @@ use App\Models\Word;
 use App\Models\WordScene;
 use App\Models\WordSceneItem;
 use App\Services\ExampleSentences;
+use Barryvdh\DomPDF\Facade\Pdf;
 use DOMDocument;
 use DOMElement;
 use Filament\Forms\Components\RichEditor\RichContentRenderer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
@@ -57,6 +59,69 @@ class LessonController extends Controller
             'topLearners' => $this->lessonTopLearners($lesson),
             'standing' => $request->user() ? $this->lessonStanding($lesson, $request->user()) : null,
         ]);
+    }
+
+    /**
+     * Download the passage as a worksheet (PDF or Word) where every marked word is replaced by a blank to fill in.
+     */
+    public function exportPassage(Course $course, Unit $unit, Lesson $lesson, string $format): Response
+    {
+        abort_unless($course->is_published && $lesson->is_published, 404);
+
+        $html = $this->passageWorksheetHtml($lesson->passage);
+
+        abort_if($html === '', 404);
+
+        $view = view('lessons.passage-export', ['lesson' => $lesson, 'passageHtml' => $html, 'format' => $format]);
+        $filename = str($lesson->slug)->append('-listen')->toString();
+
+        if ($format === 'pdf') {
+            return Pdf::loadHtml($view->render())->download($filename.'.pdf');
+        }
+
+        return response($view->render(), 200, [
+            'Content-Type' => 'application/msword; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'.doc"',
+        ]);
+    }
+
+    /**
+     * The passage with each inline code (marked word) turned into a blank, and media that cannot be printed removed.
+     */
+    private function passageWorksheetHtml(?string $content): string
+    {
+        if (blank($content)) {
+            return '';
+        }
+
+        $html = RichContentRenderer::make($content)
+            ->customBlocks([YoutubeVideoBlock::class, VideoBlock::class, AudioBlock::class])
+            ->fileAttachmentsDisk('public')
+            ->fileAttachmentsVisibility('public')
+            ->toHtml();
+
+        $document = new DOMDocument;
+        $document->loadHTML('<?xml encoding="utf-8"?><div id="rich-content">'.$html.'</div>', LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        foreach (['audio', 'video', 'iframe', 'img'] as $tag) {
+            foreach (iterator_to_array($document->getElementsByTagName($tag)) as $element) {
+                $element->parentNode?->removeChild($element);
+            }
+        }
+
+        foreach (iterator_to_array($document->getElementsByTagName('code')) as $code) {
+            if ($code->parentNode?->nodeName !== 'pre') {
+                $code->parentNode?->replaceChild($document->createTextNode('___________'), $code);
+            }
+        }
+
+        $output = '';
+
+        foreach ($document->getElementById('rich-content')->childNodes as $child) {
+            $output .= $document->saveHTML($child);
+        }
+
+        return blank(trim(strip_tags($output))) ? '' : $output;
     }
 
     /**

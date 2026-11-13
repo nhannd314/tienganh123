@@ -38,11 +38,30 @@
             {{-- Passage --}}
             @if (filled($passageHtml) || $lesson->passage_audio_url)
                 <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card sm:p-10">
+                    <h2 class="type-h2 text-fg-strong">Listen</h2>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        @if ($lesson->passage_audio_url)
+                            <x-button size="sm" icon-left="play" data-passage-play aria-pressed="false"><span data-toggle-text>Play</span></x-button>
+                        @endif
+                        @if (filled($passageHtml))
+                            <x-button variant="outline" size="sm" icon-left="eye-off" data-passage-labels-toggle aria-pressed="false"><span data-toggle-text>Ẩn từ</span></x-button>
+                            <x-button variant="outline" size="sm" icon-left="download" :href="route('lessons.passage.export', [$course, $unit, $lesson, 'pdf'])">Xuất PDF</x-button>
+                            <x-button variant="outline" size="sm" icon-left="download" :href="route('lessons.passage.export', [$course, $unit, $lesson, 'word'])">Xuất Word</x-button>
+                        @endif
+                    </div>
+
                     @if ($lesson->passage_audio_url)
-                        <audio data-passage-audio controls preload="none" src="{{ $lesson->passage_audio_url }}" class="w-full"></audio>
+                        <div data-passage-player hidden class="fixed inset-x-0 bottom-0 z-40 border-t border-line-default bg-surface-card p-3 shadow-raised">
+                            <div class="mx-auto flex max-w-200 items-center gap-3">
+                                <span class="hidden min-w-0 shrink truncate type-label text-fg-strong sm:block">{{ $lesson->title }}</span>
+                                <audio data-passage-audio controls preload="none" src="{{ $lesson->passage_audio_url }}" class="h-10 min-w-0 flex-1"></audio>
+                                <x-icon-button icon="x" size="sm" variant="ghost" label="Đóng trình phát" data-passage-player-close />
+                            </div>
+                        </div>
                     @endif
 
-                    <div data-passage class="flex flex-col gap-4 type-body-lg text-pretty text-fg-body [&_a]:underline [&_li+li]:mt-2 [&_li>ol]:mt-2 [&_li>ul]:mt-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line-default [&_td]:p-3 [&_th]:border [&_th]:border-line-default [&_th]:bg-surface-hover [&_th]:p-3 [&_th]:text-left">
+                    <div data-passage class="group/passage flex flex-col gap-4 type-body-lg text-pretty text-fg-body [&_a]:underline [&_li+li]:mt-2 [&_li>ol]:mt-2 [&_li>ul]:mt-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-line-default [&_td]:p-3 [&_th]:border [&_th]:border-line-default [&_th]:bg-surface-hover [&_th]:p-3 [&_th]:text-left">
                         {!! $passageHtml !!}
                     </div>
                 </section>
