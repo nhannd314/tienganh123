@@ -267,8 +267,28 @@ document.addEventListener('click', (event) => {
 
     passage.toggleAttribute('data-labels-hidden', hidden);
     button.setAttribute('aria-pressed', String(hidden));
-    button.querySelector('[data-toggle-text]').textContent = hidden ? 'Hiện từ' : 'Ẩn từ';
+    button.title = button.ariaLabel = hidden ? 'Hiện từ' : 'Ẩn từ';
     swapIcon(button, hidden ? 'eye' : 'eye-off');
+});
+
+// Align the fixed player with the main (left) column of the lesson page.
+const placePassagePlayer = () => {
+    const player = document.querySelector('[data-passage-player]');
+    const column = document.querySelector('[data-lesson-main]');
+
+    if (player && column) {
+        const rect = column.getBoundingClientRect();
+
+        player.style.left = `${rect.left}px`;
+        player.style.width = `${rect.width}px`;
+    }
+};
+
+window.addEventListener('resize', placePassagePlayer);
+document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-sidebar-toggle]')) {
+        requestAnimationFrame(placePassagePlayer);
+    }
 });
 
 // Passage audio: the play button opens a player fixed to the bottom of the page and starts the audio; closing stops it.
@@ -289,6 +309,7 @@ document.addEventListener('click', (event) => {
         return;
     }
 
+    placePassagePlayer();
     player.hidden = false;
     audio.paused ? audio.play().catch(() => {}) : audio.pause();
 });
@@ -298,7 +319,7 @@ document.querySelectorAll('[data-passage-player] audio').forEach((audio) => {
         const button = document.querySelector('[data-passage-play]');
         const playing = !audio.paused;
 
-        button.querySelector('[data-toggle-text]').textContent = playing ? 'Pause' : 'Play';
+        button.title = button.ariaLabel = playing ? 'Tạm dừng' : 'Phát audio';
         swapIcon(button, playing ? 'pause' : 'play');
     };
 
