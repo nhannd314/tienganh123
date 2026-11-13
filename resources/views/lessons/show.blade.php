@@ -38,22 +38,24 @@
             {{-- Passage --}}
             @if (filled($passageHtml) || $lesson->passage_audio_url)
                 <section class="flex flex-col gap-5 rounded-lg bg-surface-card p-7 shadow-card sm:p-10">
-                    <h2 class="type-h2 text-fg-strong">Listen</h2>
+                    <div class="flex items-center justify-between gap-4">
+                        <h2 class="type-h2 text-fg-strong">Listen</h2>
 
-                    <div class="flex flex-wrap items-center gap-2">
-                        @if ($lesson->passage_audio_url)
-                            <x-icon-button icon="play" variant="primary" label="Phát audio" size="sm" aria-pressed="false" data-passage-play />
-                        @endif
-                        @if (filled($passageHtml))
-                            <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-passage-labels-toggle />
-                            <x-icon-button icon="file-text" label="Xuất PDF" size="sm" :href="route('lessons.passage.export', [$course, $unit, $lesson, 'pdf'])" />
-                            <x-icon-button icon="file-down" label="Xuất Word" size="sm" :href="route('lessons.passage.export', [$course, $unit, $lesson, 'word'])" />
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if ($lesson->passage_audio_url)
+                                <x-icon-button icon="play" label="Phát audio" size="sm" aria-pressed="false" data-passage-play />
+                            @endif
+                            @if (filled($passageHtml))
+                                <x-icon-button icon="eye-off" label="Ẩn từ" size="sm" aria-pressed="false" data-passage-labels-toggle />
+                                <x-icon-button icon="file-text" label="Xuất PDF" size="sm" :href="route('lessons.passage.export', [$course, $unit, $lesson, 'pdf'])" />
+                                <x-icon-button icon="file-down" label="Xuất Word" size="sm" :href="route('lessons.passage.export', [$course, $unit, $lesson, 'word'])" />
+                            @endif
+                        </div>
                     </div>
 
                     @if ($lesson->passage_audio_url)
-                        <div data-passage-player hidden class="fixed bottom-0 z-40 rounded-t-lg border border-b-0 border-line-default bg-surface-card p-3 shadow-raised">
-                            <div class="flex items-center gap-3">
+                        <div data-passage-player hidden class="fixed inset-x-0 bottom-0 z-40 border-t border-line-default bg-surface-card py-3 shadow-raised">
+                            <div data-passage-player-inner class="flex items-center gap-3">
                                 <span class="hidden min-w-0 shrink truncate type-label text-fg-strong sm:block">{{ $lesson->title }}</span>
                                 <audio data-passage-audio controls preload="none" src="{{ $lesson->passage_audio_url }}" class="h-10 min-w-0 flex-1"></audio>
                                 <x-icon-button icon="x" size="sm" variant="ghost" label="Đóng trình phát" data-passage-player-close />

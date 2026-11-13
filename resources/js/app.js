@@ -273,14 +273,14 @@ document.addEventListener('click', (event) => {
 
 // Align the fixed player with the main (left) column of the lesson page.
 const placePassagePlayer = () => {
-    const player = document.querySelector('[data-passage-player]');
+    const inner = document.querySelector('[data-passage-player-inner]');
     const column = document.querySelector('[data-lesson-main]');
 
-    if (player && column) {
+    if (inner && column) {
         const rect = column.getBoundingClientRect();
 
-        player.style.left = `${rect.left}px`;
-        player.style.width = `${rect.width}px`;
+        inner.style.marginLeft = `${rect.left}px`;
+        inner.style.width = `${rect.width}px`;
     }
 };
 
