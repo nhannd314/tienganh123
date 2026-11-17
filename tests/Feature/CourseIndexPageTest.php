@@ -75,3 +75,11 @@ it('tags the course cards of the home page', function () {
 
     $this->get(route('home'))->assertSeeInOrder(['Trung cấp', 'THCS']);
 });
+
+it('shows the rich text description of a course card as plain text', function () {
+    Course::factory()->published()->create(['description' => '<p>Học <strong>giao tiếp</strong></p>']);
+
+    $this->get(route('courses.index'))
+        ->assertSee('Học giao tiếp')
+        ->assertDontSee('&lt;strong&gt;', false);
+});

@@ -12,7 +12,7 @@
 
 <x-lesson-card
     :title="$course->title"
-    :description="$course->description"
+    :description="filled($course->description) ? trim(html_entity_decode(strip_tags(str_replace('</p>', '</p> ', $course->description)))) : null"
     :thumbnail="$course->thumbnail_url"
     :href="route('courses.show', $course)"
     :tags="$tags"

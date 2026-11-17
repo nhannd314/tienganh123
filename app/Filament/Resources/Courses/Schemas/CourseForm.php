@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Courses\Schemas;
 
 use App\Models\Course;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -33,8 +34,12 @@ class CourseForm
                     ->alphaDash()
                     ->unique(ignoreRecord: true)
                     ->helperText('Leave empty to generate it from the title.'),
-                Textarea::make('description')
-                    ->rows(4)
+                RichEditor::make('description')
+                    ->toolbarButtons([
+                        ['bold', 'italic', 'underline', 'strike', 'link'],
+                        ['bulletList', 'orderedList'],
+                        ['undo', 'redo'],
+                    ])
                     ->columnSpanFull(),
                 FileUpload::make('thumbnail')
                     ->image()

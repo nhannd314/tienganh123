@@ -2,8 +2,8 @@
 
 namespace App\Filament\Resources\Units\Schemas;
 
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -40,8 +40,12 @@ class UnitForm
                         modifyRuleUsing: fn (Unique $rule, Get $get): Unique => $rule->where('course_id', $get('course_id')),
                     )
                     ->helperText('Leave empty to generate it from the title. Must be unique within the course.'),
-                Textarea::make('description')
-                    ->rows(4)
+                RichEditor::make('description')
+                    ->toolbarButtons([
+                        ['bold', 'italic', 'underline', 'strike', 'link'],
+                        ['bulletList', 'orderedList'],
+                        ['undo', 'redo'],
+                    ])
                     ->columnSpanFull(),
                 TextInput::make('sort_order')
                     ->required()

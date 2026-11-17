@@ -28,8 +28,8 @@
 
             <h1 class="type-word tracking-tight text-balance text-fg-strong">{{ $course->title }}</h1>
 
-            @if ($course->description)
-                <p class="text-[17px] leading-body text-pretty text-fg-body">{{ $course->description }}</p>
+            @if (filled($descriptionHtml))
+                <div class="text-[17px] leading-body text-pretty text-fg-body [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5">{!! $descriptionHtml !!}</div>
             @endif
 
             <ul class="flex flex-wrap gap-x-12 gap-y-5">
@@ -64,8 +64,8 @@
                 <div class="flex flex-col gap-4">
                     <div class="flex flex-col gap-0.5">
                         <h2 class="type-h2 text-fg-strong">{{ $unit['title'] }}</h2>
-                        @if (filled($unit['description']))
-                            <p class="type-body text-pretty text-fg-muted">{{ $unit['description'] }}</p>
+                        @if (filled($unit['descriptionHtml']))
+                            <div class="type-body text-pretty text-fg-muted [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5">{!! $unit['descriptionHtml'] !!}</div>
                         @endif
                     </div>
 

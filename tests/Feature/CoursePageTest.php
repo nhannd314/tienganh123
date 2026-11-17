@@ -255,3 +255,12 @@ it('shows the description of a unit under its title', function () {
     $this->get(route('courses.show', $course))
         ->assertSeeInOrder(['Hello!', 'Greet new friends', 'Lesson A']);
 });
+
+it('renders the rich text descriptions of the course and its units as html', function () {
+    $course = Course::factory()->published()->create(['description' => '<p>Học <strong>giao tiếp</strong></p>']);
+    Unit::factory()->for($course)->create(['description' => '<p>Chào <em>bạn mới</em></p>']);
+
+    $this->get(route('courses.show', $course))
+        ->assertSee('Học <strong>giao tiếp</strong>', false)
+        ->assertSee('Chào <em>bạn mới</em>', false);
+});

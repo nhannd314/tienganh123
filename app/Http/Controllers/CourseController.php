@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Lesson;
+use Filament\Forms\Components\RichEditor\RichContentRenderer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -34,7 +35,7 @@ class CourseController extends Controller
         $unitRows = $units->map(function ($unit) use (&$lessonNumber, $wordCounts, $reviewPercents, $course, $hasCourseAccess): array {
             return [
                 'title' => $unit->title,
-                'description' => $unit->description,
+                'descriptionHtml' => $this->richHtml($unit->description),
                 'lessons' => $unit->lessons->map(function ($lesson) use (&$lessonNumber, $wordCounts, $reviewPercents, $course, $unit, $hasCourseAccess): array {
                     $lessonNumber++;
                     $access = match (true) {
@@ -66,6 +67,7 @@ class CourseController extends Controller
 
         return view('courses.show', [
             'course' => $course,
+            'descriptionHtml' => $this->richHtml($course->description),
             'units' => $unitRows,
             'stats' => array_values(array_filter([
                 ['icon' => 'layers', 'value' => $unitCount, 'label' => 'Unit'],
@@ -81,6 +83,20 @@ class CourseController extends Controller
             'hasPaidAccess' => $hasPaidAccess,
             'topLearners' => $course->topLearners()->all(),
         ]);
+    }
+
+    /**
+     * Render a rich editor description to HTML, or an empty string when it has no visible text.
+     */
+    private function richHtml(?string $description): string
+    {
+        if (blank($description)) {
+            return '';
+        }
+
+        $html = RichContentRenderer::make($description)->toHtml();
+
+        return filled(trim(strip_tags($html))) ? $html : '';
     }
 
     /**
