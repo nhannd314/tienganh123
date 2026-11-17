@@ -51,6 +51,7 @@ class LessonController extends Controller
             'exampleSentences' => $exampleSentences,
             'flashcardSets' => $lesson->flashcardSets,
             'wordScenes' => $lesson->wordScenes->filter(fn (WordScene $scene): bool => filled($scene->image) && $scene->items->contains(fn (WordSceneItem $item): bool => $item->hasRectangle())),
+            'descriptionHtml' => filled($lesson->description) ? RichContentRenderer::make($lesson->description)->toHtml() : '',
             'passageHtml' => $this->richContentHtml($lesson->passage, 'passage-word-'),
             'contentHtml' => $this->richContentHtml($lesson->content, 'word-'),
             'attachments' => $this->attachments($lesson),

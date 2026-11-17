@@ -25,8 +25,8 @@
             <h1 class="type-page-title tracking-tight text-balance text-fg-strong">{{ $lessonNumber ? $lessonNumber.'. ' : '' }}{{ $lesson->title }}</h1>
             <p class="type-label text-fg-muted">{{ $unit->title }}</p>
         </div>
-        @if ($lesson->description)
-            <p class="max-w-200 type-body-lg text-pretty text-fg-body">{{ $lesson->description }}</p>
+        @if (filled(trim(strip_tags($descriptionHtml))))
+            <div class="max-w-200 type-body-lg text-pretty text-fg-body [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_strong]:text-fg-strong [&_ul]:list-disc [&_ul]:pl-5">{!! $descriptionHtml !!}</div>
         @endif
         @if (auth()->user()?->isAdmin())
             <x-button variant="outline" size="sm" icon-left="pencil" :href="route('filament.admin.resources.lessons.edit', $lesson)">Sửa bài học</x-button>

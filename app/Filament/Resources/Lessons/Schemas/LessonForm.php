@@ -83,8 +83,12 @@ class LessonForm
                     ->default(false),
                 Toggle::make('is_published')
                     ->default(false),
-                Textarea::make('description')
-                    ->rows(3)
+                RichEditor::make('description')
+                    ->toolbarButtons([
+                        ['bold', 'italic', 'underline', 'strike', 'link'],
+                        ['bulletList', 'orderedList'],
+                        ['undo', 'redo'],
+                    ])
                     ->columnSpanFull(),
                 self::richContentEditor('passage')
                     ->helperText('Opening passage of the lesson. Wrap a word in inline code (`apple`) to show its IPA, audio and meaning in a popover when the word exists.'),
