@@ -85,23 +85,23 @@ it('shows the game card right under the learning progress in the sidebar', funct
         ->assertSeeInOrder(['Tiến độ học tập', 'Chơi game giải trí', 'Vừa chơi vừa học', 'Tăng tốc độ phản xạ', 'Tăng tốc độ đánh máy', 'Chơi ngay', 'Top 10 bài học này']);
 });
 
-it('gives each question four distinct options that include the right meaning of the word', function () {
-    $lesson = reviewLesson(5);
+it('gives each question six distinct options that include the right meaning of the word', function () {
+    $lesson = reviewLesson(7);
 
     $questions = reviewQuestions($this->get(reviewUrl($lesson))->getContent());
 
     foreach ($questions as $question) {
         $word = Word::find($question['id']);
 
-        expect($question['options'])->toHaveCount(4)
-            ->and(array_unique($question['options']))->toHaveCount(4)
+        expect($question['options'])->toHaveCount(6)
+            ->and(array_unique($question['options']))->toHaveCount(6)
             ->and($question['options'][$question['answer']])->toBe($word->allMeaningsLabel())
             ->and($question['prompt'])->toBe($word->word);
     }
 });
 
-it('shows part 2 with the meaning of each word and four distinct English words to pick from', function () {
-    $lesson = reviewLesson(5);
+it('shows part 2 with the meaning of each word and six distinct English words to pick from', function () {
+    $lesson = reviewLesson(7);
 
     $response = $this->get(reviewUrl($lesson, 2))
         ->assertOk()
@@ -110,15 +110,15 @@ it('shows part 2 with the meaning of each word and four distinct English words t
 
     $questions = reviewQuestions($response->getContent());
 
-    expect($questions)->toHaveCount(5);
+    expect($questions)->toHaveCount(7);
 
     foreach ($questions as $question) {
         $word = Word::find($question['id']);
 
         expect($question['prompt'])->toBe($word->allMeaningsLabel())
             ->and($question['phonetic'])->toBeNull()
-            ->and($question['options'])->toHaveCount(4)
-            ->and(array_unique(array_map('mb_strtolower', $question['options'])))->toHaveCount(4)
+            ->and($question['options'])->toHaveCount(6)
+            ->and(array_unique(array_map('mb_strtolower', $question['options'])))->toHaveCount(6)
             ->and($question['options'][$question['answer']])->toBe($word->word);
     }
 
@@ -127,11 +127,11 @@ it('shows part 2 with the meaning of each word and four distinct English words t
 
 it('borrows wrong words from outside the lesson in part 2 when the lesson has too few', function () {
     $lesson = reviewLesson(2);
-    Word::factory()->count(3)->create();
+    Word::factory()->count(5)->create();
 
     $questions = reviewQuestions($this->get(reviewUrl($lesson, 2))->getContent());
 
-    expect($questions)->toHaveCount(2)->and($questions[0]['options'])->toHaveCount(4);
+    expect($questions)->toHaveCount(2)->and($questions[0]['options'])->toHaveCount(6);
 });
 
 it('grades part 2 on the English word, not on a meaning', function () {
@@ -151,7 +151,7 @@ it('grades part 2 on the English word, not on a meaning', function () {
 });
 
 it('shows part 3 with the word to listen to, hidden, and its meaning to pick', function () {
-    $lesson = reviewLesson(5);
+    $lesson = reviewLesson(7);
 
     $response = $this->get(reviewUrl($lesson, 3))
         ->assertOk()
@@ -163,14 +163,14 @@ it('shows part 3 with the word to listen to, hidden, and its meaning to pick', f
 
     $questions = reviewQuestions($response->getContent());
 
-    expect($questions)->toHaveCount(5);
+    expect($questions)->toHaveCount(7);
 
     foreach ($questions as $question) {
         $word = Word::find($question['id']);
 
         expect($question['prompt'])->toBe($word->word)
             ->and($question['phonetic'])->toBeNull()
-            ->and($question['options'])->toHaveCount(4)
+            ->and($question['options'])->toHaveCount(6)
             ->and($question['options'][$question['answer']])->toBe($word->allMeaningsLabel());
 
         $response->assertDontSee('Nghe phát âm '.$word->word);
@@ -268,12 +268,12 @@ it('grades part 4 on the typed word, whatever its case and spacing', function ()
 
 it('borrows wrong options from other words when the lesson has too few words', function () {
     $lesson = reviewLesson(2);
-    Word::factory()->count(3)->create();
+    Word::factory()->count(5)->create();
 
     $questions = reviewQuestions($this->get(reviewUrl($lesson))->getContent());
 
     expect($questions)->toHaveCount(2)
-        ->and($questions[0]['options'])->toHaveCount(4);
+        ->and($questions[0]['options'])->toHaveCount(6);
 });
 
 it('asks about every word that has a meaning', function () {

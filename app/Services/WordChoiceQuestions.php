@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  */
 class WordChoiceQuestions
 {
-    public const OPTIONS_PER_QUESTION = 4;
+    public const OPTIONS_PER_QUESTION = 6;
 
     /**
      * How many random stored words are fetched for the wrong options.
