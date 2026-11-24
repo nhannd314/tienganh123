@@ -1,13 +1,6 @@
 @php
     $dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
     $periods = collect($shifts)->groupBy(fn (\App\Enums\ClassShift $shift): string => $shift->getPeriodLabel());
-
-    // A stable colour per classroom.
-    $badgeStyle = function (int $classroomId): string {
-        $hue = ($classroomId * 47) % 360;
-
-        return "background-color: hsl({$hue} 80% 50% / 0.16); color: hsl({$hue} 70% 30%); border-color: hsl({$hue} 80% 50% / 0.45);";
-    };
 @endphp
 
 <x-layouts.app title="Lịch học" noindex main-class="flex flex-col gap-6 pt-6 pb-10">
@@ -42,10 +35,15 @@
             >
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[40rem] table-fixed border-collapse">
+                        <colgroup>
+                            <col class="w-20">
+                            <col class="w-32">
+                            <col span="7">
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th colspan="2" @class([
-                                    'w-32 border border-line-strong p-2 type-label',
+                                    'border border-line-strong p-2 type-label',
                                     'bg-ink-50 text-fg-strong' => ! $isCurrentWeek,
                                     'bg-primary-bg text-primary-text' => $isCurrentWeek,
                                 ])>Tuần {{ $weekIndex + 1 }}</th>
@@ -66,12 +64,15 @@
                                 @foreach ($periodShifts as $shift)
                                     <tr>
                                         @if ($loop->first)
-                                            <th rowspan="{{ $periodShifts->count() }}" class="w-16 border border-line-strong bg-ink-50 px-3 py-4 type-label text-fg-strong">{{ $periodLabel }}</th>
+                                            <th rowspan="{{ $periodShifts->count() }}" class="border border-line-strong bg-ink-50 px-3 py-4 type-label text-fg-strong">{{ $periodLabel }}</th>
                                         @endif
-                                        <th class="w-16 border border-line-strong bg-ink-50 px-3 py-4 type-body-sm font-medium text-fg-body">{{ $shift->getLabel() }}</th>
+                                        <th class="border border-line-strong bg-ink-50 px-2 py-4 type-body-sm font-medium whitespace-nowrap text-fg-body">
+                                        {{ $shift->getLabel() }}
+                                        <div class="text-[0.7rem] font-normal text-fg-muted">{{ $shift->getTimeRange() }}</div>
+                                    </th>
                                         @foreach ($week as $day)
                                             @php($session = $scheduledSessions->get($day['date'].'|'.$shift->value))
-                                            <td class="border border-line-strong p-0 align-top">
+                                            <td class="h-14 border border-line-strong p-0 align-top">
                                                 <button
                                                     type="button"
                                                     @disabled(! $day['inMonth'])
@@ -90,7 +91,7 @@
                                                     aria-label="Chọn lớp học cho {{ $shift->getLabel() }} ngày {{ \Illuminate\Support\Carbon::parse($day['date'])->format('d/m/Y') }}"
                                                 >
                                                     @if ($session)
-                                                        <span class="block rounded-sm border px-1.5 py-0.5 type-body-sm font-medium" style="{{ $badgeStyle($session->classroom_id) }}" @if (filled($session->note)) title="{{ $session->note }}" @endif>
+                                                        <span class="block rounded-sm border px-1.5 py-0.5 type-body-sm font-medium" style="{{ $session->classroom->badgeStyle() }}" @if (filled($session->note)) title="{{ $session->note }}" @endif>
                                                             <span class="block truncate">{{ $session->classroom->name }}</span>
                                                             @if (filled($session->note))
                                                                 <span class="block truncate text-[0.7rem] font-normal opacity-80">{{ $session->note }}</span>
@@ -123,7 +124,7 @@
                         @forelse ($classrooms as $classroom)
                             <tr>
                                 <td class="border border-line-strong bg-white px-3 py-2">
-                                    <span class="inline-block max-w-full truncate rounded-sm border px-2 py-0.5 type-body-sm font-medium" style="{{ $badgeStyle($classroom->id) }}">{{ $classroom->name }}</span>
+                                    <span class="inline-block max-w-full truncate rounded-sm border px-2 py-0.5 type-body-sm font-medium" style="{{ $classroom->badgeStyle() }}">{{ $classroom->name }}</span>
                                 </td>
                                 <td class="border border-line-strong bg-white px-3 py-2 text-right type-body text-fg-body">{{ $shiftCounts[$classroom->id] ?? 0 }}</td>
                             </tr>

@@ -8,12 +8,38 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-it('lets only admins open the schedule page', function () {
-    $this->get('/schedule')->assertRedirect(route('login'));
+it('shows the month to edit to an admin and the read-only week to everyone else', function () {
+    $this->get('/schedule')->assertOk()->assertViewIs('schedule.week');
 
-    $this->actingAs(User::factory()->create())->get('/schedule')->assertForbidden();
+    $this->actingAs(User::factory()->create())->get('/schedule')->assertOk()->assertViewIs('schedule.week');
 
-    $this->actingAs(User::factory()->admin()->create())->get('/schedule')->assertOk();
+    $this->actingAs(User::factory()->admin()->create())->get('/schedule')->assertOk()->assertViewIs('admin.schedule.index');
+});
+
+it('shows the week of the latest classes, not the ones planned after this week', function () {
+    $this->travelTo('2026-03-11');
+    [$old, $recent, $planned] = Classroom::factory()->count(3)->sequence(['name' => 'Old Class'], ['name' => 'Recent Class'], ['name' => 'Planned Class'])->create();
+
+    foreach ([['2026-02-10', $old], ['2026-03-04', $recent], ['2026-03-25', $planned]] as [$date, $classroom]) {
+        ClassSession::factory()->create(['classroom_id' => $classroom->id, 'date' => $date, 'shift' => ClassShift::First, 'note' => 'Note of '.$classroom->name]);
+    }
+
+    $this->get('/schedule')
+        ->assertOk()
+        ->assertSee('02/03 - 08/03/2026')
+        ->assertSee('Recent Class')
+        ->assertDontSee('Old Class')
+        ->assertDontSee('Planned Class')
+        ->assertDontSee('Note of Recent Class')
+        ->assertDontSee('data-schedule-slot', false);
+
+    $this->actingAs(User::factory()->admin()->create())->get('/schedule?month=2026-03')->assertSee('Note of Recent Class');
+});
+
+it('shows the current week when there is no class yet', function () {
+    $this->travelTo('2026-03-11');
+
+    $this->get('/schedule')->assertOk()->assertSee('09/03 - 15/03/2026');
 });
 
 it('shows the classrooms scheduled in the requested month', function () {
@@ -77,12 +103,8 @@ it('does not let a regular user change the schedule', function () {
     expect(ClassSession::query()->count())->toBe(0);
 });
 
-it('links the schedule in the footer for admins only', function () {
-    $this->get(route('home'))->assertOk()->assertDontSee(route('admin.schedule.index'));
-
-    $this->actingAs(User::factory()->create())->get(route('home'))->assertDontSee(route('admin.schedule.index'));
-
-    $this->actingAs(User::factory()->admin()->create())->get(route('home'))->assertSee('Lịch học')->assertSee(route('admin.schedule.index'));
+it('links the schedule in the footer', function () {
+    $this->get(route('home'))->assertOk()->assertSee('Lịch học')->assertSee(route('admin.schedule.index'));
 });
 
 it('rejects a slot that is not in the month shown', function () {
@@ -105,4 +127,10 @@ it('counts the shifts of each classroom in the days of the month only', function
     $this->actingAs(User::factory()->admin()->create());
 
     $this->get('/schedule?month=2026-03')->assertOk()->assertViewHas('shiftCounts', [$first->id => 2, $second->id => 1]);
+});
+
+it('shows the hours of each shift', function () {
+    $this->get('/schedule')->assertOk()->assertSeeInOrder(['Ca 1', '7h30 - 9h30', 'Ca 2', '9h30 - 11h30', 'Ca 3', '14h - 16h', 'Ca 4', '16h30 - 18h30', 'Ca 5', '19h30 - 21h30']);
+
+    $this->actingAs(User::factory()->admin()->create())->get('/schedule')->assertSee('7h30 - 9h30')->assertSee('19h30 - 21h30');
 });

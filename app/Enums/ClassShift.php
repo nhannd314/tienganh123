@@ -17,6 +17,20 @@ enum ClassShift: int implements HasLabel
         return 'Ca '.$this->value;
     }
 
+    /**
+     * The hours of the shift, as shown beside its name.
+     */
+    public function getTimeRange(): string
+    {
+        return match ($this) {
+            self::First => '7h30 - 9h30',
+            self::Second => '9h30 - 11h30',
+            self::Third => '14h - 16h',
+            self::Fourth => '16h30 - 18h30',
+            self::Fifth => '19h30 - 21h30',
+        };
+    }
+
     public function getPeriodLabel(): string
     {
         return match ($this) {

@@ -13,14 +13,18 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 /**
- * The class timetable of a month (/schedule): one table per week (Monday to Sunday), a row per shift, and the classrooms that study
+ * The class timetable (/schedule). An admin sees a month: one table per week (Monday to Sunday), a row per shift, and the classrooms that study
  * in each slot (one class per slot), with its note. Clicking a slot opens a dialog to choose the classroom and write the note (see
- * resources/js/class-schedule.js).
+ * resources/js/class-schedule.js). Anyone else sees one read-only table, the week of the latest classes (see latestWeek).
  */
 class ClassScheduleController extends Controller
 {
     public function index(Request $request): View
     {
+        if (! $request->user()?->isAdmin()) {
+            return $this->week();
+        }
+
         $month = $this->resolveMonth($request->query('month'));
         $first = $month->startOfWeek(CarbonImmutable::MONDAY);
         $last = $month->endOfMonth()->endOfWeek(CarbonImmutable::SUNDAY);
@@ -42,6 +46,41 @@ class ClassScheduleController extends Controller
             'shiftCounts' => $this->shiftCountsOf($month),
             'shifts' => ClassShift::cases(),
         ]);
+    }
+
+    /**
+     * The read-only timetable of one week for the visitors who are not admins.
+     */
+    private function week(): View
+    {
+        $first = $this->latestWeek();
+        $last = $first->endOfWeek(CarbonImmutable::SUNDAY);
+
+        return view('schedule.week', [
+            'first' => $first,
+            'last' => $last,
+            'days' => collect(range(0, 6))->map(fn (int $offset): CarbonImmutable => $first->addDays($offset)),
+            'scheduledSessions' => ClassSession::query()
+                ->with('classroom')
+                ->whereDate('date', '>=', $first->toDateString())
+                ->whereDate('date', '<=', $last->toDateString())
+                ->get()
+                ->keyBy(fn (ClassSession $session): string => $session->date->toDateString().'|'.$session->shift->value),
+            'shifts' => ClassShift::cases(),
+        ]);
+    }
+
+    /**
+     * The Monday of the week of the latest class up to the end of this week, so classes planned ahead do not hide the week in
+     * progress; the current week when there is no class yet.
+     */
+    private function latestWeek(): CarbonImmutable
+    {
+        $latest = ClassSession::query()
+            ->whereDate('date', '<=', CarbonImmutable::now()->endOfWeek(CarbonImmutable::SUNDAY)->toDateString())
+            ->max('date');
+
+        return ($latest ? CarbonImmutable::parse($latest) : CarbonImmutable::now())->startOfWeek(CarbonImmutable::MONDAY)->startOfDay();
     }
 
     /**

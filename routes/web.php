@@ -36,6 +36,7 @@ use App\Http\Controllers\VocabularyIndexController;
 use App\Http\Controllers\VocabularyReviewController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureLessonAccess;
+use App\Http\Middleware\EnsureLessonGamesUnlocked;
 use App\Http\Middleware\EnsureMember;
 use App\Http\Middleware\VerifySepayWebhook;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -113,15 +114,15 @@ Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/thanh-tich', Lesso
     ->name('lessons.learners');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/tro-choi', [LessonGameController::class, 'index'])
     ->scopeBindings()
-    ->middleware(EnsureLessonAccess::class)
+    ->middleware([EnsureLessonAccess::class, EnsureLessonGamesUnlocked::class])
     ->name('lessons.games');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/tro-choi/{game}', [LessonGameController::class, 'show'])
     ->scopeBindings()
-    ->middleware(EnsureLessonAccess::class)
+    ->middleware([EnsureLessonAccess::class, EnsureLessonGamesUnlocked::class])
     ->name('lessons.games.show');
 Route::post('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/tro-choi/{game}/thanh-tich', [LessonGameController::class, 'storeScore'])
     ->scopeBindings()
-    ->middleware(['auth', EnsureLessonAccess::class, 'throttle:30,1'])
+    ->middleware(['auth', EnsureLessonAccess::class, EnsureLessonGamesUnlocked::class, 'throttle:30,1'])
     ->name('lessons.games.score');
 Route::get('/khoa-hoc/{course:slug}/{unit:slug}/{lesson:slug}/review/{step}', [LessonReviewController::class, 'show'])
     ->whereIn('step', ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'])
@@ -167,8 +168,6 @@ Route::middleware(['auth', EnsureAdmin::class])->prefix('quan-tri/word-scenes')-
     Route::delete('/{wordScene}/items/{item}', [WordScenesController::class, 'destroyItem'])->scopeBindings()->name('items.destroy');
 });
 
-// The class timetable of a month, for admins.
-Route::middleware(['auth', EnsureAdmin::class])->prefix('schedule')->name('admin.schedule.')->group(function () {
-    Route::get('/', [ClassScheduleController::class, 'index'])->name('index');
-    Route::put('/', [ClassScheduleController::class, 'update'])->name('update');
-});
+// The class timetable: the month to edit for admins, the week of the latest classes for everyone else.
+Route::get('/schedule', [ClassScheduleController::class, 'index'])->name('admin.schedule.index');
+Route::put('/schedule', [ClassScheduleController::class, 'update'])->middleware(['auth', EnsureAdmin::class])->name('admin.schedule.update');

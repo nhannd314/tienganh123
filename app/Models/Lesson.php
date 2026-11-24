@@ -44,6 +44,11 @@ class Lesson extends Model
     public const REVIEW_PARTS = 6;
 
     /**
+     * The review progress, in percent, a user needs to play the games of the lesson (see EnsureLessonGamesUnlocked).
+     */
+    public const GAMES_UNLOCK_PERCENT = 80;
+
+    /**
      * The review parts in which words are read aloud and scored out of 10.
      *
      * @var list<int>

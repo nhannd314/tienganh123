@@ -3,6 +3,7 @@
 use App\Models\Course;
 use App\Models\GameScore;
 use App\Models\Lesson;
+use App\Models\LessonReview;
 use App\Models\LessonScore;
 use App\Models\Unit;
 use App\Models\User;
@@ -24,6 +25,18 @@ function gamesLesson(int $monthlyPrice = 0): Lesson
     return $lesson->fresh();
 }
 
+/**
+ * Give the user a passed attempt at the first $parts parts of the review of the lesson (all of them by default).
+ */
+function unlockGames(User $user, Lesson $lesson, ?int $parts = null): User
+{
+    foreach (array_slice($lesson->reviewSteps(), 0, $parts) as $step) {
+        LessonReview::factory()->for($lesson)->create(['user_id' => $user->id, 'step' => $step, 'total' => 10, 'correct' => 10]);
+    }
+
+    return $user;
+}
+
 function lessonRoute(string $name, Lesson $lesson, array $parameters = []): string
 {
     return route($name, [$lesson->unit->course, $lesson->unit, $lesson, ...$parameters]);
@@ -32,7 +45,7 @@ function lessonRoute(string $name, Lesson $lesson, array $parameters = []): stri
 it('shows the three games of the lesson, each with a thumbnail, its name and a play button', function () {
     $lesson = gamesLesson();
 
-    $response = $this->get(lessonRoute('lessons.games', $lesson))
+    $response = $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games', $lesson))
         ->assertOk()
         ->assertSeeInOrder(['Trang chủ', 'Tiếng Anh lớp 3', 'Chào hỏi bạn mới', 'Trò chơi'])
         ->assertSeeInOrder(['Soldier and Monster', 'Chơi ngay', 'Galaxy Defender', 'Chơi ngay', 'Zombie Defense', 'Chơi ngay'])
@@ -47,7 +60,7 @@ it('shows the three games of the lesson, each with a thumbnail, its name and a p
 it('links every game to its page, Soldier and Monster with its preview as thumbnail', function () {
     $lesson = gamesLesson();
 
-    $this->get(lessonRoute('lessons.games', $lesson))
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games', $lesson))
         ->assertSee('href="'.lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']).'"', false)
         ->assertSee('href="'.lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']).'"', false)
         ->assertSee('href="'.lessonRoute('lessons.games.show', $lesson, ['zombie-defense']).'"', false)
@@ -63,7 +76,7 @@ it('plays Soldier and Monster with the review words of the lesson and six second
         Word::factory()->create(['word' => 'empty', 'meanings' => []]),
     ]);
 
-    $content = $this->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))
+    $content = $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))
         ->assertOk()
         ->assertSeeInOrder(['Trò chơi', 'Soldier and Monster'])
         ->assertSee('data-soldier-game', false)
@@ -76,7 +89,7 @@ it('plays Soldier and Monster with the review words of the lesson and six second
         'words' => [['word' => 'apple', 'meaning' => 'quả táo'], ['word' => 'ice cream', 'meaning' => 'kem']],
         'secondsPerWord' => 6,
         'assetsUrl' => asset('games/soldier-and-monster'),
-        'saveUrl' => null,
+        'saveUrl' => lessonRoute('lessons.games.score', $lesson, ['soldier-and-monster']),
         'csrf' => csrf_token(),
     ]);
 });
@@ -89,7 +102,7 @@ it('plays Galaxy Defender with the review words of the lesson, without a time li
         Word::factory()->create(['word' => 'empty', 'meanings' => []]),
     ]);
 
-    $content = $this->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))
+    $content = $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))
         ->assertOk()
         ->assertSeeInOrder(['Trò chơi', 'Galaxy Defender'])
         ->assertSee('data-galaxy-game', false)
@@ -102,7 +115,7 @@ it('plays Galaxy Defender with the review words of the lesson, without a time li
     expect(json_decode($match[1], true))->toBe([
         'words' => [['word' => 'apple', 'meaning' => 'quả táo; ăn táo']],
         'assetsUrl' => asset('games/galaxy-defender'),
-        'saveUrl' => null,
+        'saveUrl' => lessonRoute('lessons.games.score', $lesson, ['galaxy-defender']),
         'csrf' => csrf_token(),
     ]);
 });
@@ -115,7 +128,7 @@ it('plays Zombie Defense with the words of the lesson and four seconds per word'
         Word::factory()->create(['word' => 'empty', 'meanings' => []]),
     ]);
 
-    $content = $this->get(lessonRoute('lessons.games.show', $lesson, ['zombie-defense']))
+    $content = $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['zombie-defense']))
         ->assertOk()
         ->assertSeeInOrder(['Trò chơi', 'Zombie Defense'])
         ->assertSee('data-zombie-game', false)
@@ -128,7 +141,7 @@ it('plays Zombie Defense with the words of the lesson and four seconds per word'
     expect(json_decode($match[1], true))->toBe([
         'words' => [['word' => 'apple', 'meaning' => 'quả táo; ăn táo']],
         'secondsPerWord' => 4,
-        'saveUrl' => null,
+        'saveUrl' => lessonRoute('lessons.games.score', $lesson, ['zombie-defense']),
         'images' => [
             'background' => asset('games/zombie-defense/bg.jpg'),
             'house' => asset('games/zombie-defense/gun-home.webp'),
@@ -144,7 +157,7 @@ it('says so when the lesson has no word to play Zombie Defense with', function (
     $lesson = gamesLesson();
     $lesson->vocabularies()->detach();
 
-    $this->get(lessonRoute('lessons.games.show', $lesson, ['zombie-defense']))
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['zombie-defense']))
         ->assertOk()
         ->assertSee('Chưa có từ vựng')
         ->assertDontSee('data-zombie-game', false);
@@ -154,7 +167,7 @@ it('says so when the lesson has no word to play Galaxy Defender with', function 
     $lesson = gamesLesson();
     $lesson->vocabularies()->detach();
 
-    $this->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))
         ->assertOk()
         ->assertSee('Chưa có từ vựng')
         ->assertDontSee('data-galaxy-game', false);
@@ -164,14 +177,16 @@ it('says so when the lesson has no word to play with', function () {
     $lesson = gamesLesson();
     $lesson->vocabularies()->detach();
 
-    $this->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))
         ->assertOk()
         ->assertSee('Chưa có từ vựng')
         ->assertDontSee('data-soldier-game', false);
 });
 
 it('returns not found for a game that does not exist', function (string $game) {
-    $this->get(lessonRoute('lessons.games.show', gamesLesson(), [$game]))->assertNotFound();
+    $lesson = gamesLesson();
+
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, [$game]))->assertNotFound();
 })->with(['treasure-hunter', 'nope']);
 
 it('keeps the games of a locked lesson from a guest and of an unpublished lesson from everyone', function () {
@@ -198,7 +213,7 @@ it('links the game card of the lesson page and of the review to the games of the
 
 it('lists the 10 fastest players of the game beside it, fastest first, and marks the viewer', function () {
     $lesson = gamesLesson();
-    $me = User::factory()->create(['name' => 'Me Myself']);
+    $me = unlockGames(User::factory()->create(['name' => 'Me Myself']), $lesson);
     GameScore::factory()->for($lesson)->for($me)->create(['milliseconds' => 8400]);
     GameScore::factory()->for($lesson)->for(User::factory()->create(['name' => 'Fast Fox']))->create(['milliseconds' => 5200]);
     GameScore::factory()->for($lesson)->count(10)->create(['milliseconds' => 59000]);
@@ -214,13 +229,15 @@ it('lists the 10 fastest players of the game beside it, fastest first, and marks
 });
 
 it('says nobody has finished yet when there is no time', function () {
-    $this->get(lessonRoute('lessons.games.show', gamesLesson(), ['soldier-and-monster']))
+    $lesson = gamesLesson();
+
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))
         ->assertSee('Chưa có ai về đích');
 });
 
 it('keeps only the best time of a player and answers with the refreshed list', function () {
     $lesson = gamesLesson();
-    $user = User::factory()->create(['name' => 'Speedy']);
+    $user = unlockGames(User::factory()->create(['name' => 'Speedy']), $lesson);
     $url = lessonRoute('lessons.games.score', $lesson, ['soldier-and-monster']);
 
     $this->actingAs($user)->postJson($url, ['milliseconds' => 4000])->assertOk()->assertJsonPath('html', fn (string $html) => str_contains($html, 'Speedy') && str_contains($html, '4.0s'));
@@ -234,7 +251,7 @@ it('keeps only the best time of a player and answers with the refreshed list', f
 it('refuses a time that is impossible or beyond the time limit of the game', function (int $milliseconds) {
     $lesson = gamesLesson();
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))
         ->postJson(lessonRoute('lessons.games.score', $lesson, ['soldier-and-monster']), ['milliseconds' => $milliseconds])
         ->assertUnprocessable();
 
@@ -245,7 +262,7 @@ it('does not take a time from a guest or for a game that does not exist', functi
     $lesson = gamesLesson();
 
     $this->postJson(lessonRoute('lessons.games.score', $lesson, ['soldier-and-monster']), ['milliseconds' => 4000])->assertUnauthorized();
-    $this->actingAs(User::factory()->create())
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson))
         ->postJson(lessonRoute('lessons.games.score', $lesson, ['nope']), ['milliseconds' => 4000])
         ->assertNotFound();
 });
@@ -257,7 +274,7 @@ it('ranks the time of Zombie Defense however slow it is', function () {
         Word::factory()->create(['word' => 'apple', 'meanings' => [['pos' => 'n', 'meaning' => 'quả táo']]]),
         Word::factory()->create(['word' => 'ice cream', 'meanings' => [['pos' => 'n', 'meaning' => 'kem']]]),
     ]);
-    $user = User::factory()->create(['name' => 'Zombie Slayer']);
+    $user = unlockGames(User::factory()->create(['name' => 'Zombie Slayer']), $lesson);
     $url = lessonRoute('lessons.games.score', $lesson, ['zombie-defense']);
 
     $this->actingAs($user)->postJson($url, ['milliseconds' => 1])->assertUnprocessable();
@@ -268,7 +285,7 @@ it('ranks the time of Zombie Defense however slow it is', function () {
 
 it('ranks the time of Galaxy Defender, which allows a minute per word instead of six seconds', function () {
     $lesson = gamesLesson();
-    $user = User::factory()->create(['name' => 'Star Pilot']);
+    $user = unlockGames(User::factory()->create(['name' => 'Star Pilot']), $lesson);
     $url = lessonRoute('lessons.games.score', $lesson, ['galaxy-defender']);
 
     $this->actingAs($user)->postJson($url, ['milliseconds' => 45000])->assertOk()->assertJsonPath('html', fn (string $html) => str_contains($html, 'Star Pilot') && str_contains($html, '45.0s'));
@@ -281,7 +298,7 @@ it('ranks the time of Galaxy Defender, which allows a minute per word instead of
 it('gives most Zombie Defense zombies the avatars of the learners of the course, and of the player', function () {
     $lesson = gamesLesson();
     $learner = User::factory()->create(['name' => 'Trần Văn Bình', 'avatar' => 'avatars/learner.jpg']);
-    $player = User::factory()->create(['name' => 'Lê Thị Hoa', 'avatar' => 'avatars/player.jpg']);
+    $player = unlockGames(User::factory()->create(['name' => 'Lê Thị Hoa', 'avatar' => 'avatars/player.jpg']), $lesson);
     $noAvatar = User::factory()->create(['avatar' => null]);
     $elsewhere = User::factory()->create(['avatar' => 'avatars/elsewhere.jpg']);
 
@@ -297,4 +314,37 @@ it('gives most Zombie Defense zombies the avatars of the learners of the course,
         ['url' => $player->avatar_url, 'name' => 'Hoa'],
         ['url' => $learner->avatar_url, 'name' => 'Bình'],
     ]);
+});
+
+it('keeps the games from a guest, even of a free lesson', function () {
+    $lesson = gamesLesson();
+
+    $this->get(lessonRoute('lessons.games', $lesson))->assertRedirect(route('login'));
+    $this->get(lessonRoute('lessons.games.show', $lesson, ['soldier-and-monster']))->assertRedirect(route('login'));
+});
+
+it('keeps the games from a user who finished less than 80% of the lesson, and tells how far they are', function () {
+    $lesson = gamesLesson();
+    $user = unlockGames(User::factory()->create(), $lesson, 4);
+
+    $this->actingAs($user)->get(lessonRoute('lessons.games', $lesson))
+        ->assertForbidden()
+        ->assertSee('Trò chơi chưa mở')
+        ->assertSee('Tiến độ hiện tại: 67% / 80%');
+    $this->actingAs($user)->get(lessonRoute('lessons.games.show', $lesson, ['galaxy-defender']))->assertForbidden();
+    $this->actingAs($user)
+        ->postJson(lessonRoute('lessons.games.score', $lesson, ['soldier-and-monster']), ['milliseconds' => 4000])
+        ->assertForbidden();
+
+    expect(GameScore::count())->toBe(0);
+});
+
+it('opens the games to a user who finished at least 80% of the lesson', function () {
+    $lesson = gamesLesson();
+
+    $this->actingAs(unlockGames(User::factory()->create(), $lesson, 5))->get(lessonRoute('lessons.games', $lesson))->assertOk();
+});
+
+it('lets an admin play without finishing the lesson', function () {
+    $this->actingAs(User::factory()->admin()->create())->get(lessonRoute('lessons.games', gamesLesson()))->assertOk();
 });

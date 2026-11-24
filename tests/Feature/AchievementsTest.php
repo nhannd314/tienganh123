@@ -4,6 +4,7 @@ use App\Events\LearnerAchieved;
 use App\Jobs\FetchWordPronunciation;
 use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\LessonReview;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Word;
@@ -82,6 +83,10 @@ it('announces a new best time of a game, and not a slower one', function () {
     $user = User::factory()->create();
     $lesson = achievementLesson();
     $url = route('lessons.games.score', [$lesson->unit->course, $lesson->unit, $lesson, 'galaxy-defender']);
+
+    foreach ($lesson->reviewSteps() as $step) {
+        LessonReview::factory()->for($lesson)->create(['user_id' => $user->id, 'step' => $step, 'total' => 10, 'correct' => 10]);
+    }
 
     $this->actingAs($user)->postJson($url, ['milliseconds' => 12300])->assertOk();
     $this->actingAs($user)->postJson($url, ['milliseconds' => 15000])->assertOk();

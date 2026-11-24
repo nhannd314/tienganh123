@@ -15,6 +15,16 @@ class Classroom extends Model
     use HasFactory;
 
     /**
+     * Inline style of the colour badge of the classroom: a hue that stays the same for the classroom.
+     */
+    public function badgeStyle(): string
+    {
+        $hue = ($this->id * 47) % 360;
+
+        return "background-color: hsl({$hue} 80% 50% / 0.16); color: hsl({$hue} 70% 30%); border-color: hsl({$hue} 80% 50% / 0.45);";
+    }
+
+    /**
      * @return HasMany<ClassSession, $this>
      */
     public function sessions(): HasMany
