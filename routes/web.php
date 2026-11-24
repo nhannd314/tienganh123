@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ClassScheduleController;
 use App\Http\Controllers\Admin\WordScenesController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\GoogleAuthController;
@@ -164,4 +165,10 @@ Route::middleware(['auth', EnsureAdmin::class])->prefix('quan-tri/word-scenes')-
     Route::put('/{wordScene}', [WordScenesController::class, 'update'])->name('update');
     Route::post('/{wordScene}/items', [WordScenesController::class, 'storeItem'])->name('items.store');
     Route::delete('/{wordScene}/items/{item}', [WordScenesController::class, 'destroyItem'])->scopeBindings()->name('items.destroy');
+});
+
+// The class timetable of a month, for admins.
+Route::middleware(['auth', EnsureAdmin::class])->prefix('schedule')->name('admin.schedule.')->group(function () {
+    Route::get('/', [ClassScheduleController::class, 'index'])->name('index');
+    Route::put('/', [ClassScheduleController::class, 'update'])->name('update');
 });

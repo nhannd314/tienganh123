@@ -39,6 +39,11 @@ class AdminPanelProvider extends PanelProvider
                     ->url(fn (): string => route('home'), shouldOpenInNewTab: true)
                     ->icon(Heroicon::OutlinedGlobeAlt)
                     ->sort(1),
+                NavigationItem::make('Lịch học')
+                    ->url(fn (): string => route('admin.schedule.index'))
+                    ->icon(Heroicon::OutlinedCalendarDays)
+                    ->group('Users')
+                    ->sort(2),
             ])
             ->colors([
                 'primary' => Color::Amber,

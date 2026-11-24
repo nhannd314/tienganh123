@@ -28,7 +28,7 @@ it('groups the admin menu into learning content, vocabulary, content, pricing, a
         ->and($labelsOf('Content'))->toBe(['Categories', 'Posts', 'Pages', 'Slides'])
         ->and($labelsOf('Pricing'))->toBe(['Payments', 'Subscriptions'])
         ->and($labelsOf('Affiliate'))->toBe(['Commissions', 'Payouts'])
-        ->and($labelsOf('Users'))->toBe(['Users']);
+        ->and($labelsOf('Users'))->toBe(['Classrooms', 'Users', 'Lịch học']);
 });
 
 it('gives every menu item its own icon', function () {
@@ -37,8 +37,8 @@ it('gives every menu item its own icon', function () {
         ->filter(fn ($item) => $item->getLabel() !== 'Dashboard')
         ->map(fn ($item) => $item->getIcon());
 
-    expect($icons)->toHaveCount(22)
-        ->and($icons->unique())->toHaveCount(22)
+    expect($icons)->toHaveCount(24)
+        ->and($icons->unique())->toHaveCount(24)
         ->and($icons->filter(fn ($icon) => blank($icon)))->toBeEmpty();
 });
 
